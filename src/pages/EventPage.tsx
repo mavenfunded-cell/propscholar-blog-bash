@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Logo } from '@/components/Logo';
+import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, Clock, FileText, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, FileText, AlertCircle, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 
@@ -181,14 +181,7 @@ export default function EventPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/">
-            <Logo />
-          </Link>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Featured Image */}
       {event.featured_image_url && (
@@ -205,7 +198,7 @@ export default function EventPage() {
       <main className="container mx-auto px-4 py-8">
         <Link 
           to="/" 
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to contests
@@ -226,17 +219,17 @@ export default function EventPage() {
               </Badge>
             </div>
             
-            <h1 className="text-3xl md:text-4xl font-display font-bold mb-4">{event.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">{event.title}</h1>
             
             <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-4 h-4 text-primary" />
                 <span>
                   {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4 text-primary" />
                 <span>Minimum {event.min_words} words</span>
               </div>
             </div>
@@ -248,9 +241,9 @@ export default function EventPage() {
 
           {/* Submission Form or Closed Message */}
           {isEventActive ? (
-            <Card className="animate-slide-up border-border/50">
+            <Card className="animate-slide-up border-border/50 bg-card">
               <CardHeader>
-                <CardTitle>Submit Your Entry</CardTitle>
+                <CardTitle className="text-foreground">Submit Your Entry</CardTitle>
                 <CardDescription>
                   Share your insights and compete in this blog writing contest
                 </CardDescription>
@@ -266,6 +259,7 @@ export default function EventPage() {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your full name"
                       required
+                      className="bg-secondary/50 border-border focus:border-primary"
                     />
                   </div>
 
@@ -279,6 +273,7 @@ export default function EventPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="your.email@gmail.com"
                       required
+                      className="bg-secondary/50 border-border focus:border-primary"
                     />
                   </div>
 
@@ -292,6 +287,7 @@ export default function EventPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Your phone number"
                       required
+                      className="bg-secondary/50 border-border focus:border-primary"
                     />
                   </div>
 
@@ -310,7 +306,7 @@ export default function EventPage() {
                       onPaste={handleBlogPaste}
                       placeholder="Type your blog entry here... (Copy/Paste is disabled)"
                       rows={12}
-                      className="no-select resize-y min-h-[300px]"
+                      className="no-select resize-y min-h-[300px] bg-secondary/50 border-border focus:border-primary"
                       required
                     />
                     <p className="text-xs text-muted-foreground">
@@ -321,9 +317,8 @@ export default function EventPage() {
                   {/* Submit */}
                   <Button 
                     type="submit" 
-                    variant="gold" 
                     size="lg"
-                    className="w-full"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     disabled={submitting || wordCount < event.min_words}
                   >
                     {submitting ? 'Submitting...' : 'Submit Entry'}
@@ -332,12 +327,12 @@ export default function EventPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-border/50 animate-slide-up">
+            <Card className="border-border/50 animate-slide-up bg-card">
               <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
                   <AlertCircle className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-display font-semibold mb-2">Submissions Closed</h3>
+                <h3 className="text-xl font-semibold mb-2 text-foreground">Submissions Closed</h3>
                 <p className="text-muted-foreground">
                   Submissions for this event are closed. Thank you for your interest!
                 </p>
@@ -348,7 +343,7 @@ export default function EventPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-8 mt-20">
+      <footer className="border-t border-border/30 py-8 mt-20">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} PropScholar. All rights reserved.</p>
         </div>
