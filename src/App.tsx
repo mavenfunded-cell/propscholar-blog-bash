@@ -11,6 +11,7 @@ import EventForm from "./pages/EventForm";
 import EventSubmissions from "./pages/EventSubmissions";
 import EventPage from "./pages/EventPage";
 import SubmissionSuccess from "./pages/SubmissionSuccess";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/events/new" element={<EventForm />} />

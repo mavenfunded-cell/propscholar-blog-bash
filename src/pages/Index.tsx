@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Logo } from '@/components/Logo';
+import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,34 +52,29 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <Logo />
-        </div>
-      </header>
+      <Navbar />
 
       {/* Hero Section */}
       <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-gold/5 via-transparent to-transparent" />
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-blue-accent/10 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
         
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center animate-fade-in">
-            <Badge variant="outline" className="mb-6 border-gold/30 text-gold px-4 py-1">
+            <Badge variant="outline" className="mb-6 border-primary/30 text-primary px-4 py-1">
               Share Your Insights
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 leading-tight">
-              Blog Writing <span className="text-gradient">Contest</span>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-foreground">
+              Blog Writing <span className="text-primary">Contest</span>
             </h1>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto font-body">
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join our exclusive blog writing contests. Share your knowledge, showcase your writing skills, 
               and compete with fellow traders and analysts.
             </p>
             {activeEvents.length > 0 && (
               <Link to={`/events/${activeEvents[0].slug}`}>
-                <Button variant="gold" size="xl" className="gap-2">
+                <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                   Enter Current Contest
                   <ArrowRight className="w-5 h-5" />
                 </Button>
@@ -95,16 +90,16 @@ export default function Index() {
           <div className="container mx-auto px-4">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-2 h-8 rounded-full bg-success" />
-              <h2 className="text-2xl font-display font-semibold">Active Contests</h2>
+              <h2 className="text-2xl font-semibold text-foreground">Active Contests</h2>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {activeEvents.map((event, index) => (
                 <Link key={event.id} to={`/events/${event.slug}`}>
-                  <Card className="h-full hover:border-gold/30 hover:shadow-glow transition-all duration-300 animate-slide-up group"
+                  <Card className="h-full hover:border-primary/30 hover:shadow-glow transition-all duration-300 animate-slide-up group"
                     style={{ animationDelay: `${index * 100}ms` }}>
                     {event.featured_image_url && (
-                      <div className="relative h-48 overflow-hidden rounded-t-xl">
+                      <div className="relative h-48 overflow-hidden rounded-t-lg">
                         <img 
                           src={event.featured_image_url} 
                           alt={event.title}
@@ -117,7 +112,7 @@ export default function Index() {
                       <div className="flex items-center gap-2 mb-2">
                         <Badge className="bg-success/20 text-success border-success/30">Active</Badge>
                       </div>
-                      <CardTitle className="group-hover:text-gold transition-colors">{event.title}</CardTitle>
+                      <CardTitle className="group-hover:text-primary transition-colors">{event.title}</CardTitle>
                       <CardDescription className="line-clamp-2">{event.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -142,7 +137,7 @@ export default function Index() {
           <div className="container mx-auto px-4">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-2 h-8 rounded-full bg-muted" />
-              <h2 className="text-2xl font-display font-semibold">Past Contests</h2>
+              <h2 className="text-2xl font-semibold text-foreground">Past Contests</h2>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -190,7 +185,7 @@ export default function Index() {
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-secondary flex items-center justify-center">
               <Calendar className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-display font-semibold mb-2">No Contests Yet</h3>
+            <h3 className="text-xl font-semibold mb-2 text-foreground">No Contests Yet</h3>
             <p className="text-muted-foreground">Check back soon for upcoming writing contests.</p>
           </div>
         </section>
@@ -210,7 +205,7 @@ export default function Index() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-8 mt-20">
+      <footer className="border-t border-border/30 py-8 mt-20">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} PropScholar. All rights reserved.</p>
         </div>
