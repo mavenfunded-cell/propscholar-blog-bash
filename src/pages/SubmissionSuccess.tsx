@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, ArrowRight, Home } from 'lucide-react';
@@ -89,12 +90,7 @@ export default function SubmissionSuccess() {
         </Card>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border/30 py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} PropScholar. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

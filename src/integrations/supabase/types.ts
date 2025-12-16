@@ -22,6 +22,7 @@ export type Database = {
           featured_image_url: string | null
           id: string
           min_words: number
+          rewards: string | null
           slug: string
           start_date: string
           status: string
@@ -35,6 +36,7 @@ export type Database = {
           featured_image_url?: string | null
           id?: string
           min_words?: number
+          rewards?: string | null
           slug: string
           start_date: string
           status?: string
@@ -48,6 +50,7 @@ export type Database = {
           featured_image_url?: string | null
           id?: string
           min_words?: number
+          rewards?: string | null
           slug?: string
           start_date?: string
           status?: string
