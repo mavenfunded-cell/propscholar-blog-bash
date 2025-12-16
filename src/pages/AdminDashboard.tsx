@@ -17,9 +17,21 @@ import {
   XCircle, 
   CheckCircle,
   Users,
-  ExternalLink
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Event {
   id: string;
@@ -43,6 +55,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventWithCount[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -108,6 +121,27 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error('Error updating event:', err);
       toast.error('Failed to update event');
+    }
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    setDeletingEventId(eventId);
+    
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setEvents(events.filter(e => e.id !== eventId));
+      toast.success('Event deleted permanently');
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      toast.error('Failed to delete event');
+    } finally {
+      setDeletingEventId(null);
     }
   };
 
@@ -269,6 +303,39 @@ export default function AdminDashboard() {
                         </>
                       )}
                     </Button>
+                    
+                    {/* Delete Event Button */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Event Permanently?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the event 
+                            "{event.title}" and all {event.submission_count} associated submissions.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteEvent(event.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deletingEventId === event.id}
+                          >
+                            {deletingEventId === event.id ? 'Deleting...' : 'Delete Permanently'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, LogIn, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navLinks = [
   { name: 'Blog', href: '/', external: false },
@@ -13,6 +14,13 @@ const navLinks = [
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <header className="border-b border-border/30 backdrop-blur-md bg-background/90 sticky top-0 z-50">
@@ -51,6 +59,35 @@ export function Navbar() {
                 </Link>
               )
             ))}
+            
+            {/* Auth Button */}
+            {user ? (
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-xs text-muted-foreground hidden lg:block truncate max-w-[120px]">
+                  {user.email}
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSignOut}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Link to="/auth">
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="ml-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  <LogIn className="w-4 h-4 mr-1" />
+                  Login
+                </Button>
+              </Link>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -91,6 +128,29 @@ export function Navbar() {
                   </Link>
                 )
               ))}
+              
+              {/* Mobile Auth Button */}
+              {user ? (
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setIsOpen(false);
+                  }}
+                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50 flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout ({user.email?.split('@')[0]})
+                </button>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="px-4 py-3 text-sm font-medium text-primary hover:text-primary/90 transition-colors rounded-md hover:bg-secondary/50 flex items-center gap-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login / Sign Up
+                </Link>
+              )}
             </div>
           </nav>
         )}
