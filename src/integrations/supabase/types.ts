@@ -184,6 +184,14 @@ export type Database = {
     }
     Functions: {
       generate_slug: { Args: { title: string }; Returns: string }
+      get_event_winners: {
+        Args: { _event_id: string }
+        Returns: {
+          submission_name: string
+          winner_id: string
+          winner_position: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
