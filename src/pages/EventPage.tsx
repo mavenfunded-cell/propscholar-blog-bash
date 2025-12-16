@@ -84,34 +84,19 @@ export default function EventPage() {
 
       setEvent(data);
 
-      // Fetch winners for this event
+      // Fetch winners using public function (works for all users)
       const { data: winnersData, error: winnersError } = await supabase
-        .from('winners')
-        .select(`
-          id,
-          position,
-          submission_id
-        `)
-        .eq('event_id', data.id)
-        .order('position', { ascending: true });
+        .rpc('get_event_winners', { _event_id: data.id });
 
       if (!winnersError && winnersData && winnersData.length > 0) {
-        // Fetch submission names for winners
-        const submissionIds = winnersData.map(w => w.submission_id);
-        const { data: submissionsData } = await supabase
-          .from('submissions')
-          .select('id, name')
-          .in('id', submissionIds);
-
-        const winnersWithNames = winnersData.map(w => ({
-          id: w.id,
-          position: w.position,
+        const formattedWinners = winnersData.map((w: { winner_id: string; winner_position: number; submission_name: string }) => ({
+          id: w.winner_id,
+          position: w.winner_position,
           submission: {
-            name: submissionsData?.find(s => s.id === w.submission_id)?.name || 'Unknown'
+            name: w.submission_name
           }
         }));
-
-        setWinners(winnersWithNames);
+        setWinners(formattedWinners);
       }
     } catch (err) {
       console.error('Error fetching event:', err);
