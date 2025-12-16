@@ -56,6 +56,24 @@ export type Database = {
         }
         Relationships: []
       }
+      submission_rate_limit: {
+        Row: {
+          identifier: string
+          submission_count: number | null
+          window_start: string | null
+        }
+        Insert: {
+          identifier: string
+          submission_count?: number | null
+          window_start?: string | null
+        }
+        Update: {
+          identifier?: string
+          submission_count?: number | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       submissions: {
         Row: {
           blog: string
