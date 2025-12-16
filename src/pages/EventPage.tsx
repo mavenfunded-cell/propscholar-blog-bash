@@ -183,12 +183,22 @@ export default function EventPage() {
           word_count: wordCount,
         }]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('You have already submitted an entry for this contest with this email.');
+          return;
+        }
+        throw error;
+      }
 
       navigate(`/events/${slug}/success`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting:', err);
-      toast.error('Failed to submit. Please try again.');
+      if (err?.message?.includes('Rate limit exceeded')) {
+        toast.error(err.message);
+      } else {
+        toast.error('Failed to submit. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -314,8 +324,8 @@ export default function EventPage() {
               </Card>
             )}
 
-            {/* Winners Section (shown when event is expired and has winners) */}
-            {isEventExpired && winners.length > 0 && (
+            {/* Winners Section (shown when winners exist) */}
+            {winners.length > 0 && (
               <Card className="mb-8 border-yellow-500/30 bg-gradient-to-r from-yellow-500/10 to-amber-500/5 animate-fade-in">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground">
