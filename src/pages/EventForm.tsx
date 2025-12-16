@@ -23,6 +23,7 @@ export default function EventForm() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [minWords, setMinWords] = useState(250);
+  const [rewards, setRewards] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
@@ -69,6 +70,7 @@ export default function EventForm() {
       setStartDate(data.start_date.split('T')[0]);
       setEndDate(data.end_date.split('T')[0]);
       setMinWords(data.min_words);
+      setRewards(data.rewards || '');
       setExistingImageUrl(data.featured_image_url);
     } catch (err) {
       console.error('Error fetching event:', err);
@@ -150,6 +152,7 @@ export default function EventForm() {
         start_date: new Date(startDate).toISOString(),
         end_date: new Date(endDate).toISOString(),
         min_words: minWords,
+        rewards: rewards || null,
         featured_image_url: imageUrl,
       };
 
@@ -336,6 +339,21 @@ export default function EventForm() {
                   onChange={(e) => setMinWords(parseInt(e.target.value) || 250)}
                   required
                 />
+              </div>
+
+              {/* Rewards */}
+              <div className="space-y-2">
+                <Label htmlFor="rewards">Contest Rewards (Optional)</Label>
+                <Textarea
+                  id="rewards"
+                  value={rewards}
+                  onChange={(e) => setRewards(e.target.value)}
+                  placeholder="e.g., 1st Place: $500 scholarship, 2nd Place: $250 scholarship..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Describe the prizes/rewards for winners. This will be shown to participants.
+                </p>
               </div>
 
               {/* Submit */}
