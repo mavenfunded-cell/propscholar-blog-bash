@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -22,17 +24,39 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
-      
-      if (error) {
-        toast.error('Login failed', {
-          description: error.message || 'Invalid credentials'
+      if (isSignUp) {
+        // Sign up new admin
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/admin/dashboard`
+          }
         });
-        return;
-      }
+        
+        if (error) {
+          toast.error('Sign up failed', {
+            description: error.message
+          });
+          return;
+        }
 
-      toast.success('Welcome back!');
-      navigate('/admin/dashboard');
+        toast.success('Account created! Please contact system admin to grant access.');
+        setIsSignUp(false);
+      } else {
+        // Sign in
+        const { error } = await signIn(email, password);
+        
+        if (error) {
+          toast.error('Login failed', {
+            description: error.message || 'Invalid credentials'
+          });
+          return;
+        }
+
+        toast.success('Welcome back!');
+        navigate('/admin/dashboard');
+      }
     } catch (err) {
       toast.error('An unexpected error occurred');
     } finally {
@@ -57,9 +81,9 @@ export default function AdminLogin() {
             <div className="flex justify-center mb-4">
               <Logo showText={false} />
             </div>
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <CardTitle className="text-2xl">{isSignUp ? 'Create Admin Account' : 'Admin Login'}</CardTitle>
             <CardDescription>
-              Sign in to manage events and submissions
+              {isSignUp ? 'Create your admin account' : 'Sign in to manage events and submissions'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -92,6 +116,7 @@ export default function AdminLogin() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
                     required
+                    minLength={6}
                   />
                 </div>
               </div>
@@ -102,9 +127,19 @@ export default function AdminLogin() {
                 className="w-full"
                 disabled={loading}
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? (isSignUp ? 'Creating...' : 'Signing in...') : (isSignUp ? 'Create Account' : 'Sign In')}
               </Button>
             </form>
+
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-muted-foreground hover:text-gold transition-colors"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+              </button>
+            </div>
           </CardContent>
         </Card>
 

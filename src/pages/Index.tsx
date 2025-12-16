@@ -5,7 +5,7 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Users, ArrowRight, Shield } from 'lucide-react';
+import { Calendar, Clock, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Event {
@@ -54,14 +54,8 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-4">
           <Logo />
-          <Link to="/admin">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Shield className="w-4 h-4" />
-              Admin
-            </Button>
-          </Link>
         </div>
       </header>
 
