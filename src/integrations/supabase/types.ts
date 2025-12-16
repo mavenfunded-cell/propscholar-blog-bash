@@ -139,6 +139,45 @@ export type Database = {
         }
         Relationships: []
       }
+      winners: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          position: number
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          position?: number
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          position?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winners_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winners_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

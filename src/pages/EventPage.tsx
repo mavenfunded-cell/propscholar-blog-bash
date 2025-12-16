@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, FileText, AlertCircle, ArrowLeft, Trophy, XCircle } from 'lucide-react';
+import { Calendar, FileText, AlertCircle, ArrowLeft, Trophy, XCircle, Crown, Medal, Award } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 
@@ -25,6 +25,14 @@ interface Event {
   min_words: number;
   status: string;
   rewards: string | null;
+}
+
+interface Winner {
+  id: string;
+  position: number;
+  submission: {
+    name: string;
+  };
 }
 
 const submissionSchema = z.object({
@@ -42,6 +50,7 @@ export default function EventPage() {
   const navigate = useNavigate();
   
   const [event, setEvent] = useState<Event | null>(null);
+  const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -74,6 +83,36 @@ export default function EventPage() {
       }
 
       setEvent(data);
+
+      // Fetch winners for this event
+      const { data: winnersData, error: winnersError } = await supabase
+        .from('winners')
+        .select(`
+          id,
+          position,
+          submission_id
+        `)
+        .eq('event_id', data.id)
+        .order('position', { ascending: true });
+
+      if (!winnersError && winnersData && winnersData.length > 0) {
+        // Fetch submission names for winners
+        const submissionIds = winnersData.map(w => w.submission_id);
+        const { data: submissionsData } = await supabase
+          .from('submissions')
+          .select('id, name')
+          .in('id', submissionIds);
+
+        const winnersWithNames = winnersData.map(w => ({
+          id: w.id,
+          position: w.position,
+          submission: {
+            name: submissionsData?.find(s => s.id === w.submission_id)?.name || 'Unknown'
+          }
+        }));
+
+        setWinners(winnersWithNames);
+      }
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
@@ -167,6 +206,24 @@ export default function EventPage() {
       toast.error('Failed to submit. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const getPositionIcon = (position: number) => {
+    switch (position) {
+      case 1: return <Crown className="w-5 h-5 text-yellow-500" />;
+      case 2: return <Medal className="w-5 h-5 text-gray-400" />;
+      case 3: return <Medal className="w-5 h-5 text-amber-600" />;
+      default: return <Award className="w-5 h-5 text-primary" />;
+    }
+  };
+
+  const getPositionLabel = (position: number) => {
+    switch (position) {
+      case 1: return '1st Place';
+      case 2: return '2nd Place';
+      case 3: return '3rd Place';
+      default: return `${position}th Place`;
     }
   };
 
@@ -267,6 +324,37 @@ export default function EventPage() {
                       <h3 className="text-lg font-semibold text-foreground mb-2">Contest Rewards</h3>
                       <p className="text-muted-foreground whitespace-pre-wrap">{event.rewards}</p>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Winners Section (shown when event is expired and has winners) */}
+            {isEventExpired && winners.length > 0 && (
+              <Card className="mb-8 border-yellow-500/30 bg-gradient-to-r from-yellow-500/10 to-amber-500/5 animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    Contest Winners
+                  </CardTitle>
+                  <CardDescription>
+                    Congratulations to our winners!
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {winners.map((winner) => (
+                      <div 
+                        key={winner.id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/50"
+                      >
+                        {getPositionIcon(winner.position)}
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{winner.submission.name}</p>
+                          <p className="text-sm text-muted-foreground">{getPositionLabel(winner.position)}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
