@@ -63,9 +63,12 @@ export function Navbar() {
             {/* Auth Button */}
             {user ? (
               <div className="flex items-center gap-2 ml-2">
-                <span className="text-xs text-muted-foreground hidden lg:block truncate max-w-[120px]">
-                  {user.email}
-                </span>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <User className="w-4 h-4" />
+                  <span className="text-sm hidden lg:block truncate max-w-[120px]">
+                    {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                  </span>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -138,8 +141,9 @@ export function Navbar() {
                   }}
                   className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50 flex items-center gap-2"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Logout ({user.email?.split('@')[0]})
+                  <User className="w-4 h-4" />
+                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                  <LogOut className="w-4 h-4 ml-auto" />
                 </button>
               ) : (
                 <Link
