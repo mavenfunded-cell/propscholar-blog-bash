@@ -44,7 +44,7 @@ export function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img 
-              src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765786687/Untitled_design_2_pbmc6o.png" 
+              src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962713/Untitled_design_3_nkt1ky.png" 
               alt="PropScholar Logo" 
               className="h-8 w-auto"
             />
