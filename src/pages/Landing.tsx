@@ -45,10 +45,16 @@ export default function Landing() {
         <div className="absolute top-[-250px] left-1/2 -translate-x-1/2 w-[1200px] h-[700px] bg-primary/10 rounded-full blur-[200px]" />
 
         {/* Secondary glow */}
-        <div className="absolute bottom-[-300px] right-[-200px] w-[700px] h-[700px] bg-white/6 rounded-full blur-[220px]" />
+        <div className="absolute bottom-[-300px] right-[-200px] w-[700px] h-[700px] bg-white/5 rounded-full blur-[220px]" />
 
-        {/* Grain overlay */}
-        <div className="absolute inset-0 opacity-[0.035] mix-blend-soft-light bg-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 200 200\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.8\" numOctaves=\"4\" stitchTiles=\"stitch\"/></filter><rect width=\"200\" height=\"200\" filter=\"url(%23n)\"/></svg>')]" />
+        {/* Grain overlay (BUILD SAFE) */}
+        <div
+          className="absolute inset-0 opacity-[0.035] mix-blend-soft-light"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>\")",
+          }}
+        />
       </div>
 
       <div className="relative z-10">
@@ -74,7 +80,7 @@ export default function Landing() {
 
               <div className="flex flex-wrap justify-center gap-6">
                 <Link to="/blog">
-                  <Button className="h-14 px-12 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-all duration-300 shadow-xl shadow-black/40">
+                  <Button className="h-14 px-12 rounded-full bg-white text-black hover:bg-white/90 shadow-xl shadow-black/40">
                     Explore Competitions
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -87,7 +93,7 @@ export default function Landing() {
                 >
                   <Button
                     variant="outline"
-                    className="h-14 px-12 rounded-full border-white/15 text-white hover:border-white/30 hover:bg-white/5 backdrop-blur-md transition-all duration-300"
+                    className="h-14 px-12 rounded-full border-white/15 text-white hover:border-white/30 hover:bg-white/5 backdrop-blur-md"
                   >
                     Visit PropScholar
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -98,20 +104,20 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ===== Competitions Section ===== */}
+        {/* ===== Competitions ===== */}
         <section className="py-28 md:py-36">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-24 animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
+            <div className="text-center mb-24">
+              <h2 className="text-3xl md:text-4xl font-semibold mb-4">
                 Choose Your Arena
               </h2>
-              <p className="text-white/60 text-sm font-light">
+              <p className="text-white/60 text-sm">
                 Different formats. Same standard of excellence.
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto">
-              {competitions.map((comp, index) => {
+              {competitions.map((comp) => {
                 const isComingSoon = comp.status === 'coming-soon';
 
                 return (
@@ -121,69 +127,32 @@ export default function Landing() {
                     onClick={(e) => isComingSoon && e.preventDefault()}
                     className={isComingSoon ? 'cursor-not-allowed' : ''}
                   >
-                    <Card
-                      className={`h-full bg-[#111111]/70 backdrop-blur-xl border border-white/10 transition-all duration-500 ease-[cubic-bezier(.2,.8,.2,1)] group relative overflow-hidden hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40 ${
-                        isComingSoon ? 'opacity-60' : ''
-                      }`}
-                      style={{ animationDelay: `${index * 120}ms` }}
-                    >
+                    <Card className="h-full bg-[#111111]/70 border border-white/10 backdrop-blur-xl transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
                       {isComingSoon && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-10">
-                          <Badge className="bg-white/10 text-white/70 border-white/15 tracking-wide">
+                          <Badge className="bg-white/10 text-white/70 border-white/15">
                             Coming Soon
                           </Badge>
                         </div>
                       )}
 
                       <CardContent className="p-10">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-8 group-hover:bg-white/10 transition-colors">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-8">
                           <comp.icon className="w-6 h-6 text-white/80" />
                         </div>
 
-                        <h3 className="text-lg font-medium mb-4 group-hover:text-primary transition-colors">
+                        <h3 className="text-lg font-medium mb-4">
                           {comp.title}
                         </h3>
 
-                        <p className="text-white/60 text-sm leading-relaxed font-light">
+                        <p className="text-white/60 text-sm leading-relaxed">
                           {comp.description}
                         </p>
-
-                        {!isComingSoon && (
-                          <div className="flex items-center text-primary text-sm font-medium mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                            Enter
-                            <ArrowRight className="w-4 h-4 ml-1" />
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                   </Link>
                 );
               })}
-            </div>
-          </div>
-        </section>
-
-        {/* ===== CTA Section ===== */}
-        <section className="py-32 md:py-40">
-          <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto text-center">
-              <Card className="bg-[#111111]/80 border border-white/10 backdrop-blur-xl">
-                <CardContent className="p-16 md:p-20">
-                  <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-6">
-                    Ready to Compete?
-                  </h2>
-                  <p className="text-white/60 text-sm font-light mb-12">
-                    Put your work in front of the PropScholar community.
-                  </p>
-
-                  <Link to="/blog">
-                    <Button className="h-12 px-12 rounded-full bg-white text-black hover:bg-white/90 transition-all shadow-xl shadow-black/40">
-                      Start Now
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </section>
