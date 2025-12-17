@@ -151,9 +151,9 @@ export function MarkdownEditor({
   );
 
   return (
-    <div className="rounded-md border border-border bg-background">
+    <div className="rounded-md border border-white/20" style={{ backgroundColor: '#0a0a0a' }}>
       {/* Toolbar */}
-      <div className="flex items-center gap-1 p-2 border-b border-border bg-secondary/30 flex-wrap">
+      <div className="flex items-center gap-1 p-2 border-b border-white/20 flex-wrap" style={{ backgroundColor: '#111' }}>
         {/* Headings */}
         <div className="flex items-center">
           {toolbarButtons.map((btn, i) => renderToolbarButton(btn, i))}
@@ -205,30 +205,30 @@ export function MarkdownEditor({
 
       {/* Editor / Preview */}
       {showPreview ? (
-        <ScrollArea className={`p-4`} style={{ minHeight }}>
+        <ScrollArea className={`p-4`} style={{ minHeight, backgroundColor: '#0a0a0a' }}>
           <div className="prose prose-sm prose-invert max-w-none">
             {value ? (
               <ReactMarkdown
                 components={{
-                  h1: ({children}) => <h1 className="text-2xl font-bold mt-4 mb-2 text-foreground">{children}</h1>,
-                  h2: ({children}) => <h2 className="text-xl font-semibold mt-3 mb-2 text-foreground">{children}</h2>,
-                  h3: ({children}) => <h3 className="text-lg font-semibold mt-3 mb-1 text-foreground">{children}</h3>,
-                  p: ({children}) => <p className="mb-3 text-foreground/90 leading-relaxed">{children}</p>,
+                  h1: ({children}) => <h1 className="text-2xl font-bold mt-4 mb-2 text-white">{children}</h1>,
+                  h2: ({children}) => <h2 className="text-xl font-semibold mt-3 mb-2 text-white">{children}</h2>,
+                  h3: ({children}) => <h3 className="text-lg font-semibold mt-3 mb-1 text-white">{children}</h3>,
+                  p: ({children}) => <p className="mb-3 text-white/90 leading-relaxed">{children}</p>,
                   ul: ({children}) => <ul className="list-disc pl-5 mb-3 space-y-1">{children}</ul>,
                   ol: ({children}) => <ol className="list-decimal pl-5 mb-3 space-y-1">{children}</ol>,
-                  li: ({children}) => <li className="text-foreground/90">{children}</li>,
-                  blockquote: ({children}) => <blockquote className="border-l-4 border-primary/50 pl-4 italic text-muted-foreground my-3">{children}</blockquote>,
-                  strong: ({children}) => <strong className="font-bold text-foreground">{children}</strong>,
+                  li: ({children}) => <li className="text-white/90">{children}</li>,
+                  blockquote: ({children}) => <blockquote className="border-l-4 border-white/30 pl-4 italic text-white/60 my-3">{children}</blockquote>,
+                  strong: ({children}) => <strong className="font-bold text-white">{children}</strong>,
                   em: ({children}) => <em className="italic">{children}</em>,
-                  code: ({children}) => <code className="bg-secondary px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>,
-                  a: ({href, children}) => <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
-                  hr: () => <hr className="my-4 border-border" />,
+                  code: ({children}) => <code className="bg-white/10 px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>,
+                  a: ({href, children}) => <a href={href} className="text-white hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                  hr: () => <hr className="my-4 border-white/20" />,
                 }}
               >
                 {value}
               </ReactMarkdown>
             ) : (
-              <p className="text-muted-foreground italic">Nothing to preview</p>
+              <p className="text-white/50 italic">Nothing to preview</p>
             )}
           </div>
         </ScrollArea>
@@ -240,8 +240,8 @@ export function MarkdownEditor({
           onPaste={onPaste}
           placeholder={placeholder}
           rows={rows}
-          className="no-select resize-y border-0 rounded-none rounded-b-md focus-visible:ring-0 focus-visible:ring-offset-0 font-mono text-sm"
-          style={{ minHeight }}
+          className="no-select resize-y border-0 rounded-none rounded-b-md focus-visible:ring-0 focus-visible:ring-offset-0 font-mono text-sm text-white"
+          style={{ minHeight, backgroundColor: '#0a0a0a' }}
           disabled={disabled}
         />
       )}
