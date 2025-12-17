@@ -104,11 +104,7 @@ export default function Terms() {
         </div>
       </main>
 
-      <footer className="border-t border-white/10 py-8 mt-20">
-        <div className="container mx-auto px-4 text-center text-sm text-white/50">
-          <p>&copy; {new Date().getFullYear()} PropScholar. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
