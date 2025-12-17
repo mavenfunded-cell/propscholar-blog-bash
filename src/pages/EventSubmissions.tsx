@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { ArrowLeft, FileText, Mail, Phone, User, Calendar, Download, Trophy, Crown, Medal, Award } from 'lucide-react';
+import { ArrowLeft, FileText, Mail, Phone, User, Calendar, Download, Trophy, Crown, Medal, Award, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -34,6 +34,7 @@ interface Submission {
   blog: string;
   word_count: number;
   submitted_at: string;
+  time_spent_seconds: number | null;
 }
 
 interface Winner {
@@ -176,13 +177,24 @@ export default function EventSubmissions() {
     }
   };
 
+  const formatTimeSpent = (seconds: number | null): string => {
+    if (!seconds || seconds === 0) return '0m';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return minutes > 0 ? `${minutes}m ${secs}s` : `${secs}s`;
+  };
+
   const exportToCSV = () => {
     if (submissions.length === 0) {
       toast.error('No submissions to export');
       return;
     }
 
-    const headers = ['Name', 'Email', 'Phone', 'Word Count', 'Submitted At', 'Is Winner', 'Position', 'Blog Content'];
+    const headers = ['Name', 'Email', 'Phone', 'Word Count', 'Time Spent', 'Submitted At', 'Is Winner', 'Position', 'Blog Content'];
     const rows = submissions.map(s => {
       const position = getWinnerPosition(s.id);
       return [
@@ -190,6 +202,7 @@ export default function EventSubmissions() {
         s.email,
         s.phone,
         s.word_count.toString(),
+        formatTimeSpent(s.time_spent_seconds),
         format(new Date(s.submitted_at), 'yyyy-MM-dd HH:mm:ss'),
         position ? 'Yes' : 'No',
         position?.toString() || '',
@@ -350,10 +363,14 @@ export default function EventSubmissions() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-4">
                         <Badge variant="secondary" className="gap-1">
                           <FileText className="w-3 h-3" />
                           {submission.word_count} words
+                        </Badge>
+                        <Badge variant="outline" className="gap-1 text-primary border-primary/30">
+                          <Clock className="w-3 h-3" />
+                          {formatTimeSpent(submission.time_spent_seconds)}
                         </Badge>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Calendar className="w-4 h-4" />
@@ -416,6 +433,10 @@ export default function EventSubmissions() {
                   </div>
                   <Badge variant="secondary">
                     {selectedSubmission.word_count} words
+                  </Badge>
+                  <Badge variant="outline" className="gap-1 text-primary border-primary/30">
+                    <Clock className="w-3 h-3" />
+                    {formatTimeSpent(selectedSubmission.time_spent_seconds)}
                   </Badge>
                 </div>
 
