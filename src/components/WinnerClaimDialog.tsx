@@ -80,6 +80,11 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
           throw new Error('Winner record not found');
         }
 
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const authedEmail = authData.user?.email;
+        if (!authedEmail) throw new Error('Please log in to claim your reward');
+
         const { error } = await supabase
           .from('winner_claims')
           .insert({
@@ -87,7 +92,7 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
             winner_type: claim.winner_type,
             event_id: claim.event_id,
             submission_id: claim.submission_id,
-            user_email: email.trim(), // Use claim email as user_email
+            user_email: authedEmail, // must match authenticated email for RLS
             position: claim.position,
             claim_name: name.trim(),
             claim_email: email.trim(),

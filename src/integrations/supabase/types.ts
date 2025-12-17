@@ -701,6 +701,10 @@ export type Database = {
       }
       apply_referral_code: { Args: { _referral_code: string }; Returns: Json }
       approve_social_follow: { Args: { _follow_id: string }; Returns: boolean }
+      can_claim_winner: {
+        Args: { _winner_id: string; _winner_type: string }
+        Returns: boolean
+      }
       claim_coupon: {
         Args: { _expiry_days?: number; _reward_type: string }
         Returns: Json
@@ -710,6 +714,7 @@ export type Database = {
         Args: { _platform: string; _screenshot_url?: string }
         Returns: Json
       }
+      current_user_email: { Args: never; Returns: string }
       generate_slug: { Args: { title: string }; Returns: string }
       get_event_winners: {
         Args: { _event_id: string }
