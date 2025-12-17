@@ -20,6 +20,11 @@ import ReelSubmissionSuccess from "./pages/ReelSubmissionSuccess";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import Rewards from "./pages/Rewards";
+import AdminRewardSettings from "./pages/AdminRewardSettings";
+import AdminCoupons from "./pages/AdminCoupons";
+import AdminUserCoins from "./pages/AdminUserCoins";
+import AdminRewardClaims from "./pages/AdminRewardClaims";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +38,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/rewards" element={<Rewards />} />
             <Route path="/blog" element={<BlogCompetitions />} />
             <Route path="/reels" element={<ReelCompetitions />} />
             <Route path="/auth" element={<Auth />} />
@@ -43,6 +49,10 @@ const App = () => (
             <Route path="/admin/events/new" element={<EventForm />} />
             <Route path="/admin/events/:id/edit" element={<EventForm />} />
             <Route path="/admin/events/:id/submissions" element={<EventSubmissions />} />
+            <Route path="/admin/rewards" element={<AdminRewardSettings />} />
+            <Route path="/admin/coupons" element={<AdminCoupons />} />
+            <Route path="/admin/users-coins" element={<AdminUserCoins />} />
+            <Route path="/admin/claims" element={<AdminRewardClaims />} />
             <Route path="/blog/:slug" element={<EventPage />} />
             <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
             <Route path="/reels/:slug" element={<ReelEventPage />} />

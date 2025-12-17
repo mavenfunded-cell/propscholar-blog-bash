@@ -21,7 +21,11 @@ import {
   ExternalLink,
   Trash2,
   PenTool,
-  Video
+  Video,
+  Coins,
+  Gift,
+  Settings,
+  Ticket
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -323,6 +327,50 @@ export default function AdminDashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Reward System Quick Links */}
+        <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link to="/admin/rewards">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-yellow-400" />
+                  Reward Settings
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link to="/admin/coupons">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-purple-400" />
+                  Coupon Management
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link to="/admin/users-coins">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-yellow-400" />
+                  User Coins
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link to="/admin/claims">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-green-400" />
+                  Reward Claims
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        </div>
+
         <Tabs defaultValue="blog" className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <TabsList className="bg-secondary/50">

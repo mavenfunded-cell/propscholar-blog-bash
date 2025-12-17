@@ -1,11 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User, Coins } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 
 const navLinks = [
   { name: 'Space', href: '/', external: false },
+  { name: 'Rewards', href: '/rewards', external: false },
   { name: 'About', href: 'https://propscholar.com/about', external: true },
   { name: 'Terms', href: '/terms', external: false },
   { name: 'Shop', href: 'https://propscholar.com/shop', external: true },
