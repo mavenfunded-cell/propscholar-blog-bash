@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,31 @@ const emailSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  
+  // Get referral code from URL
+  const referralCode = searchParams.get('ref');
 
   useEffect(() => {
     if (!loading && user) {
+      // Store referral code in localStorage to use after signup
+      if (referralCode) {
+        localStorage.setItem('referral_code', referralCode);
+      }
       navigate('/');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, referralCode]);
+  
+  // Store referral code when page loads
+  useEffect(() => {
+    if (referralCode) {
+      localStorage.setItem('referral_code', referralCode);
+    }
+  }, [referralCode]);
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();

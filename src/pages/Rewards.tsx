@@ -87,6 +87,15 @@ interface RewardSettings {
 
 interface SocialFollow {
   platform: string;
+  status?: string;
+}
+
+interface Referral {
+  id: string;
+  referred_email: string;
+  status: string;
+  coins_rewarded: number;
+  created_at: string;
 }
 
 const platformIcons: Record<string, React.ElementType> = {
@@ -116,6 +125,7 @@ export default function Rewards() {
   const [claims, setClaims] = useState<RewardClaim[]>([]);
   const [settings, setSettings] = useState<RewardSettings>({});
   const [socialFollows, setSocialFollows] = useState<SocialFollow[]>([]);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [claimingSocial, setClaimingSocial] = useState<string | null>(null);
@@ -160,10 +170,32 @@ export default function Rewards() {
       if (coinsData) {
         setUserCoins(coinsData);
       } else {
-        // Create user_coins record if doesn't exist
+        // Check for referral code in localStorage
+        const referralCode = localStorage.getItem('referral_code');
+        let referredBy = null;
+        
+        if (referralCode) {
+          // Find referrer by code
+          const { data: referrer } = await supabase
+            .from('user_coins')
+            .select('user_id')
+            .eq('referral_code', referralCode)
+            .maybeSingle();
+          
+          if (referrer) {
+            referredBy = referrer.user_id;
+          }
+          localStorage.removeItem('referral_code');
+        }
+        
+        // Create user_coins record with referral
         const { data: newCoins } = await supabase
           .from('user_coins')
-          .insert({ user_id: user.id, email: user.email || '' })
+          .insert({ 
+            user_id: user.id, 
+            email: user.email || '',
+            referred_by: referredBy
+          })
           .select()
           .single();
         setUserCoins(newCoins);
@@ -213,10 +245,19 @@ export default function Rewards() {
       // Fetch social follows
       const { data: followsData } = await supabase
         .from('social_follows')
-        .select('platform')
+        .select('platform, status')
         .eq('user_id', user.id);
 
       setSocialFollows(followsData || []);
+      
+      // Fetch referrals (users who signed up from your link)
+      const { data: referralsData } = await supabase
+        .from('referrals')
+        .select('*')
+        .eq('referrer_id', user.id)
+        .order('created_at', { ascending: false });
+
+      setReferrals(referralsData || []);
     } catch (error) {
       console.error('Error fetching rewards data:', error);
     } finally {
@@ -475,7 +516,6 @@ export default function Rewards() {
   if (!user) return null;
 
   const platforms = ['facebook', 'instagram', 'twitter', 'discord', 'youtube'];
-  const followedPlatforms = socialFollows.map(f => f.platform);
 
   return (
     <div className="min-h-screen bg-background">
@@ -563,12 +603,14 @@ export default function Rewards() {
                     if (!setting?.enabled) return null;
                     
                     const Icon = platformIcons[platform];
-                    const isFollowed = followedPlatforms.includes(platform);
+                    const socialFollow = socialFollows.find(f => f.platform === platform);
+                    const isFollowed = !!socialFollow;
+                    const isPending = socialFollow?.status === 'pending';
                     
                     return (
                       <div 
                         key={platform}
-                        className={`p-4 rounded-lg border ${isFollowed ? 'bg-green-500/10 border-green-500/30' : 'bg-background/50 border-border/30'}`}
+                        className={`p-4 rounded-lg border ${isFollowed ? (isPending ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30') : 'bg-background/50 border-border/30'}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -578,25 +620,29 @@ export default function Rewards() {
                             <div>
                               <p className="font-medium text-foreground capitalize">{platform}</p>
                               <p className="text-xs text-muted-foreground">
-                                {isFollowed ? 'Claimed' : `+${setting.value} coins`}
+                                {isFollowed ? (isPending ? 'Pending Review' : 'Verified') : `+${setting.value} coins`}
                               </p>
                             </div>
                           </div>
                           {isFollowed ? (
-                            <CheckCircle className="w-5 h-5 text-green-400" />
+                            isPending ? (
+                              <Clock className="w-5 h-5 text-yellow-400" />
+                            ) : (
+                              <CheckCircle className="w-5 h-5 text-green-400" />
+                            )
                           ) : (
                             <Button
                               size="sm"
-                              variant="outline"
                               onClick={() => openSocialDialog(platform)}
-                              disabled={claimingSocial === platform || !setting.url}
+                              disabled={claimingSocial === platform}
+                              className="flex items-center gap-1"
                             >
                               {claimingSocial === platform ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <>
-                                  Claim
-                                  <ExternalLink className="w-3 h-3 ml-1" />
+                                  <Upload className="w-3 h-3" />
+                                  Upload
                                 </>
                               )}
                             </Button>
@@ -616,9 +662,9 @@ export default function Rewards() {
                     Refer & Earn
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Share your referral link. Earn {settings.referral_coins?.value || 1} coin when your friend participates in an approved blog.
+                    Share your referral link. Earn {settings.referral_coins?.value || 1} coin when your friend signs up using your link!
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-4">
                     <div className="flex-1 p-3 rounded-lg bg-background/50 border border-border/30 text-sm text-muted-foreground truncate">
                       {`${REFERRAL_DOMAIN}/auth?ref=${userCoins?.referral_code || ''}`}
                     </div>
@@ -627,6 +673,23 @@ export default function Rewards() {
                       Copy
                     </Button>
                   </div>
+                  
+                  {/* Referred Users */}
+                  {referrals.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/30">
+                      <h4 className="text-sm font-medium text-foreground mb-3">
+                        Users who signed up from your link ({referrals.length})
+                      </h4>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {referrals.map(ref => (
+                          <div key={ref.id} className="flex items-center justify-between p-2 rounded bg-background/30">
+                            <span className="text-sm text-muted-foreground">{ref.referred_email}</span>
+                            <span className="text-xs text-green-400">+{ref.coins_rewarded} coins</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </Card>
               )}
 
