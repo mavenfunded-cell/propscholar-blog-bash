@@ -60,7 +60,7 @@ export default function EventSubmissions() {
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
-      navigate('/admin');
+      navigate('/space');
     }
   }, [user, isAdmin, authLoading, navigate]);
 
@@ -106,7 +106,7 @@ export default function EventSubmissions() {
     } catch (err) {
       console.error('Error fetching data:', err);
       toast.error('Failed to load submissions');
-      navigate('/admin/dashboard');
+      navigate('/space/dashboard');
     } finally {
       setLoading(false);
     }
@@ -246,7 +246,7 @@ export default function EventSubmissions() {
 
       <main className="container mx-auto px-4 py-8">
         <Link 
-          to="/admin/dashboard" 
+          to="/space/dashboard" 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
