@@ -86,6 +86,7 @@ export type Database = {
           name: string
           phone: string
           submitted_at: string
+          time_spent_seconds: number | null
           word_count: number
         }
         Insert: {
@@ -96,6 +97,7 @@ export type Database = {
           name: string
           phone: string
           submitted_at?: string
+          time_spent_seconds?: number | null
           word_count: number
         }
         Update: {
@@ -106,6 +108,7 @@ export type Database = {
           name?: string
           phone?: string
           submitted_at?: string
+          time_spent_seconds?: number | null
           word_count?: number
         }
         Relationships: [

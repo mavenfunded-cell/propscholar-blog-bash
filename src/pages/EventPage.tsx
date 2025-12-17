@@ -59,6 +59,10 @@ export default function EventPage() {
   const [phone, setPhone] = useState('');
   const [blog, setBlog] = useState('');
   const [wordCount, setWordCount] = useState(0);
+  
+  // Secret time tracking
+  const [writingStartTime, setWritingStartTime] = useState<number | null>(null);
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
 
   useEffect(() => {
     if (slug) {
@@ -109,11 +113,27 @@ export default function EventPage() {
   const isEventActive = event && event.status === 'active' && new Date(event.end_date) > new Date();
   const isEventExpired = event && new Date(event.end_date) < new Date();
 
-  // Word count calculation
+  // Word count calculation and time tracking
   useEffect(() => {
     const words = blog.trim().split(/\s+/).filter(word => word.length > 0);
     setWordCount(words.length);
-  }, [blog]);
+    
+    // Start timer when user first types
+    if (blog.length > 0 && !writingStartTime) {
+      setWritingStartTime(Date.now());
+    }
+  }, [blog, writingStartTime]);
+
+  // Update time spent every second while writing
+  useEffect(() => {
+    if (!writingStartTime) return;
+    
+    const interval = setInterval(() => {
+      setTotalTimeSpent(Math.floor((Date.now() - writingStartTime) / 1000));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [writingStartTime]);
 
   // Disable right-click
   useEffect(() => {
@@ -181,6 +201,7 @@ export default function EventPage() {
           phone,
           blog,
           word_count: wordCount,
+          time_spent_seconds: totalTimeSpent,
         }]);
 
       if (error) {
