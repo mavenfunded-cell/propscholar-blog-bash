@@ -77,19 +77,19 @@ export default function Auth() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#080808' }}>
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Gradient Background */}
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#080808' }}>
+      {/* Gradient Background - Black/Dark theme */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-background to-[#0d1f3c]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[80px]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#080808] to-[#111111]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-white/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-white/3 rounded-full blur-[80px]" />
       </div>
 
       <div className="relative z-10 min-h-screen flex flex-col">
@@ -97,7 +97,7 @@ export default function Auth() {
         <header className="p-6">
           <Link 
             to="/" 
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 text-white/50 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to home
@@ -111,21 +111,21 @@ export default function Auth() {
             <div className="text-center mb-8">
               <Link to="/" className="inline-flex items-center gap-3">
                 <img 
-                  src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765786687/Untitled_design_2_pbmc6o.png" 
+                  src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962041/Untitled_design_2_qambfs.png" 
                   alt="PropScholar Logo" 
-                  className="h-12 w-auto"
+                  className="h-14 w-auto"
                 />
-                <span className="text-2xl font-bold text-foreground">PropScholar</span>
+                <span className="text-2xl font-bold text-white">PropScholar</span>
               </Link>
-              <p className="mt-3 text-muted-foreground">
+              <p className="mt-3 text-white/50">
                 Sign in to your account
               </p>
             </div>
 
-            <Card className="border-border/50 bg-card/80 backdrop-blur-xl shadow-2xl">
+            <Card className="border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl shadow-2xl">
               <CardHeader className="text-center pb-2">
-                <CardTitle className="text-xl">Welcome</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-xl text-white">Welcome</CardTitle>
+                <CardDescription className="text-white/50">
                   {magicLinkSent 
                     ? 'Check your email for the magic link' 
                     : 'Choose your preferred sign-in method'
@@ -135,19 +135,19 @@ export default function Auth() {
               <CardContent className="pt-4">
                 {magicLinkSent ? (
                   <div className="text-center space-y-4">
-                    <div className="w-16 h-16 mx-auto bg-primary/20 rounded-full flex items-center justify-center">
-                      <Mail className="w-8 h-8 text-primary" />
+                    <div className="w-16 h-16 mx-auto bg-white/10 rounded-full flex items-center justify-center">
+                      <Mail className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <p className="text-foreground font-medium">Magic link sent!</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        We sent a sign-in link to <strong>{email}</strong>
+                      <p className="text-white font-medium">Magic link sent!</p>
+                      <p className="text-sm text-white/50 mt-1">
+                        We sent a sign-in link to <strong className="text-white">{email}</strong>
                       </p>
                     </div>
                     <Button
                       variant="outline"
                       onClick={() => setMagicLinkSent(false)}
-                      className="w-full"
+                      className="w-full border-white/20 text-white hover:bg-white/10"
                     >
                       Use a different email
                     </Button>
@@ -159,7 +159,7 @@ export default function Auth() {
                       type="button"
                       variant="outline"
                       onClick={handleGoogleLogin}
-                      className="w-full py-5 bg-secondary/50 border-border hover:bg-secondary"
+                      className="w-full py-5 bg-white/5 border-white/20 text-white hover:bg-white/10"
                     >
                       <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                         <path
@@ -184,10 +184,10 @@ export default function Auth() {
 
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border" />
+                        <span className="w-full border-t border-white/10" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">
+                        <span className="bg-[#0a0a0a] px-2 text-white/50">
                           Or continue with email
                         </span>
                       </div>
@@ -196,18 +196,18 @@ export default function Auth() {
                     {/* Magic Link Form */}
                     <form onSubmit={handleMagicLink} className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">
+                        <Label htmlFor="email" className="text-sm font-medium text-white">
                           Email Address
                         </Label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
                           <Input
                             id="email"
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="you@example.com"
-                            className="pl-10 bg-secondary/50 border-border focus:border-primary"
+                            className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-white/40"
                             required
                           />
                         </div>
@@ -215,7 +215,7 @@ export default function Auth() {
 
                       <Button 
                         type="submit" 
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-5"
+                        className="w-full bg-white hover:bg-white/90 text-black font-semibold py-5"
                         disabled={submitting}
                       >
                         {submitting ? (
@@ -233,9 +233,9 @@ export default function Auth() {
               </CardContent>
             </Card>
 
-            <p className="text-center text-xs text-muted-foreground mt-6">
+            <p className="text-center text-xs text-white/40 mt-6">
               By continuing, you agree to our{' '}
-              <Link to="/terms" className="text-primary hover:underline">
+              <Link to="/terms" className="text-white/70 hover:text-white hover:underline">
                 Terms & Conditions
               </Link>
             </p>
