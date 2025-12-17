@@ -86,18 +86,18 @@ export default function ReelCompetitions() {
 
             <div className="max-w-3xl animate-fade-in">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Video className="w-6 h-6 text-purple-400" />
+                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+                  <Video className="w-6 h-6 text-white/70" />
                 </div>
-                <Badge variant="outline" className="border-purple-500/30 text-purple-400">
+                <Badge variant="outline" className="border-white/20 text-white/70">
                   Reel Competition
                 </Badge>
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight text-foreground">
-                Reel Making <span className="text-purple-400">Contest</span>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight text-white">
+                Reel Making <span className="text-white/70">Contest</span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl">
+              <p className="text-lg text-white/50 max-w-2xl">
                 Create engaging video content about trading strategies, market insights, and financial education. Max 200MB per video.
               </p>
             </div>
@@ -109,8 +109,8 @@ export default function ReelCompetitions() {
           <section className="py-12">
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-2 h-8 rounded-full bg-success" />
-                <h2 className="text-2xl font-semibold text-foreground">Active Contests</h2>
+                <div className="w-2 h-8 rounded-full bg-white" />
+                <h2 className="text-2xl font-semibold text-white">Active Contests</h2>
               </div>
               
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -125,21 +125,21 @@ export default function ReelCompetitions() {
                             alt={event.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
                           <div className="absolute bottom-4 left-4">
-                            <Video className="w-8 h-8 text-purple-400" />
+                            <Video className="w-8 h-8 text-white/70" />
                           </div>
                         </div>
                       )}
                       <CardHeader className={event.featured_image_url ? 'pt-4' : ''}>
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge className="bg-success/20 text-success border-success/30">Active</Badge>
+                          <Badge className="bg-white/10 text-white border-white/20">Active</Badge>
                         </div>
-                        <CardTitle className="group-hover:text-purple-400 transition-colors">{event.title}</CardTitle>
-                        <CardDescription className="line-clamp-2">{event.description}</CardDescription>
+                        <CardTitle className="text-white group-hover:text-white/80 transition-colors">{event.title}</CardTitle>
+                        <CardDescription className="text-white/50 line-clamp-2">{event.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 text-sm text-white/50">
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
                             <span>Ends {format(new Date(event.end_date), 'MMM d')}</span>
@@ -159,8 +159,8 @@ export default function ReelCompetitions() {
           <section className="py-12">
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-2 h-8 rounded-full bg-muted" />
-                <h2 className="text-2xl font-semibold text-foreground">Past Contests</h2>
+                <div className="w-2 h-8 rounded-full bg-white/30" />
+                <h2 className="text-2xl font-semibold text-white">Past Contests</h2>
               </div>
               
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -175,24 +175,24 @@ export default function ReelCompetitions() {
                             alt={event.title}
                             className="w-full h-full object-cover grayscale"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-[#111]/50 to-transparent" />
                         </div>
                       )}
                       <CardHeader className={event.featured_image_url ? 'pt-4' : ''}>
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary">Closed</Badge>
+                          <Badge className="bg-white/5 text-white/50 border-white/10">Closed</Badge>
                           {isEventExpired(event) && (
-                            <Badge variant="outline" className="border-destructive/50 text-destructive flex items-center gap-1">
+                            <Badge variant="outline" className="border-white/20 text-white/40 flex items-center gap-1">
                               <XCircle className="w-3 h-3" />
                               Expired
                             </Badge>
                           )}
                         </div>
-                        <CardTitle className="text-muted-foreground">{event.title}</CardTitle>
-                        <CardDescription className="line-clamp-2">{event.description}</CardDescription>
+                        <CardTitle className="text-white/60">{event.title}</CardTitle>
+                        <CardDescription className="text-white/40 line-clamp-2">{event.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 text-sm text-white/40">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             <span>Ended {format(new Date(event.end_date), 'MMM d, yyyy')}</span>
@@ -211,11 +211,11 @@ export default function ReelCompetitions() {
         {events.length === 0 && !loading && (
           <section className="py-20">
             <div className="container mx-auto px-4 text-center">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Video className="w-10 h-10 text-purple-400" />
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
+                <Video className="w-10 h-10 text-white/50" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-foreground">No Reel Contests Yet</h3>
-              <p className="text-muted-foreground">Check back soon for upcoming reel making contests.</p>
+              <h3 className="text-xl font-semibold mb-2 text-white">No Reel Contests Yet</h3>
+              <p className="text-white/50">Check back soon for upcoming reel making contests.</p>
             </div>
           </section>
         )}
@@ -225,9 +225,9 @@ export default function ReelCompetitions() {
           <section className="py-20">
             <div className="container mx-auto px-4 text-center">
               <div className="animate-pulse">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-secondary" />
-                <div className="h-6 w-48 bg-secondary rounded mx-auto mb-2" />
-                <div className="h-4 w-64 bg-secondary rounded mx-auto" />
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/10" />
+                <div className="h-6 w-48 bg-white/10 rounded mx-auto mb-2" />
+                <div className="h-4 w-64 bg-white/10 rounded mx-auto" />
               </div>
             </div>
           </section>

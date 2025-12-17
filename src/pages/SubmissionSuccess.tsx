@@ -45,52 +45,62 @@ export default function SubmissionSuccess() {
   const isEventActive = event && event.status === 'active' && new Date(event.end_date) > new Date();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col relative">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0c0c0c] to-[#101010]" />
+        <div
+          className="absolute inset-0 opacity-[0.025] mix-blend-soft-light"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>\")",
+          }}
+        />
+      </div>
 
-      {/* Success Content */}
-      <main className="flex-1 flex items-center justify-center p-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-success/5" />
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-success/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
-        
-        <Card className="max-w-md w-full relative animate-scale-in border-success/30 bg-card">
-          <CardContent className="p-8 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-success/20 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-success" />
-            </div>
-            
-            <h1 className="text-2xl font-bold mb-2 text-foreground">
-              Submission Successful!
-            </h1>
-            
-            <p className="text-muted-foreground mb-6">
-              Your blog entry has been submitted successfully. 
-              {isEventActive && " You may submit another entry if you'd like to participate again."}
-            </p>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Navbar />
 
-            <div className="space-y-3">
-              {isEventActive && (
-                <Link to={`/events/${slug}`}>
-                  <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                    Submit Another Entry
-                    <ArrowRight className="w-4 h-4" />
+        {/* Success Content */}
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full animate-scale-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
+            <CardContent className="p-8 text-center">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-white" />
+              </div>
+              
+              <h1 className="text-2xl font-bold mb-2 text-white">
+                Submission Successful!
+              </h1>
+              
+              <p className="text-white/60 mb-6">
+                Your blog entry has been submitted successfully. 
+                {isEventActive && " You may submit another entry if you'd like to participate again."}
+              </p>
+
+              <div className="space-y-3">
+                {isEventActive && (
+                  <Link to={`/blog/${slug}`}>
+                    <Button className="w-full gap-2 bg-white text-black hover:bg-white/90">
+                      Submit Another Entry
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                )}
+                
+                <Link to="/">
+                  <Button variant="outline" className="w-full gap-2 border-white/20 text-white hover:bg-white/5">
+                    <Home className="w-4 h-4" />
+                    Back to Home
                   </Button>
                 </Link>
-              )}
-              
-              <Link to="/">
-                <Button variant="outline" className="w-full gap-2 border-border hover:bg-secondary">
-                  <Home className="w-4 h-4" />
-                  Back to Home
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
     </div>
   );
 }
