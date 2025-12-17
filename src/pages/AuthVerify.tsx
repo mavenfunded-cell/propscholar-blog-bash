@@ -33,23 +33,26 @@ const AuthVerify = () => {
           throw new Error("Verification failed");
         }
 
-        // Sign in the user using OTP
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-          email: data.email,
-          options: {
-            shouldCreateUser: true,
-          },
-        });
+        // Use the token_hash returned from verification to sign in
+        if (data.token_hash && data.type) {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: data.token_hash,
+            type: data.type as 'magiclink',
+          });
 
-        // For verified magic links, we can use a workaround - sign in directly
-        // Since we verified the token, we trust this email
+          if (verifyError) {
+            console.error("OTP verification error:", verifyError);
+            throw new Error(verifyError.message);
+          }
+        }
+
         setStatus("success");
         setMessage("Verification successful! Redirecting...");
         toast.success("Successfully signed in!");
         
-        // Wait briefly then redirect
+        // Wait briefly then redirect to dashboard
         setTimeout(() => {
-          navigate("/");
+          navigate("/dashboard");
         }, 1500);
 
       } catch (error: any) {
