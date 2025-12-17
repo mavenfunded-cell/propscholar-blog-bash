@@ -70,7 +70,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
-      navigate('/space');
+      navigate('/admin');
     }
   }, [user, isAdmin, loading, navigate]);
 
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/space');
+    navigate('/admin');
   };
 
   const isEventExpired = (endDate: string) => new Date(endDate) < new Date();
@@ -232,13 +232,13 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to={`/space/events/${event.id}/edit`}>
+            <Link to={`/admin/events/${event.id}/edit`}>
               <Button variant="outline" size="sm">
                 <Edit2 className="w-4 h-4 mr-1" />
                 Edit
               </Button>
             </Link>
-            <Link to={`/space/events/${event.id}/submissions`}>
+            <Link to={`/admin/events/${event.id}/submissions`}>
               <Button variant="outline" size="sm">
                 <Eye className="w-4 h-4 mr-1" />
                 Submissions
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
       <main className="container mx-auto px-4 py-8">
         {/* Reward System Quick Links */}
           <div className="mb-8 grid grid-cols-2 md:grid-cols-6 gap-4">
-            <Link to="/space/rewards">
+            <Link to="/admin/rewards">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/space/coupons">
+            <Link to="/admin/coupons">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -352,7 +352,7 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/space/users-coins">
+            <Link to="/admin/users-coins">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/space/claims">
+            <Link to="/admin/claims">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/space/winner-claims">
+            <Link to="/admin/winner-claims">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-yellow-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/space/social-follows">
+            <Link to="/admin/social-follows">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -392,7 +392,7 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
-            <Link to="/space/seo">
+            <Link to="/admin/seo">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-green-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -417,7 +417,7 @@ export default function AdminDashboard() {
               </TabsTrigger>
             </TabsList>
             
-            <Link to="/space/events/new">
+            <Link to="/admin/events/new">
               <Button variant="default">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Event
@@ -461,7 +461,7 @@ export default function AdminDashboard() {
                   <PenTool className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">No Blog Events Yet</h3>
                   <p className="text-muted-foreground mb-4">Create your first blog writing event to get started.</p>
-                  <Link to="/space/events/new">
+                  <Link to="/admin/events/new">
                     <Button>
                       <Plus className="w-4 h-4 mr-2" />
                       Create Blog Event
@@ -508,7 +508,7 @@ export default function AdminDashboard() {
                   <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">No Reel Events Yet</h3>
                   <p className="text-muted-foreground mb-4">Create your first reel making event to get started.</p>
-                  <Link to="/space/events/new">
+                  <Link to="/admin/events/new">
                     <Button className="bg-purple-500 hover:bg-purple-600">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Reel Event

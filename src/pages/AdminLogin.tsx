@@ -30,7 +30,7 @@ export default function AdminLogin() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/space/dashboard`
+            emailRedirectTo: `${window.location.origin}/admin/dashboard`
           }
         });
         
@@ -55,7 +55,7 @@ export default function AdminLogin() {
         }
 
         toast.success('Welcome back!');
-        navigate('/space/dashboard');
+        navigate('/admin/dashboard');
       }
     } catch (err) {
       toast.error('An unexpected error occurred');
