@@ -651,7 +651,7 @@ export type Database = {
       apply_referral_code: { Args: { _referral_code: string }; Returns: Json }
       approve_social_follow: { Args: { _follow_id: string }; Returns: boolean }
       claim_coupon: {
-        Args: { _expiry_days: number; _reward_type: string }
+        Args: { _expiry_days?: number; _reward_type: string }
         Returns: Json
       }
       claim_signup_coins: { Args: { _user_id: string }; Returns: Json }
