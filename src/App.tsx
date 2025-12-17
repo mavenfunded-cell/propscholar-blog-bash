@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import Landing from "./pages/Landing";
@@ -58,33 +58,19 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verify" element={<AuthVerify />} />
             <Route path="/terms" element={<Terms />} />
-            {/* Admin (moved to /space) */}
-            <Route path="/space" element={<AdminLogin />} />
-            <Route path="/space/dashboard" element={<AdminDashboard />} />
-            <Route path="/space/events/new" element={<EventForm />} />
-            <Route path="/space/events/:id/edit" element={<EventForm />} />
-            <Route path="/space/events/:id/submissions" element={<EventSubmissions />} />
-            <Route path="/space/rewards" element={<AdminRewardSettings />} />
-            <Route path="/space/coupons" element={<AdminCoupons />} />
-            <Route path="/space/users-coins" element={<AdminUserCoins />} />
-            <Route path="/space/claims" element={<AdminRewardClaims />} />
-            <Route path="/space/social-follows" element={<AdminSocialFollows />} />
-            <Route path="/space/winner-claims" element={<AdminWinnerClaims />} />
-            <Route path="/space/seo" element={<AdminSEO />} />
-
-            {/* Legacy /admin routes -> redirect */}
-            <Route path="/admin" element={<Navigate to="/space" replace />} />
-            <Route path="/admin/dashboard" element={<Navigate to="/space/dashboard" replace />} />
-            <Route path="/admin/events/new" element={<Navigate to="/space/events/new" replace />} />
-            <Route path="/admin/events/:id/edit" element={<Navigate to="/space/events/:id/edit" replace />} />
-            <Route path="/admin/events/:id/submissions" element={<Navigate to="/space/events/:id/submissions" replace />} />
-            <Route path="/admin/rewards" element={<Navigate to="/space/rewards" replace />} />
-            <Route path="/admin/coupons" element={<Navigate to="/space/coupons" replace />} />
-            <Route path="/admin/users-coins" element={<Navigate to="/space/users-coins" replace />} />
-            <Route path="/admin/claims" element={<Navigate to="/space/claims" replace />} />
-            <Route path="/admin/social-follows" element={<Navigate to="/space/social-follows" replace />} />
-            <Route path="/admin/winner-claims" element={<Navigate to="/space/winner-claims" replace />} />
-            <Route path="/admin/seo" element={<Navigate to="/space/seo" replace />} />
+            {/* Admin */}
+            <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/events/new" element={<EventForm />} />
+            <Route path="/admin/events/:id/edit" element={<EventForm />} />
+            <Route path="/admin/events/:id/submissions" element={<EventSubmissions />} />
+            <Route path="/admin/rewards" element={<AdminRewardSettings />} />
+            <Route path="/admin/coupons" element={<AdminCoupons />} />
+            <Route path="/admin/users-coins" element={<AdminUserCoins />} />
+            <Route path="/admin/claims" element={<AdminRewardClaims />} />
+            <Route path="/admin/social-follows" element={<AdminSocialFollows />} />
+            <Route path="/admin/winner-claims" element={<AdminWinnerClaims />} />
+            <Route path="/admin/seo" element={<AdminSEO />} />
             <Route path="/blog/:slug" element={<EventPage />} />
             <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
             <Route path="/reels/:slug" element={<ReelEventPage />} />

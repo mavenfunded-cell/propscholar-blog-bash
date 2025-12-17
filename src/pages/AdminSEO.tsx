@@ -144,7 +144,7 @@ Allow: /
 Sitemap: https://propscholar.space/sitemap.xml
 
 # Disallow admin pages
-Disallow: /space/`;
+Disallow: /admin/`;
 
   const fetchSitemapPreview = async () => {
     setLoadingSitemap(true);
@@ -286,7 +286,7 @@ Disallow: /space/`;
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/space/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/dashboard')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
