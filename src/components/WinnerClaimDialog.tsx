@@ -53,8 +53,22 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
 
     setSubmitting(true);
     try {
-      if (claim.id) {
-        // Update existing claim
+      // First check if there's already an existing claim in the database
+      const { data: existingClaim } = await supabase
+        .from('winner_claims')
+        .select('id, status')
+        .eq('submission_id', claim.submission_id)
+        .maybeSingle();
+
+      // Prevent duplicate claims - user can only claim once
+      if (existingClaim && existingClaim.status !== 'unclaimed') {
+        toast.error('You have already submitted a claim for this reward');
+        onOpenChange(false);
+        return;
+      }
+
+      if (existingClaim) {
+        // Update existing claim (created by trigger)
         const { error } = await supabase
           .from('winner_claims')
           .update({
@@ -63,18 +77,17 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
             status: 'pending',
             claimed_at: new Date().toISOString()
           })
-          .eq('id', claim.id);
+          .eq('id', existingClaim.id);
 
         if (error) throw error;
       } else {
-        // Create new claim (for winners without existing claim record)
-        // First, we need to find the winner_id from the winners table
+        // Create new claim (for winners without existing claim record - legacy)
         const winnerTable = claim.winner_type === 'blog' ? 'winners' : 'reel_winners';
         const { data: winnerData } = await supabase
           .from(winnerTable)
           .select('id')
           .eq('submission_id', claim.submission_id)
-          .single();
+          .maybeSingle();
 
         if (!winnerData) {
           throw new Error('Winner record not found');
@@ -92,7 +105,7 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
             winner_type: claim.winner_type,
             event_id: claim.event_id,
             submission_id: claim.submission_id,
-            user_email: authedEmail, // must match authenticated email for RLS
+            user_email: authedEmail,
             position: claim.position,
             claim_name: name.trim(),
             claim_email: email.trim(),
@@ -109,6 +122,7 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
       onOpenChange(false);
       onClaimed();
     } catch (error: any) {
+      console.error('Claim submission error:', error);
       toast.error(error.message || 'Failed to submit claim');
     } finally {
       setSubmitting(false);
