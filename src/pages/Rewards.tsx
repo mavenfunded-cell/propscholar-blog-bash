@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,9 +24,20 @@ import {
   Youtube,
   MessageCircle,
   Percent,
-  Award
+  Award,
+  Upload,
+  Image as ImageIcon,
+  PartyPopper
 } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface UserCoins {
   balance: number;
@@ -94,6 +105,8 @@ const platformColors: Record<string, string> = {
   youtube: 'bg-red-600/20 text-red-400 hover:bg-red-600/30',
 };
 
+const REFERRAL_DOMAIN = 'https://propscholar.space';
+
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -107,6 +120,19 @@ export default function Rewards() {
   const [claiming, setClaiming] = useState<string | null>(null);
   const [claimingSocial, setClaimingSocial] = useState<string | null>(null);
   const [claimingSignup, setClaimingSignup] = useState(false);
+  
+  // Social follow screenshot upload state
+  const [socialDialog, setSocialDialog] = useState<{ open: boolean; platform: string | null }>({ open: false, platform: null });
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Success dialog state
+  const [successDialog, setSuccessDialog] = useState<{ open: boolean; reward: Reward | null; couponCode: string | null }>({ 
+    open: false, 
+    reward: null, 
+    couponCode: null 
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -221,35 +247,87 @@ export default function Rewards() {
     }
   };
 
-  const claimSocialCoins = async (platform: string) => {
-    if (!user || claimingSocial) return;
-    setClaimingSocial(platform);
+  const openSocialDialog = (platform: string) => {
+    const socialSetting = settings[`social_${platform}`];
+    if (socialSetting?.url) {
+      window.open(socialSetting.url, '_blank');
+    }
+    setSocialDialog({ open: true, platform });
+    setScreenshotFile(null);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('File size must be under 2MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file');
+        return;
+      }
+      setScreenshotFile(file);
+    }
+  };
+
+  const submitSocialClaim = async () => {
+    if (!user || !socialDialog.platform || !screenshotFile) return;
+    setUploadingScreenshot(true);
 
     try {
-      // Open social link
-      const socialSetting = settings[`social_${platform}`];
-      if (socialSetting?.url) {
-        window.open(socialSetting.url, '_blank');
+      // Upload screenshot to Supabase Storage
+      const fileExt = screenshotFile.name.split('.').pop();
+      const fileName = `${user.id}/${socialDialog.platform}_${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('social-screenshots')
+        .upload(fileName, screenshotFile);
+
+      if (uploadError) {
+        // If bucket doesn't exist, create it and try again
+        if (uploadError.message.includes('Bucket not found')) {
+          toast.error('Storage not configured. Please contact support.');
+          return;
+        }
+        throw uploadError;
       }
 
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('social-screenshots')
+        .getPublicUrl(fileName);
+
+      const screenshotUrl = urlData.publicUrl;
+
+      // Claim social coins with screenshot
       const { data, error } = await supabase.rpc('claim_social_coins', { 
         _user_id: user.id, 
-        _platform: platform 
+        _platform: socialDialog.platform 
       });
       
       if (error) throw error;
       
       const result = data as any;
       if (result?.success) {
-        toast.success(`You earned ${result.coins} Space Coins for following on ${platform}!`);
+        // Update with screenshot URL
+        await supabase
+          .from('social_follows')
+          .update({ screenshot_url: screenshotUrl, status: 'pending' })
+          .eq('user_id', user.id)
+          .eq('platform', socialDialog.platform);
+
+        toast.success(`You earned ${result.coins} Space Coins for following on ${socialDialog.platform}!`);
+        setSocialDialog({ open: false, platform: null });
+        setScreenshotFile(null);
         fetchData();
       } else {
         toast.error(result?.error || 'Failed to claim social coins');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to claim social coins');
+      toast.error(error.message || 'Failed to submit claim');
     } finally {
-      setClaimingSocial(null);
+      setUploadingScreenshot(false);
     }
   };
 
@@ -295,42 +373,60 @@ export default function Rewards() {
 
         if (couponError) throw couponError;
 
-        if (coupon) {
-          // Assign coupon to user
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + reward.expiry_days);
-
-          await supabase
-            .from('coupon_pools')
-            .update({
-              status: 'assigned',
-              assigned_to: user.id,
-              assigned_email: user.email,
-              assigned_at: new Date().toISOString(),
-              expires_at: expiresAt.toISOString()
-            })
-            .eq('id', coupon.id);
-
-          couponCode = coupon.coupon_code;
-          couponId = coupon.id;
+        if (!coupon) {
+          toast.error('No coupons available. Please try again later.');
+          // Refund coins since no coupon available
+          await supabase.rpc('add_coins', {
+            _user_id: user.id,
+            _amount: reward.coin_cost,
+            _source: 'refund',
+            _description: 'Refund - No coupon available'
+          });
+          return;
         }
+
+        // Assign coupon to user
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + reward.expiry_days);
+
+        await supabase
+          .from('coupon_pools')
+          .update({
+            status: 'assigned',
+            assigned_to: user.id,
+            assigned_email: user.email,
+            assigned_at: new Date().toISOString(),
+            expires_at: expiresAt.toISOString()
+          })
+          .eq('id', coupon.id);
+
+        couponCode = coupon.coupon_code;
+        couponId = coupon.id;
       }
 
-      // Create reward claim
+      // Create reward claim - fulfilled for coupons, pending only for prop_account
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + reward.expiry_days);
+
+      const claimStatus = reward.reward_type === 'prop_account' ? 'pending' : 'fulfilled';
 
       await supabase.from('reward_claims').insert({
         user_id: user.id,
         reward_id: reward.id,
         coins_spent: reward.coin_cost,
-        status: reward.reward_type === 'prop_account' ? 'pending' : (couponCode ? 'fulfilled' : 'pending'),
+        status: claimStatus,
         coupon_id: couponId,
         coupon_code: couponCode,
         expires_at: expiresAt.toISOString()
       });
 
-      toast.success(`Successfully claimed ${reward.name}!`);
+      // Show success dialog for coupon rewards, toast for $10K
+      if (reward.reward_type === 'prop_account') {
+        toast.success('Your PropScholar $10K Account request has been submitted! You will receive it within 24 hours.');
+      } else {
+        setSuccessDialog({ open: true, reward, couponCode });
+      }
+      
       fetchData();
     } catch (error: any) {
       toast.error(error.message || 'Failed to claim reward');
@@ -341,7 +437,7 @@ export default function Rewards() {
 
   const copyReferralCode = () => {
     if (userCoins?.referral_code) {
-      navigator.clipboard.writeText(`${window.location.origin}/auth?ref=${userCoins.referral_code}`);
+      navigator.clipboard.writeText(`${REFERRAL_DOMAIN}/auth?ref=${userCoins.referral_code}`);
       toast.success('Referral link copied!');
     }
   };
@@ -458,6 +554,9 @@ export default function Rewards() {
                   <Share2 className="w-5 h-5" />
                   Follow Us & Earn
                 </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Follow us on social media and upload a screenshot to earn coins. Max screenshot size: 2MB.
+                </p>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {platforms.map(platform => {
                     const setting = settings[`social_${platform}`];
@@ -489,14 +588,14 @@ export default function Rewards() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => claimSocialCoins(platform)}
+                              onClick={() => openSocialDialog(platform)}
                               disabled={claimingSocial === platform || !setting.url}
                             >
                               {claimingSocial === platform ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <>
-                                  Follow
+                                  Claim
                                   <ExternalLink className="w-3 h-3 ml-1" />
                                 </>
                               )}
@@ -521,7 +620,7 @@ export default function Rewards() {
                   </p>
                   <div className="flex gap-2">
                     <div className="flex-1 p-3 rounded-lg bg-background/50 border border-border/30 text-sm text-muted-foreground truncate">
-                      {`${window.location.origin}/auth?ref=${userCoins?.referral_code || ''}`}
+                      {`${REFERRAL_DOMAIN}/auth?ref=${userCoins?.referral_code || ''}`}
                     </div>
                     <Button onClick={copyReferralCode} variant="outline">
                       <Copy className="w-4 h-4 mr-2" />
@@ -556,6 +655,7 @@ export default function Rewards() {
                     const userClaimCount = claims.filter(c => c.reward.id === reward.id).length;
                     const canClaim = userClaimCount < (reward.max_claims_per_user || 1);
                     const hasEnoughCoins = (userCoins?.balance || 0) >= reward.coin_cost;
+                    const isPropAccount = reward.reward_type === 'prop_account';
                     
                     return (
                       <Card key={reward.id} className="overflow-hidden bg-card/50 backdrop-blur-xl border-border/50">
@@ -566,10 +666,17 @@ export default function Rewards() {
                             </div>
                             <div>
                               <h3 className="font-semibold text-foreground">{reward.name}</h3>
-                              <p className="text-xs text-muted-foreground">Expires in {reward.expiry_days} days</p>
+                              <p className="text-xs text-muted-foreground">
+                                {isPropAccount ? 'Delivered within 24 hours' : `Expires in ${reward.expiry_days} days`}
+                              </p>
                             </div>
                           </div>
                           <p className="text-sm text-muted-foreground mb-4">{reward.description}</p>
+                          {isPropAccount && (
+                            <p className="text-xs text-yellow-500 mb-4">
+                              ⚡ You will receive your account within 24 hours after claiming
+                            </p>
+                          )}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <Coins className="w-5 h-5 text-yellow-500" />
@@ -623,6 +730,11 @@ export default function Rewards() {
                             {claim.expires_at && (
                               <p className="text-xs text-muted-foreground">
                                 Expires: {format(new Date(claim.expires_at), 'MMM d, yyyy')}
+                              </p>
+                            )}
+                            {claim.status === 'pending' && claim.reward?.reward_type === 'prop_account' && (
+                              <p className="text-xs text-yellow-500 mt-1">
+                                ⏳ Your account will be delivered within 24 hours
                               </p>
                             )}
                           </div>
@@ -698,6 +810,129 @@ export default function Rewards() {
       </main>
 
       <Footer />
+
+      {/* Social Follow Screenshot Dialog */}
+      <Dialog open={socialDialog.open} onOpenChange={(open) => setSocialDialog({ open, platform: open ? socialDialog.platform : null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 capitalize">
+              {socialDialog.platform && platformIcons[socialDialog.platform] && (
+                (() => {
+                  const Icon = platformIcons[socialDialog.platform!];
+                  return <Icon className="w-5 h-5" />;
+                })()
+              )}
+              Follow on {socialDialog.platform}
+            </DialogTitle>
+            <DialogDescription>
+              Upload a screenshot showing you followed us to claim your coins.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-2">Steps:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>A new tab opened with our {socialDialog.platform} page</li>
+                <li>Follow/Subscribe to our account</li>
+                <li>Take a screenshot showing you followed</li>
+                <li>Upload the screenshot below (max 2MB)</li>
+              </ol>
+            </div>
+            
+            <div>
+              <Label>Upload Screenshot (max 2MB)</Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-2 border-2 border-dashed border-border/50 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              >
+                {screenshotFile ? (
+                  <div className="space-y-2">
+                    <ImageIcon className="w-8 h-8 mx-auto text-green-400" />
+                    <p className="text-sm text-foreground">{screenshotFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(screenshotFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Click to upload screenshot</p>
+                    <p className="text-xs text-muted-foreground">PNG, JPG up to 2MB</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSocialDialog({ open: false, platform: null })}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={submitSocialClaim}
+                disabled={!screenshotFile || uploadingScreenshot}
+              >
+                {uploadingScreenshot ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Submit & Claim
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog for Coupon Claims */}
+      <Dialog open={successDialog.open} onOpenChange={(open) => !open && setSuccessDialog({ open: false, reward: null, couponCode: null })}>
+        <DialogContent className="sm:max-w-md text-center">
+          <div className="py-6 space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
+              <PartyPopper className="w-8 h-8 text-green-400" />
+            </div>
+            <DialogTitle className="text-2xl">Congratulations! 🎉</DialogTitle>
+            <DialogDescription className="text-base">
+              You successfully claimed your {successDialog.reward?.name}!
+            </DialogDescription>
+            
+            {successDialog.couponCode && (
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <p className="text-sm text-muted-foreground">Your Coupon Code:</p>
+                <div className="flex items-center justify-center gap-2">
+                  <code className="text-xl font-bold text-foreground bg-background px-4 py-2 rounded">
+                    {successDialog.couponCode}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(successDialog.couponCode!);
+                      toast.success('Coupon code copied!');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Expires in {successDialog.reward?.expiry_days} days. One-time use only.
+                </p>
+              </div>
+            )}
+            
+            <Button onClick={() => setSuccessDialog({ open: false, reward: null, couponCode: null })} className="w-full">
+              Got it!
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
