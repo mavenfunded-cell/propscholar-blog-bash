@@ -9,21 +9,24 @@ import { ArrowRight, PenTool, Video, Sparkles, ExternalLink } from 'lucide-react
 const competitions = [
   {
     title: 'Blog Competition',
-    description: 'Showcase your writing skills and share insights on trading, finance, and market analysis.',
+    description:
+      'Showcase your writing skills and share insights on trading, finance, and market analysis.',
     icon: PenTool,
     href: '/blog',
     status: 'active',
   },
   {
     title: 'Reel Competition',
-    description: 'Create engaging video content about trading strategies and financial education.',
+    description:
+      'Create engaging video content about trading strategies and financial education.',
     icon: Video,
     href: '/reels',
     status: 'coming-soon',
   },
   {
     title: 'Quiz Challenge',
-    description: 'Test your trading knowledge and compete with others in interactive quiz competitions.',
+    description:
+      'Test your trading knowledge and compete with others in interactive quiz competitions.',
     icon: Sparkles,
     href: '#',
     status: 'coming-soon',
@@ -32,49 +35,59 @@ const competitions = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Subtle gradient background */}
+    <div className="min-h-screen relative overflow-hidden bg-[#090909] text-white">
+      {/* ===== Background Layers ===== */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-secondary/20" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/3 rounded-full blur-[150px]" />
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#090909] via-[#0b0b0b] to-[#101010]" />
+
+        {/* Primary glow */}
+        <div className="absolute top-[-250px] left-1/2 -translate-x-1/2 w-[1200px] h-[700px] bg-primary/10 rounded-full blur-[200px]" />
+
+        {/* Secondary glow */}
+        <div className="absolute bottom-[-300px] right-[-200px] w-[700px] h-[700px] bg-white/6 rounded-full blur-[220px]" />
+
+        {/* Grain overlay */}
+        <div className="absolute inset-0 opacity-[0.035] mix-blend-soft-light bg-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 200 200\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.8\" numOctaves=\"4\" stitchTiles=\"stitch\"/></filter><rect width=\"200\" height=\"200\" filter=\"url(%23n)\"/></svg>')]" />
       </div>
 
       <div className="relative z-10">
         <Navbar />
 
-        {/* Hero Section - Apple style minimal */}
-        <section className="relative py-32 md:py-44">
+        {/* ===== Hero Section ===== */}
+        <section className="relative py-36 md:py-48">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center animate-fade-in">
-              <p className="text-sm tracking-[0.2em] uppercase text-muted-foreground mb-6 font-medium">
+              <p className="text-xs tracking-[0.4em] uppercase text-white/60 mb-10 font-medium">
                 PropScholar Space
               </p>
-              
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-semibold mb-8 leading-[1.1] tracking-tight text-foreground">
+
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-semibold leading-[1.05] tracking-tight mb-12">
                 Compete. Create.
                 <br />
                 <span className="text-primary">Win.</span>
               </h1>
-              
-              <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-xl mx-auto leading-relaxed font-light">
-                Join India's premier trading community competitions.
+
+              <p className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed font-light mb-16">
+                A premium competition space built for traders who think long term.
               </p>
 
-              <div className="flex flex-wrap justify-center gap-4">
+              <div className="flex flex-wrap justify-center gap-6">
                 <Link to="/blog">
-                  <Button 
-                    size="lg" 
-                    className="h-14 px-8 text-base font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-all"
-                  >
+                  <Button className="h-14 px-12 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-all duration-300 shadow-xl shadow-black/40">
                     Explore Competitions
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
-                <a href="https://propscholar.com" target="_blank" rel="noopener noreferrer">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="h-14 px-8 text-base font-medium rounded-full glass-button border-border/40 hover:border-border/60"
+
+                <a
+                  href="https://propscholar.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    variant="outline"
+                    className="h-14 px-12 rounded-full border-white/15 text-white hover:border-white/30 hover:bg-white/5 backdrop-blur-md transition-all duration-300"
                   >
                     Visit PropScholar
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -85,55 +98,58 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Competitions Section */}
-        <section className="py-24 md:py-32">
+        {/* ===== Competitions Section ===== */}
+        <section className="py-28 md:py-36">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16 animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-semibold mb-4 text-foreground tracking-tight">
+            <div className="text-center mb-24 animate-fade-in">
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
                 Choose Your Arena
               </h2>
-              <p className="text-muted-foreground text-base max-w-md mx-auto font-light">
-                Pick a competition that matches your skills
+              <p className="text-white/60 text-sm font-light">
+                Different formats. Same standard of excellence.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto">
               {competitions.map((comp, index) => {
                 const isComingSoon = comp.status === 'coming-soon';
-                
+
                 return (
-                  <Link 
-                    key={comp.title} 
+                  <Link
+                    key={comp.title}
                     to={isComingSoon ? '#' : comp.href}
-                    className={isComingSoon ? 'cursor-not-allowed' : ''}
                     onClick={(e) => isComingSoon && e.preventDefault()}
+                    className={isComingSoon ? 'cursor-not-allowed' : ''}
                   >
-                    <Card 
-                      className={`h-full transition-all duration-300 animate-slide-up bg-card/50 backdrop-blur-sm border-border/30 hover:border-border/50 group relative overflow-hidden ${isComingSoon ? 'opacity-50 blur-[1px]' : 'hover:bg-card/70'}`}
-                      style={{ animationDelay: `${index * 100}ms` }}
+                    <Card
+                      className={`h-full bg-[#111111]/70 backdrop-blur-xl border border-white/10 transition-all duration-500 ease-[cubic-bezier(.2,.8,.2,1)] group relative overflow-hidden hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40 ${
+                        isComingSoon ? 'opacity-60' : ''
+                      }`}
+                      style={{ animationDelay: `${index * 120}ms` }}
                     >
                       {isComingSoon && (
-                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/60 backdrop-blur-sm">
-                          <Badge className="bg-secondary text-muted-foreground border-border/50 text-xs font-medium">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-10">
+                          <Badge className="bg-white/10 text-white/70 border-white/15 tracking-wide">
                             Coming Soon
                           </Badge>
                         </div>
                       )}
-                      <CardContent className="p-8">
-                        <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center mb-6 group-hover:bg-secondary/80 transition-colors">
-                          <comp.icon className="w-6 h-6 text-foreground/70" />
+
+                      <CardContent className="p-10">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-8 group-hover:bg-white/10 transition-colors">
+                          <comp.icon className="w-6 h-6 text-white/80" />
                         </div>
-                        
-                        <h3 className="text-lg font-medium mb-3 text-foreground group-hover:text-primary transition-colors">
+
+                        <h3 className="text-lg font-medium mb-4 group-hover:text-primary transition-colors">
                           {comp.title}
                         </h3>
-                        
-                        <p className="text-muted-foreground text-sm leading-relaxed font-light">
+
+                        <p className="text-white/60 text-sm leading-relaxed font-light">
                           {comp.description}
                         </p>
 
                         {!isComingSoon && (
-                          <div className="flex items-center text-primary text-sm font-medium mt-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center text-primary text-sm font-medium mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
                             Enter
                             <ArrowRight className="w-4 h-4 ml-1" />
                           </div>
@@ -147,23 +163,21 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* CTA Section - Minimal */}
-        <section className="py-24 md:py-32">
+        {/* ===== CTA Section ===== */}
+        <section className="py-32 md:py-40">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
-              <Card className="bg-secondary/30 border-border/20 backdrop-blur-sm">
-                <CardContent className="p-12 md:p-16">
-                  <h2 className="text-2xl md:text-3xl font-semibold mb-4 text-foreground tracking-tight">
+              <Card className="bg-[#111111]/80 border border-white/10 backdrop-blur-xl">
+                <CardContent className="p-16 md:p-20">
+                  <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-6">
                     Ready to Compete?
                   </h2>
-                  <p className="text-muted-foreground text-base mb-8 font-light">
-                    Start showcasing your skills and win exciting prizes.
+                  <p className="text-white/60 text-sm font-light mb-12">
+                    Put your work in front of the PropScholar community.
                   </p>
+
                   <Link to="/blog">
-                    <Button 
-                      size="lg" 
-                      className="h-12 px-8 rounded-full bg-foreground text-background hover:bg-foreground/90"
-                    >
+                    <Button className="h-12 px-12 rounded-full bg-white text-black hover:bg-white/90 transition-all shadow-xl shadow-black/40">
                       Start Now
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
