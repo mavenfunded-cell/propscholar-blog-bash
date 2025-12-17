@@ -341,7 +341,7 @@ export default function Rewards() {
 
       const screenshotUrl = urlData.publicUrl;
 
-      // Claim social coins with screenshot
+      // Claim social coins with screenshot (coins added after admin approval)
       const { data, error } = await supabase.rpc('claim_social_coins', { 
         _user_id: user.id, 
         _platform: socialDialog.platform 
@@ -354,11 +354,11 @@ export default function Rewards() {
         // Update with screenshot URL
         await supabase
           .from('social_follows')
-          .update({ screenshot_url: screenshotUrl, status: 'pending' })
+          .update({ screenshot_url: screenshotUrl })
           .eq('user_id', user.id)
           .eq('platform', socialDialog.platform);
 
-        toast.success(`You earned ${result.coins} Space Coins for following on ${socialDialog.platform}!`);
+        toast.success(`Screenshot submitted for ${socialDialog.platform}! Coins will be added after admin approval.`);
         setSocialDialog({ open: false, platform: null });
         setScreenshotFile(null);
         fetchData();
@@ -403,19 +403,20 @@ export default function Rewards() {
       let couponId = null;
 
       if (reward.reward_type === 'discount_30' || reward.reward_type === 'discount_50') {
-        // Try to get an available coupon
+        // Try to get an available coupon - check for 'unused' OR 'available' status
         const { data: coupon, error: couponError } = await supabase
           .from('coupon_pools')
           .select('*')
           .eq('reward_type', reward.reward_type)
-          .eq('status', 'unused')
+          .in('status', ['unused', 'available'])
+          .is('assigned_to', null)
           .limit(1)
           .maybeSingle();
 
         if (couponError) throw couponError;
 
         if (!coupon) {
-          toast.error('No coupons available. Please try again later.');
+          toast.error('No coupons available at the moment. Please try again later or contact support.');
           // Refund coins since no coupon available
           await supabase.rpc('add_coins', {
             _user_id: user.id,
@@ -537,16 +538,16 @@ export default function Rewards() {
             <div className="grid md:grid-cols-3 gap-6 text-center">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
-                <p className="text-4xl font-bold text-yellow-500">{userCoins?.balance || 0}</p>
+                <p className="text-4xl font-bold text-yellow-500 tabular-nums">{userCoins?.balance || 0}</p>
                 <p className="text-xs text-muted-foreground">Space Coins</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Earned</p>
-                <p className="text-2xl font-semibold text-green-400">{userCoins?.total_earned || 0}</p>
+                <p className="text-2xl font-semibold text-green-400 tabular-nums">{userCoins?.total_earned || 0}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Spent</p>
-                <p className="text-2xl font-semibold text-foreground">{userCoins?.total_spent || 0}</p>
+                <p className="text-2xl font-semibold text-foreground tabular-nums">{userCoins?.total_spent || 0}</p>
               </div>
             </div>
           </Card>
