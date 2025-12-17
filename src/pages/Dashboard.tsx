@@ -256,26 +256,26 @@ const Dashboard = () => {
           </div>
 
           {/* Profile Section */}
-          <Card className="p-6 bg-card/50 backdrop-blur-xl border-border/50">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+          <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <User className="w-10 h-10 text-primary" />
+                  <User className="w-8 h-8 md:w-10 md:h-10 text-primary" />
                 )}
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl font-bold text-foreground">
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">
                   {profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || 'PropScholar User'}
                 </h2>
-                <div className="flex flex-col md:flex-row gap-4 mt-2 text-muted-foreground">
-                  <div className="flex items-center justify-center md:justify-start gap-2">
+                <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-2 text-muted-foreground">
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-sm">
                     <Mail className="w-4 h-4" />
-                    <span>{user.email}</span>
+                    <span className="truncate max-w-[200px] md:max-w-none">{user.email}</span>
                   </div>
                   {profile?.phone && (
-                    <div className="flex items-center justify-center md:justify-start gap-2">
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-sm">
                       <Phone className="w-4 h-4" />
                       <span>{profile.phone}</span>
                     </div>
@@ -283,7 +283,7 @@ const Dashboard = () => {
                 </div>
               </div>
               <Link to="/blog">
-                <Button className="bg-primary hover:bg-primary/90">
+                <Button className="w-full md:w-auto bg-primary hover:bg-primary/90 text-sm">
                   Participate in Events
                 </Button>
               </Link>
@@ -292,18 +292,18 @@ const Dashboard = () => {
 
           {/* Space Coins Card */}
           <Link to="/rewards">
-            <Card className="p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-yellow-500/20">
-                    <Coins className="w-8 h-8 text-yellow-500" />
+            <Card className="p-4 md:p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 rounded-full bg-yellow-500/20">
+                    <Coins className="w-6 h-6 md:w-8 md:h-8 text-yellow-500" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-yellow-500">{coinBalance}</h3>
-                    <p className="text-sm text-muted-foreground">Space Coins</p>
+                    <h3 className="text-xl md:text-2xl font-bold text-yellow-500">{coinBalance}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground">Space Coins</p>
                   </div>
                 </div>
-                <Button variant="outline" className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                <Button variant="outline" className="w-full sm:w-auto border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-sm">
                   Earn & Claim Rewards
                 </Button>
               </div>
@@ -311,37 +311,37 @@ const Dashboard = () => {
           </Link>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="p-4 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <Calendar className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{totalParticipations}</p>
-              <p className="text-sm text-muted-foreground">Events Participated</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
+              <Calendar className="w-6 h-6 md:w-8 md:h-8 text-primary mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-foreground">{totalParticipations}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Events Participated</p>
             </Card>
-            <Card className="p-4 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{totalWins}</p>
-              <p className="text-sm text-muted-foreground">Events Won</p>
+            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
+              <Trophy className="w-6 h-6 md:w-8 md:h-8 text-yellow-500 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-foreground">{totalWins}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Events Won</p>
             </Card>
-            <Card className="p-4 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <FileText className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{blogSubmissions.length}</p>
-              <p className="text-sm text-muted-foreground">Blogs Written</p>
+            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
+              <FileText className="w-6 h-6 md:w-8 md:h-8 text-blue-500 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-foreground">{blogSubmissions.length}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Blogs Written</p>
             </Card>
-            <Card className="p-4 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <Film className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{reelSubmissions.length}</p>
-              <p className="text-sm text-muted-foreground">Reels Submitted</p>
+            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
+              <Film className="w-6 h-6 md:w-8 md:h-8 text-purple-500 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-foreground">{reelSubmissions.length}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Reels Submitted</p>
             </Card>
           </div>
 
           {/* Submissions Section */}
-          <Card className="p-6 bg-card/50 backdrop-blur-xl border-border/50">
-            <h3 className="text-xl font-bold text-foreground mb-4">My Submissions</h3>
+          <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
+            <h3 className="text-lg md:text-xl font-bold text-foreground mb-4">My Submissions</h3>
             
             <Tabs defaultValue="blogs" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="blogs">Blogs ({blogSubmissions.length})</TabsTrigger>
-                <TabsTrigger value="reels">Reels ({reelSubmissions.length})</TabsTrigger>
+                <TabsTrigger value="blogs" className="text-sm">Blogs ({blogSubmissions.length})</TabsTrigger>
+                <TabsTrigger value="reels" className="text-sm">Reels ({reelSubmissions.length})</TabsTrigger>
               </TabsList>
               
               <TabsContent value="blogs">

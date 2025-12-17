@@ -3,10 +3,10 @@ import { Footer } from '@/components/Footer';
 
 export default function Terms() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#080808' }}>
+    <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
+      <main className="container mx-auto px-4 pt-24 pb-16 max-w-4xl">
         <h1 className="text-3xl md:text-4xl font-bold mb-8 text-white">
           Terms and Conditions
         </h1>
