@@ -594,6 +594,57 @@ export type Database = {
         }
         Relationships: []
       }
+      winner_claims: {
+        Row: {
+          admin_notes: string | null
+          claim_email: string | null
+          claim_name: string | null
+          claimed_at: string | null
+          created_at: string
+          event_id: string
+          id: string
+          issued_at: string | null
+          position: number
+          status: string
+          submission_id: string
+          user_email: string
+          winner_id: string
+          winner_type: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          claim_email?: string | null
+          claim_name?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          issued_at?: string | null
+          position?: number
+          status?: string
+          submission_id: string
+          user_email: string
+          winner_id: string
+          winner_type: string
+        }
+        Update: {
+          admin_notes?: string | null
+          claim_email?: string | null
+          claim_name?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          issued_at?: string | null
+          position?: number
+          status?: string
+          submission_id?: string
+          user_email?: string
+          winner_id?: string
+          winner_type?: string
+        }
+        Relationships: []
+      }
       winners: {
         Row: {
           created_at: string

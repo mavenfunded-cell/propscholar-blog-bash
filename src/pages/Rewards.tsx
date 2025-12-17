@@ -38,6 +38,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { PropAccountClaimDialog } from '@/components/PropAccountClaimDialog';
 
 interface UserCoins {
   balance: number;
@@ -142,6 +144,12 @@ export default function Rewards() {
     open: false, 
     reward: null, 
     couponCode: null 
+  });
+  
+  // Prop account claim dialog state
+  const [propAccountDialog, setPropAccountDialog] = useState<{ open: boolean; reward: Reward | null }>({
+    open: false,
+    reward: null
   });
 
   useEffect(() => {
@@ -388,6 +396,18 @@ export default function Rewards() {
       return;
     }
 
+    // For prop_account, show dialog to collect name/email first
+    if (reward.reward_type === 'prop_account') {
+      setPropAccountDialog({ open: true, reward });
+      return;
+    }
+
+    await processRewardClaim(reward);
+  };
+
+  const processRewardClaim = async (reward: Reward, claimName?: string, claimEmail?: string) => {
+    if (!user) return;
+    
     setClaiming(reward.id);
 
     try {
@@ -443,6 +463,7 @@ export default function Rewards() {
       expiresAt.setDate(expiresAt.getDate() + (reward.expiry_days ?? 14));
 
       const claimStatus = reward.reward_type === 'prop_account' ? 'pending' : 'fulfilled';
+      const notes = claimName && claimEmail ? `Name: ${claimName}, Email: ${claimEmail}` : null;
 
       await supabase.from('reward_claims').insert({
         user_id: user.id,
@@ -451,7 +472,8 @@ export default function Rewards() {
         status: claimStatus,
         coupon_id: couponId,
         coupon_code: couponCode,
-        expires_at: expiresAt.toISOString()
+        expires_at: expiresAt.toISOString(),
+        notes: notes
       });
 
       // Show success dialog for coupon rewards, toast for $10K
@@ -467,6 +489,11 @@ export default function Rewards() {
     } finally {
       setClaiming(null);
     }
+  };
+
+  const handlePropAccountClaim = async (name: string, email: string) => {
+    if (!propAccountDialog.reward) return;
+    await processRewardClaim(propAccountDialog.reward, name, email);
   };
 
   const copyReferralCode = () => {
@@ -989,6 +1016,14 @@ export default function Rewards() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Prop Account Claim Dialog */}
+      <PropAccountClaimDialog
+        reward={propAccountDialog.reward}
+        open={propAccountDialog.open}
+        onOpenChange={(open) => setPropAccountDialog({ ...propAccountDialog, open })}
+        onSubmit={handlePropAccountClaim}
+      />
     </div>
   );
 }

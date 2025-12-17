@@ -7,7 +7,8 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins } from 'lucide-react';
+import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins, CheckCircle } from 'lucide-react';
+import { WinnerClaimDialog } from '@/components/WinnerClaimDialog';
 
 interface Submission {
   id: string;
@@ -39,6 +40,16 @@ interface Profile {
   avatar_url: string | null;
 }
 
+interface WinnerClaim {
+  id: string;
+  winner_type: string;
+  event_id: string;
+  submission_id: string;
+  position: number;
+  status: string;
+  event_title?: string;
+}
+
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +58,9 @@ const Dashboard = () => {
   const [reelSubmissions, setReelSubmissions] = useState<ReelSubmission[]>([]);
   const [coinBalance, setCoinBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [winnerClaims, setWinnerClaims] = useState<WinnerClaim[]>([]);
+  const [unclaimedWin, setUnclaimedWin] = useState<WinnerClaim | null>(null);
+  const [showWinnerDialog, setShowWinnerDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -143,11 +157,44 @@ const Dashboard = () => {
 
         setReelSubmissions(enrichedReels);
       }
+
+      // Fetch winner claims for this user
+      const { data: winnerClaimsData } = await supabase
+        .from('winner_claims')
+        .select('*')
+        .eq('user_email', user.email);
+
+      if (winnerClaimsData && winnerClaimsData.length > 0) {
+        // Get event titles
+        const eventIds = [...new Set(winnerClaimsData.map(c => c.event_id))];
+        const { data: events } = await supabase
+          .from('events')
+          .select('id, title')
+          .in('id', eventIds);
+
+        const enrichedClaims = winnerClaimsData.map(claim => ({
+          ...claim,
+          event_title: events?.find(e => e.id === claim.event_id)?.title
+        }));
+
+        setWinnerClaims(enrichedClaims);
+
+        // Check for unclaimed wins and show popup
+        const unclaimed = enrichedClaims.find(c => c.status === 'unclaimed');
+        if (unclaimed) {
+          setUnclaimedWin(unclaimed);
+          setShowWinnerDialog(true);
+        }
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleWinnerClaimed = () => {
+    fetchDashboardData();
   };
 
   const totalWins = [...blogSubmissions, ...reelSubmissions].filter(s => s.is_winner).length;
@@ -383,24 +430,58 @@ const Dashboard = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 {[...blogSubmissions, ...reelSubmissions]
                   .filter(s => s.is_winner)
-                  .map((win) => (
-                    <div
-                      key={win.id}
-                      className="p-4 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl">
-                          {win.position === 1 ? '🥇' : win.position === 2 ? '🥈' : '🥉'}
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-foreground">
-                            {'blog_title' in win ? win.blog_title : win.title}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">{win.event_title}</p>
+                  .map((win) => {
+                    // Find the claim status for this win
+                    const claim = winnerClaims.find(c => c.submission_id === win.id);
+                    const claimStatus = claim?.status || 'unclaimed';
+                    
+                    return (
+                      <div
+                        key={win.id}
+                        className="p-4 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-3xl">
+                              {win.position === 1 ? '🥇' : win.position === 2 ? '🥈' : '🥉'}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-foreground">
+                                {'blog_title' in win ? win.blog_title : win.title}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">{win.event_title}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {claimStatus === 'issued' ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
+                                <CheckCircle className="w-3 h-3" />
+                                Reward Issued
+                              </span>
+                            ) : claimStatus === 'pending' ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-medium">
+                                <Clock className="w-3 h-3" />
+                                Processing
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  if (claim) {
+                                    setUnclaimedWin({ ...claim, event_title: win.event_title });
+                                    setShowWinnerDialog(true);
+                                  }
+                                }}
+                                className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs"
+                              >
+                                Claim Reward
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </Card>
           )}
@@ -437,6 +518,14 @@ const Dashboard = () => {
       </main>
 
       <Footer />
+
+      {/* Winner Claim Dialog */}
+      <WinnerClaimDialog
+        claim={unclaimedWin}
+        open={showWinnerDialog}
+        onOpenChange={setShowWinnerDialog}
+        onClaimed={handleWinnerClaimed}
+      />
     </div>
   );
 };
