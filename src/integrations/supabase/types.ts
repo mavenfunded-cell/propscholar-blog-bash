@@ -648,6 +648,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      approve_social_follow: { Args: { _follow_id: string }; Returns: boolean }
       claim_signup_coins: { Args: { _user_id: string }; Returns: Json }
       claim_social_coins: {
         Args: { _platform: string; _user_id: string }

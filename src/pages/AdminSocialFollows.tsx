@@ -105,14 +105,24 @@ export default function AdminSocialFollows() {
   const updateStatus = async (followId: string, status: 'verified' | 'rejected') => {
     setUpdating(followId);
     try {
-      const { error } = await supabase
-        .from('social_follows')
-        .update({ status })
-        .eq('id', followId);
-
-      if (error) throw error;
-
-      toast.success(`Status updated to ${status}`);
+      if (status === 'verified') {
+        // Use the approve function which adds coins
+        const { data, error } = await supabase.rpc('approve_social_follow', { _follow_id: followId });
+        if (error) throw error;
+        if (!data) {
+          toast.error('Follow not found or already processed');
+          return;
+        }
+        toast.success('Verified! Coins have been added to user account.');
+      } else {
+        // Just update status for rejection
+        const { error } = await supabase
+          .from('social_follows')
+          .update({ status: 'rejected' })
+          .eq('id', followId);
+        if (error) throw error;
+        toast.success('Claim rejected');
+      }
       fetchFollows();
     } catch (error: any) {
       toast.error(error.message || 'Failed to update status');
