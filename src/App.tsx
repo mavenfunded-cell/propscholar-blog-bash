@@ -41,8 +41,8 @@ const App = () => (
             <Route path="/admin/events/new" element={<EventForm />} />
             <Route path="/admin/events/:id/edit" element={<EventForm />} />
             <Route path="/admin/events/:id/submissions" element={<EventSubmissions />} />
-            <Route path="/events/:slug" element={<EventPage />} />
-            <Route path="/events/:slug/success" element={<SubmissionSuccess />} />
+            <Route path="/blog/:slug" element={<EventPage />} />
+            <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
             <Route path="/reels/:slug" element={<ReelEventPage />} />
             <Route path="/reels/:slug/success" element={<ReelSubmissionSuccess />} />
             <Route path="*" element={<NotFound />} />

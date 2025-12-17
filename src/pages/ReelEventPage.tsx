@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Calendar, Video, AlertCircle, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Upload, X } from 'lucide-react';
+import { Calendar, Video, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 
@@ -92,9 +92,6 @@ export default function ReelEventPage() {
       }
 
       setEvent(data);
-
-      // Fetch winners - we'll need to create a similar function for reels
-      // For now, we'll skip winners display for reel events
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
@@ -142,7 +139,6 @@ export default function ReelEventPage() {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `reels/${fileName}`;
 
-    // Simulate progress for UX (Supabase doesn't support progress callbacks)
     setUploadProgress(10);
     
     const { error: uploadError } = await supabase.storage
@@ -168,7 +164,6 @@ export default function ReelEventPage() {
     
     if (!event) return;
 
-    // Validate form
     try {
       submissionSchema.parse({ name, email, phone, title, description });
     } catch (err) {
@@ -183,7 +178,6 @@ export default function ReelEventPage() {
       return;
     }
 
-    // Double check event is still active
     if (!isEventActive) {
       toast.error('This event is no longer accepting submissions');
       return;
@@ -193,11 +187,9 @@ export default function ReelEventPage() {
     setUploadProgress(0);
 
     try {
-      // Upload video
       toast.info('Uploading video... Please wait');
       const videoUrl = await uploadVideo();
 
-      // Insert submission
       const { error } = await supabase
         .from('reel_submissions')
         .insert([{
@@ -231,10 +223,10 @@ export default function ReelEventPage() {
 
   const getPositionIcon = (position: number) => {
     switch (position) {
-      case 1: return <Crown className="w-5 h-5 text-yellow-500" />;
-      case 2: return <Medal className="w-5 h-5 text-gray-400" />;
-      case 3: return <Medal className="w-5 h-5 text-amber-600" />;
-      default: return <Award className="w-5 h-5 text-primary" />;
+      case 1: return <Crown className="w-5 h-5 text-white" />;
+      case 2: return <Medal className="w-5 h-5 text-white/70" />;
+      case 3: return <Medal className="w-5 h-5 text-white/50" />;
+      default: return <Award className="w-5 h-5 text-white/40" />;
     }
   };
 
@@ -249,8 +241,8 @@ export default function ReelEventPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading event...</div>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="animate-pulse text-white/50">Loading event...</div>
       </div>
     );
   }
@@ -260,11 +252,17 @@ export default function ReelEventPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Full page gradient background */}
+    <div className="min-h-screen bg-[#0a0a0a] text-white relative">
+      {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#030712] via-background to-[#0c1222]" />
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0c0c0c] to-[#101010]" />
+        <div
+          className="absolute inset-0 opacity-[0.025] mix-blend-soft-light"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>\")",
+          }}
+        />
       </div>
 
       <div className="relative z-10">
@@ -278,14 +276,14 @@ export default function ReelEventPage() {
               alt={event.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent" />
           </div>
         )}
 
         <main className="container mx-auto px-4 py-8">
           <Link 
             to="/reels" 
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-purple-400 mb-6 transition-colors"
+            className="inline-flex items-center gap-2 text-white/50 hover:text-white mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to reel contests
@@ -298,51 +296,51 @@ export default function ReelEventPage() {
                 <Badge 
                   className={
                     isEventActive
-                      ? 'bg-success/20 text-success border-success/30'
-                      : 'bg-muted text-muted-foreground'
+                      ? 'bg-white/10 text-white border-white/20'
+                      : 'bg-white/5 text-white/50 border-white/10'
                   }
                 >
                   {isEventActive ? 'Active' : 'Closed'}
                 </Badge>
                 {isEventExpired && (
-                  <Badge variant="outline" className="border-destructive/50 text-destructive flex items-center gap-1">
+                  <Badge variant="outline" className="border-white/20 text-white/50 flex items-center gap-1">
                     <XCircle className="w-3 h-3" />
                     Expired
                   </Badge>
                 )}
               </div>
               
-              <h1 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">{event.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 text-white">{event.title}</h1>
               
-              <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6">
+              <div className="flex flex-wrap items-center gap-4 text-white/50 mb-6">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-purple-400" />
+                  <Calendar className="w-4 h-4 text-white/70" />
                   <span>
                     {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Video className="w-4 h-4 text-purple-400" />
+                  <Video className="w-4 h-4 text-white/70" />
                   <span>Max 200MB video</span>
                 </div>
               </div>
 
               <div className="prose prose-invert max-w-none">
-                <p className="text-foreground/80 whitespace-pre-wrap">{event.description}</p>
+                <p className="text-white/70 whitespace-pre-wrap">{event.description}</p>
               </div>
             </div>
 
             {/* Rewards Card */}
             {event.rewards && (
-              <Card className="mb-8 border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-pink-500/5 animate-fade-in">
+              <Card className="mb-8 border-white/10 bg-[#111]/80 backdrop-blur-xl animate-fade-in">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <Trophy className="w-6 h-6 text-purple-400" />
+                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">Contest Rewards</h3>
-                      <p className="text-muted-foreground whitespace-pre-wrap">{event.rewards}</p>
+                      <h3 className="text-lg font-semibold text-white mb-2">Contest Rewards</h3>
+                      <p className="text-white/60 whitespace-pre-wrap">{event.rewards}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -351,10 +349,10 @@ export default function ReelEventPage() {
 
             {/* Submission Form or Closed Message */}
             {isEventActive ? (
-              <Card className="animate-slide-up border-border/50 bg-card/80 backdrop-blur-sm">
+              <Card className="animate-slide-up border-white/10 bg-[#111]/80 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Submit Your Reel</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white">Submit Your Reel</CardTitle>
+                  <CardDescription className="text-white/50">
                     Upload your video entry for this reel competition
                   </CardDescription>
                 </CardHeader>
@@ -362,20 +360,20 @@ export default function ReelEventPage() {
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Name */}
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="name" className="text-white/80">Full Name</Label>
                       <Input
                         id="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Your full name"
                         required
-                        className="bg-secondary/50 border-border focus:border-purple-500"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
                       />
                     </div>
 
                     {/* Email */}
                     <div className="space-y-2">
-                      <Label htmlFor="email">Gmail Address</Label>
+                      <Label htmlFor="email" className="text-white/80">Gmail Address</Label>
                       <Input
                         id="email"
                         type="email"
@@ -383,13 +381,13 @@ export default function ReelEventPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="your.email@gmail.com"
                         required
-                        className="bg-secondary/50 border-border focus:border-purple-500"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
                       />
                     </div>
 
                     {/* Phone */}
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <Label htmlFor="phone" className="text-white/80">Phone Number</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -397,14 +395,14 @@ export default function ReelEventPage() {
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="Your phone number"
                         required
-                        className="bg-secondary/50 border-border focus:border-purple-500"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
                       />
                     </div>
 
                     {/* Reel Title */}
                     <div className="space-y-2">
-                      <Label htmlFor="title">
-                        Reel Title <span className="text-destructive">*</span>
+                      <Label htmlFor="title" className="text-white/80">
+                        Reel Title <span className="text-white/50">*</span>
                       </Label>
                       <Input
                         id="title"
@@ -412,30 +410,30 @@ export default function ReelEventPage() {
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g., My Trading Journey with PropScholar"
                         required
-                        className="bg-secondary/50 border-border focus:border-purple-500"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
                       />
                     </div>
 
                     {/* Description */}
                     <div className="space-y-2">
-                      <Label htmlFor="description">Description (Optional)</Label>
+                      <Label htmlFor="description" className="text-white/80">Description (Optional)</Label>
                       <Textarea
                         id="description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Tell us about your reel..."
                         rows={3}
-                        className="bg-secondary/50 border-border focus:border-purple-500"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
                       />
                     </div>
 
                     {/* Video Upload */}
                     <div className="space-y-2">
-                      <Label>Video Upload <span className="text-destructive">*</span></Label>
-                      <div className="border-2 border-dashed border-border rounded-lg p-4">
+                      <Label className="text-white/80">Video Upload <span className="text-white/50">*</span></Label>
+                      <div className="border-2 border-dashed border-white/10 rounded-lg p-4">
                         {videoPreview ? (
                           <div className="space-y-4">
-                            <div className="relative aspect-video bg-secondary/50 rounded-lg overflow-hidden">
+                            <div className="relative aspect-video bg-white/5 rounded-lg overflow-hidden">
                               <video 
                                 src={videoPreview} 
                                 controls 
@@ -445,21 +443,21 @@ export default function ReelEventPage() {
                                 type="button"
                                 variant="destructive"
                                 size="icon"
-                                className="absolute top-2 right-2"
+                                className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 border-0"
                                 onClick={removeVideo}
                               >
                                 <X className="w-4 h-4" />
                               </Button>
                             </div>
-                            <p className="text-sm text-muted-foreground text-center">
+                            <p className="text-sm text-white/50 text-center">
                               {videoFile?.name} ({(videoFile?.size || 0 / 1024 / 1024).toFixed(2)} MB)
                             </p>
                           </div>
                         ) : (
-                          <label className="flex flex-col items-center justify-center h-40 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg">
-                            <Upload className="w-10 h-10 text-muted-foreground mb-2" />
-                            <span className="text-sm text-muted-foreground">Click to upload video</span>
-                            <span className="text-xs text-muted-foreground mt-1">Max 200MB, MP4/MOV/AVI</span>
+                          <label className="flex flex-col items-center justify-center h-40 cursor-pointer hover:bg-white/5 transition-colors rounded-lg">
+                            <Upload className="w-10 h-10 text-white/30 mb-2" />
+                            <span className="text-sm text-white/50">Click to upload video</span>
+                            <span className="text-xs text-white/30 mt-1">Max 200MB, MP4/MOV/AVI</span>
                             <input
                               ref={fileInputRef}
                               type="file"
@@ -476,10 +474,10 @@ export default function ReelEventPage() {
                     {submitting && uploadProgress > 0 && (
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Uploading...</span>
-                          <span className="text-purple-400">{uploadProgress}%</span>
+                          <span className="text-white/60">Uploading...</span>
+                          <span className="text-white/60">{uploadProgress}%</span>
                         </div>
-                        <Progress value={uploadProgress} className="h-2" />
+                        <Progress value={uploadProgress} className="h-2 bg-white/10" />
                       </div>
                     )}
 
@@ -487,23 +485,21 @@ export default function ReelEventPage() {
                     <Button 
                       type="submit" 
                       size="lg"
-                      className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                      className="w-full bg-white text-black hover:bg-white/90 transition-all"
                       disabled={submitting || !videoFile}
                     >
-                      {submitting ? 'Uploading & Submitting...' : 'Submit Reel'}
+                      {submitting ? 'Uploading...' : 'Submit Reel'}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="border-border/50 bg-card/80 backdrop-blur-sm animate-fade-in">
+              <Card className="animate-fade-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
                 <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                    <AlertCircle className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-foreground">Contest Closed</h3>
-                  <p className="text-muted-foreground">
-                    This reel competition is no longer accepting submissions.
+                  <XCircle className="w-12 h-12 text-white/30 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Contest Closed</h3>
+                  <p className="text-white/50">
+                    This contest is no longer accepting submissions.
                   </p>
                 </CardContent>
               </Card>
