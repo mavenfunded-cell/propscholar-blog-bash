@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowLeft, XCircle, PenTool } from 'lucide-react';
 import { format } from 'date-fns';
+import { useSEO } from '@/hooks/useSEO';
 
 interface Event {
   id: string;
@@ -21,6 +22,7 @@ interface Event {
 }
 
 export default function BlogCompetitions() {
+  useSEO();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -40,6 +40,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PropAccountClaimDialog } from '@/components/PropAccountClaimDialog';
+import { RewardsSkeleton } from '@/components/RewardsSkeleton';
+import { useSEO } from '@/hooks/useSEO';
 
 interface UserCoins {
   balance: number;
@@ -530,10 +532,19 @@ export default function Rewards() {
     }
   };
 
+  // Apply SEO
+  useSEO();
+
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-24 pb-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <RewardsSkeleton />
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
