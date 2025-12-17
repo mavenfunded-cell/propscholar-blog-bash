@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.notify-balance-change]
 verify_jwt = false
+
+[functions.notify-winner]
+verify_jwt = false
