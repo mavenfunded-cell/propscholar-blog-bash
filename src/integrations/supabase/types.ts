@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      coin_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          source: string
+          source_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          source: string
+          source_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          source?: string
+          source_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coupon_pools: {
+        Row: {
+          assigned_at: string | null
+          assigned_email: string | null
+          assigned_to: string | null
+          coupon_code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          revoke_reason: string | null
+          reward_type: string
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_email?: string | null
+          assigned_to?: string | null
+          coupon_code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          revoke_reason?: string | null
+          reward_type: string
+          status?: string
+          used_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_email?: string | null
+          assigned_to?: string | null
+          coupon_code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          revoke_reason?: string | null
+          reward_type?: string
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           competition_type: string
@@ -205,6 +280,186 @@ export type Database = {
           },
         ]
       }
+      referrals: {
+        Row: {
+          coins_rewarded: number | null
+          created_at: string
+          id: string
+          qualified_at: string | null
+          referred_email: string
+          referred_id: string
+          referrer_id: string
+          rewarded_at: string | null
+          status: string
+        }
+        Insert: {
+          coins_rewarded?: number | null
+          created_at?: string
+          id?: string
+          qualified_at?: string | null
+          referred_email: string
+          referred_id: string
+          referrer_id: string
+          rewarded_at?: string | null
+          status?: string
+        }
+        Update: {
+          coins_rewarded?: number | null
+          created_at?: string
+          id?: string
+          qualified_at?: string | null
+          referred_email?: string
+          referred_id?: string
+          referrer_id?: string
+          rewarded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      reward_claims: {
+        Row: {
+          coins_spent: number
+          coupon_code: string | null
+          coupon_id: string | null
+          created_at: string
+          expires_at: string | null
+          fulfilled_at: string | null
+          id: string
+          notes: string | null
+          reward_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          coins_spent: number
+          coupon_code?: string | null
+          coupon_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          notes?: string | null
+          reward_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          coins_spent?: number
+          coupon_code?: string | null
+          coupon_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          notes?: string | null
+          reward_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_claims_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_claims_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      rewards: {
+        Row: {
+          coin_cost: number
+          created_at: string
+          description: string | null
+          expiry_days: number | null
+          id: string
+          is_enabled: boolean | null
+          max_claims_per_user: number | null
+          name: string
+          reward_type: string
+          updated_at: string
+        }
+        Insert: {
+          coin_cost: number
+          created_at?: string
+          description?: string | null
+          expiry_days?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          max_claims_per_user?: number | null
+          name: string
+          reward_type: string
+          updated_at?: string
+        }
+        Update: {
+          coin_cost?: number
+          created_at?: string
+          description?: string | null
+          expiry_days?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          max_claims_per_user?: number | null
+          name?: string
+          reward_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_follows: {
+        Row: {
+          claimed_at: string
+          coins_earned: number
+          id: string
+          platform: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          coins_earned: number
+          id?: string
+          platform: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          coins_earned?: number
+          id?: string
+          platform?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       submission_rate_limit: {
         Row: {
           identifier: string
@@ -269,6 +524,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_coins: {
+        Row: {
+          balance: number
+          created_at: string
+          email: string
+          id: string
+          referral_code: string
+          referred_by: string | null
+          signup_coins_claimed: boolean | null
+          total_earned: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          email: string
+          id?: string
+          referral_code?: string
+          referred_by?: string | null
+          signup_coins_claimed?: boolean | null
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          email?: string
+          id?: string
+          referral_code?: string
+          referred_by?: string | null
+          signup_coins_claimed?: boolean | null
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -335,6 +632,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_coins: {
+        Args: {
+          _amount: number
+          _description?: string
+          _source: string
+          _source_id?: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      claim_signup_coins: { Args: { _user_id: string }; Returns: Json }
+      claim_social_coins: {
+        Args: { _platform: string; _user_id: string }
+        Returns: Json
+      }
       generate_slug: { Args: { title: string }; Returns: string }
       get_event_winners: {
         Args: { _event_id: string }
@@ -353,6 +665,16 @@ export type Database = {
       }
       is_event_accepting_submissions: {
         Args: { _event_id: string }
+        Returns: boolean
+      }
+      spend_coins: {
+        Args: {
+          _amount: number
+          _description?: string
+          _source: string
+          _source_id?: string
+          _user_id: string
+        }
         Returns: boolean
       }
     }
