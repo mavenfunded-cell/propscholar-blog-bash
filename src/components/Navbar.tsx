@@ -23,7 +23,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="border-b border-border/30 backdrop-blur-md bg-background/90 sticky top-0 z-50">
+    <header className="border-b border-white/10 backdrop-blur-xl bg-[#0a0a0a]/80 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -33,7 +33,7 @@ export function Navbar() {
               alt="PropScholar Logo" 
               className="h-8 w-auto"
             />
-            <span className="text-lg font-semibold text-foreground">PropScholar</span>
+            <span className="text-lg font-semibold text-white/90">PropScholar</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -45,7 +45,7 @@ export function Navbar() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50"
+                  className="px-4 py-2 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
                 >
                   {link.name}
                 </a>
@@ -53,7 +53,7 @@ export function Navbar() {
                 <Link
                   key={link.name}
                   to={link.href}
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50"
+                  className="px-4 py-2 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
                 >
                   {link.name}
                 </Link>
@@ -63,7 +63,7 @@ export function Navbar() {
             {/* Auth Button */}
             {user ? (
               <div className="flex items-center gap-2 ml-2">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-white/50">
                   <User className="w-4 h-4" />
                   <span className="text-sm hidden lg:block truncate max-w-[120px]">
                     {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
@@ -73,7 +73,7 @@ export function Navbar() {
                   variant="ghost" 
                   size="sm" 
                   onClick={handleSignOut}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-white/50 hover:text-white hover:bg-white/5"
                 >
                   <LogOut className="w-4 h-4 mr-1" />
                   Logout
@@ -82,9 +82,8 @@ export function Navbar() {
             ) : (
               <Link to="/auth">
                 <Button 
-                  variant="default" 
                   size="sm" 
-                  className="ml-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="ml-2 bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-md"
                 >
                   <LogIn className="w-4 h-4 mr-1" />
                   Login
@@ -97,7 +96,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden text-white/70 hover:text-white hover:bg-white/5"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -106,7 +105,7 @@ export function Navbar() {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <nav className="md:hidden py-4 border-t border-border/30">
+          <nav className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 link.external ? (
@@ -115,7 +114,7 @@ export function Navbar() {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50"
+                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
                     onClick={() => setIsOpen(false)}
                   >
                     {link.name}
@@ -124,7 +123,7 @@ export function Navbar() {
                   <Link
                     key={link.name}
                     to={link.href}
-                    className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50"
+                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
                     onClick={() => setIsOpen(false)}
                   >
                     {link.name}
@@ -139,7 +138,7 @@ export function Navbar() {
                     handleSignOut();
                     setIsOpen(false);
                   }}
-                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary/50 flex items-center gap-2"
+                  className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
                 >
                   <User className="w-4 h-4" />
                   {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
@@ -148,7 +147,7 @@ export function Navbar() {
               ) : (
                 <Link
                   to="/auth"
-                  className="px-4 py-3 text-sm font-medium text-primary hover:text-primary/90 transition-colors rounded-md hover:bg-secondary/50 flex items-center gap-2"
+                  className="px-4 py-3 text-sm font-medium text-white/70 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
                   onClick={() => setIsOpen(false)}
                 >
                   <LogIn className="w-4 h-4" />
