@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Search, Coins, Users, Eye, Gift, History } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, Coins, Users, Eye, Gift, History, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -61,6 +62,11 @@ export default function AdminUserCoins() {
   const [userTransactions, setUserTransactions] = useState<CoinTransaction[]>([]);
   const [userClaims, setUserClaims] = useState<RewardClaim[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  
+  // Coin adjustment state
+  const [adjustAmount, setAdjustAmount] = useState<string>('');
+  const [adjustReason, setAdjustReason] = useState<string>('');
+  const [adjusting, setAdjusting] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -92,6 +98,8 @@ export default function AdminUserCoins() {
   const fetchUserDetails = async (userCoin: UserCoin) => {
     setSelectedUser(userCoin);
     setLoadingDetails(true);
+    setAdjustAmount('');
+    setAdjustReason('');
 
     try {
       const { data: transactions } = await supabase
@@ -117,6 +125,59 @@ export default function AdminUserCoins() {
       console.error('Error fetching user details:', error);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const adjustCoins = async (type: 'add' | 'subtract') => {
+    if (!selectedUser || !adjustAmount || adjusting) return;
+    
+    const amount = parseInt(adjustAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    if (type === 'subtract' && amount > selectedUser.balance) {
+      toast.error('Cannot subtract more than current balance');
+      return;
+    }
+
+    setAdjusting(true);
+
+    try {
+      if (type === 'add') {
+        const { error } = await supabase.rpc('add_coins', {
+          _user_id: selectedUser.user_id,
+          _amount: amount,
+          _source: 'admin_adjustment',
+          _description: adjustReason || 'Admin adjustment - added coins'
+        });
+        if (error) throw error;
+        toast.success(`Added ${amount} coins to ${selectedUser.email}`);
+      } else {
+        const { error } = await supabase.rpc('spend_coins', {
+          _user_id: selectedUser.user_id,
+          _amount: amount,
+          _source: 'admin_adjustment',
+          _description: adjustReason || 'Admin adjustment - removed coins'
+        });
+        if (error) throw error;
+        toast.success(`Removed ${amount} coins from ${selectedUser.email}`);
+      }
+
+      // Refresh data
+      await fetchUsers();
+      // Update selectedUser with fresh data
+      const updatedUser = users.find(u => u.user_id === selectedUser.user_id);
+      if (updatedUser) {
+        await fetchUserDetails({...selectedUser, ...updatedUser});
+      }
+      setAdjustAmount('');
+      setAdjustReason('');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to adjust coins');
+    } finally {
+      setAdjusting(false);
     }
   };
 
@@ -244,14 +305,14 @@ export default function AdminUserCoins() {
                           onClick={() => fetchUserDetails(userCoin)}
                         >
                           <Eye className="w-4 h-4 mr-1" />
-                          Details
+                          Manage
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>{selectedUser?.email}</DialogTitle>
                           <DialogDescription>
-                            User coin history and claims
+                            Manage user coins and view history
                           </DialogDescription>
                         </DialogHeader>
                         
@@ -274,6 +335,55 @@ export default function AdminUserCoins() {
                               <div className="p-3 rounded-lg bg-muted text-center">
                                 <p className="text-2xl font-bold text-foreground">{selectedUser?.total_spent}</p>
                                 <p className="text-xs text-muted-foreground">Spent</p>
+                              </div>
+                            </div>
+
+                            {/* Admin Coin Adjustment */}
+                            <div className="p-4 rounded-lg border border-primary/30 bg-primary/5">
+                              <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                                <Coins className="w-4 h-4 text-yellow-500" />
+                                Adjust User Coins
+                              </h4>
+                              <div className="space-y-3">
+                                <div>
+                                  <Label>Amount</Label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    placeholder="Enter amount..."
+                                    value={adjustAmount}
+                                    onChange={(e) => setAdjustAmount(e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Reason (optional)</Label>
+                                  <Input
+                                    placeholder="Reason for adjustment..."
+                                    value={adjustReason}
+                                    onChange={(e) => setAdjustReason(e.target.value)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={() => adjustCoins('add')}
+                                    disabled={!adjustAmount || adjusting}
+                                    className="flex-1 bg-green-600 hover:bg-green-700"
+                                  >
+                                    {adjusting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                                    Add Coins
+                                  </Button>
+                                  <Button
+                                    onClick={() => adjustCoins('subtract')}
+                                    disabled={!adjustAmount || adjusting}
+                                    variant="destructive"
+                                    className="flex-1"
+                                  >
+                                    {adjusting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Minus className="w-4 h-4 mr-2" />}
+                                    Remove Coins
+                                  </Button>
+                                </div>
                               </div>
                             </div>
 
