@@ -89,9 +89,17 @@ export default function Landing() {
                 PropScholar Space
               </p>
 
-              <h1 className="reveal-on-scroll text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-10 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-100">
+              <h1 className="
+                reveal-on-scroll
+                text-5xl md:text-7xl lg:text-8xl
+                font-light tracking-tight mb-10
+                whitespace-normal md:whitespace-nowrap
+                opacity-0 blur-sm translate-y-4
+                transition-all duration-700 delay-100
+              ">
                 You Win, <span className="font-semibold">We Reward.</span>
               </h1>
+
 
               <p className="reveal-on-scroll text-base md:text-lg text-white/65 max-w-2xl mx-auto leading-relaxed font-light mb-16 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
                 A premium competition platform where performance, clarity,
