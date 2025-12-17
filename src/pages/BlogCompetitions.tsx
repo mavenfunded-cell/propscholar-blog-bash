@@ -58,11 +58,17 @@ export default function BlogCompetitions() {
   const closedEvents = events.filter(e => !isEventActive(e));
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Full page gradient background */}
+    <div className="min-h-screen relative overflow-hidden bg-[#0a0a0a] text-white">
+      {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#030712] via-background to-[#0c1222]" />
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0c0c0c] to-[#101010]" />
+        <div
+          className="absolute inset-0 opacity-[0.025] mix-blend-soft-light"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>\")",
+          }}
+        />
       </div>
 
       <div className="relative z-10">
@@ -73,7 +79,7 @@ export default function BlogCompetitions() {
           <div className="container mx-auto px-4 relative">
             <Link 
               to="/" 
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors"
+              className="inline-flex items-center gap-2 text-white/50 hover:text-white mb-8 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to PropScholar Space
@@ -111,7 +117,7 @@ export default function BlogCompetitions() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {activeEvents.map((event, index) => (
                   <Link key={event.id} to={`/events/${event.slug}`}>
-                    <Card className="h-full hover:border-primary/30 hover:shadow-glow transition-all duration-300 animate-slide-up group bg-card/80 backdrop-blur-sm"
+                    <Card className="h-full hover:border-white/20 transition-all duration-300 animate-slide-up group bg-[#111]/80 backdrop-blur-xl border border-white/10"
                       style={{ animationDelay: `${index * 100}ms` }}>
                       {event.featured_image_url && (
                         <div className="relative h-48 overflow-hidden rounded-t-lg">
@@ -158,7 +164,7 @@ export default function BlogCompetitions() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {closedEvents.map((event, index) => (
                   <Link key={event.id} to={`/events/${event.slug}`}>
-                    <Card className="h-full opacity-80 hover:opacity-100 transition-all duration-300 animate-slide-up bg-card/80 backdrop-blur-sm"
+                    <Card className="h-full opacity-80 hover:opacity-100 transition-all duration-300 animate-slide-up bg-[#111]/80 backdrop-blur-xl border border-white/10"
                       style={{ animationDelay: `${index * 100}ms` }}>
                       {event.featured_image_url && (
                         <div className="relative h-40 overflow-hidden rounded-t-xl">
