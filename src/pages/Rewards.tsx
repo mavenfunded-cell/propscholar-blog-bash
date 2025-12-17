@@ -567,25 +567,46 @@ export default function Rewards() {
             </h1>
             <p className="text-sm md:text-base text-muted-foreground">Earn coins and redeem exclusive rewards</p>
           </div>
-
           {/* Balance Card */}
           <Card className="p-4 md:p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center">
-              <div className="pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
-                <p className="text-xs md:text-sm text-muted-foreground mb-1">Available Balance</p>
-                <p className="text-3xl md:text-4xl font-bold text-yellow-500 tabular-nums">{userCoins?.balance || 0}</p>
-                <p className="text-xs text-muted-foreground">Space Coins</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center items-stretch">
+              
+              {/* Available Balance */}
+              <div className="flex flex-col justify-center h-full pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
+                <p className="text-xs md:text-sm text-muted-foreground mb-1">
+                  Available Balance
+                </p>
+                <p className="text-3xl md:text-4xl font-bold text-yellow-500 tabular-nums">
+                  {userCoins?.balance || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Space Coins
+                </p>
               </div>
-              <div className="pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
-                <p className="text-xs md:text-sm text-muted-foreground mb-1">Total Earned</p>
-                <p className="text-xl md:text-2xl font-semibold text-green-400 tabular-nums">{userCoins?.total_earned || 0}</p>
+          
+              {/* Total Earned */}
+              <div className="flex flex-col justify-center h-full pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
+                <p className="text-xs md:text-sm text-muted-foreground mb-1">
+                  Total Earned
+                </p>
+                <p className="text-3xl md:text-4xl font-bold text-green-400 tabular-nums">
+                  {userCoins?.total_earned || 0}
+                </p>
               </div>
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground mb-1">Total Spent</p>
-                <p className="text-xl md:text-2xl font-semibold text-foreground tabular-nums">{userCoins?.total_spent || 0}</p>
+          
+              {/* Total Spent */}
+              <div className="flex flex-col justify-center h-full">
+                <p className="text-xs md:text-sm text-muted-foreground mb-1">
+                  Total Spent
+                </p>
+                <p className="text-3xl md:text-4xl font-bold text-foreground tabular-nums">
+                  {userCoins?.total_spent || 0}
+                </p>
               </div>
+          
             </div>
           </Card>
+
 
           <Tabs defaultValue="earn" className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-6 h-auto">
