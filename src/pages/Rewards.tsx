@@ -579,9 +579,6 @@ export default function Rewards() {
                 <p className="text-3xl md:text-4xl font-bold text-yellow-500 tabular-nums">
                   {userCoins?.balance || 0}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Space Coins
-                </p>
               </div>
           
               {/* Total Earned */}
