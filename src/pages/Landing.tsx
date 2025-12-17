@@ -3,7 +3,6 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ArrowRight, PenTool, Video, Sparkles, ExternalLink } from 'lucide-react';
 
 const competitions = [
@@ -33,15 +32,10 @@ const competitions = [
   },
 ];
 
-const scrollToArena = () => {
-  const element = document.getElementById('choose-your-arena');
-  element?.scrollIntoView({ behavior: 'smooth' });
-};
-
 export default function Landing() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0a0a0a] text-white">
-      {/* ===== Background ===== */}
+      {/* ===== CLEAN BACKGROUND ===== */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0c0c0c] to-[#101010]" />
         <div
@@ -59,12 +53,17 @@ export default function Landing() {
         {/* ===== HERO ===== */}
         <section className="relative py-40 md:py-52">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
+            <div className="max-w-5xl mx-auto text-center">
               <p className="text-xs tracking-[0.35em] uppercase text-white/50 mb-10 font-medium">
                 PropScholar Space
               </p>
 
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight mb-10">
+              {/* FORCE SINGLE LINE ON DESKTOP */}
+              <h1 className="
+                text-5xl md:text-7xl lg:text-8xl
+                font-light tracking-tight mb-10
+                whitespace-normal md:whitespace-nowrap
+              ">
                 You Win, <span className="font-semibold">We Reward.</span>
               </h1>
 
@@ -74,13 +73,18 @@ export default function Landing() {
               </p>
 
               <div className="flex flex-wrap justify-center gap-6">
-                <Button 
-                  onClick={scrollToArena}
-                  className="h-14 px-12 rounded-full bg-white/90 text-black hover:bg-white transition-all backdrop-blur-md shadow-xl shadow-black/40"
-                >
-                  Explore Competitions
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                <Link to="/blog">
+                  <Button className="
+                    h-14 px-12 rounded-full
+                    bg-white/90 text-black
+                    hover:bg-white
+                    transition-colors
+                    shadow-xl shadow-black/40
+                  ">
+                    Explore Competitions
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
 
                 <a
                   href="https://propscholar.com"
@@ -89,10 +93,18 @@ export default function Landing() {
                 >
                   <Button
                     variant="outline"
-                    className="h-14 px-12 rounded-full border-white/20 text-white hover:bg-white/5 backdrop-blur-md transition-all"
+                    className="
+                      h-14 px-12 rounded-full
+                      border border-white/20
+                      bg-white/[0.02]
+                      text-white
+                      hover:bg-white/[0.06]
+                      transition-colors
+                      backdrop-blur-md
+                    "
                   >
                     Visit PropScholar
-                    <ExternalLink className="w-4 h-4 ml-2" />
+                    <ExternalLink className="w-4 h-4 ml-2 opacity-70" />
                   </Button>
                 </a>
               </div>
@@ -101,7 +113,7 @@ export default function Landing() {
         </section>
 
         {/* ===== COMPETITIONS ===== */}
-        <section id="choose-your-arena" className="py-28 md:py-36">
+        <section className="py-28 md:py-36">
           <div className="container mx-auto px-4">
             <div className="text-center mb-24">
               <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
@@ -126,54 +138,47 @@ export default function Landing() {
                     <Card
                       className={`
                         relative h-full
-                        bg-[#111]/80
-                        backdrop-blur-xl
+                        bg-white/[0.04]
                         border border-white/10
-                        overflow-hidden
                         ${
                           isComingSoon
-                            ? ''
-                            : 'transition-all duration-500 hover:-translate-y-1 hover:bg-[#161616] hover:border-white/15 hover:shadow-2xl hover:shadow-black/50'
+                            ? 'opacity-60'
+                            : 'transition-all duration-500 hover:-translate-y-1 hover:bg-white/[0.08] hover:shadow-2xl hover:shadow-black/40'
                         }
                       `}
                     >
-                      {/* COMING SOON OVERLAY - Full blur */}
+                      {/* CLEAN COMING SOON LABEL */}
                       {isComingSoon && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]/90 backdrop-blur-xl z-10">
-                          <Badge
-                            className="
-                              px-5 py-2
-                              bg-white/10
-                              text-white/80
-                              border border-white/20
-                              backdrop-blur-md
-                              tracking-widest
-                              text-xs
-                              uppercase
-                            "
-                          >
+                        <div className="absolute top-6 right-6 z-10">
+                          <span className="
+                            px-3 py-1.5 text-xs
+                            rounded-full
+                            bg-black/60
+                            border border-white/20
+                            text-white/70
+                            backdrop-blur-sm
+                            tracking-wide
+                          ">
                             Coming Soon
-                          </Badge>
+                          </span>
                         </div>
                       )}
 
                       <CardContent className="p-10">
-                        <div
-                          className={`
-                            w-12 h-12 rounded-2xl
-                            bg-white/5
-                            border border-white/10
-                            flex items-center justify-center mb-8
-                          `}
-                        >
-                          <comp.icon className="w-6 h-6 text-white/70" />
+                        <div className="
+                          w-12 h-12 rounded-2xl
+                          bg-white/10
+                          border border-white/20
+                          flex items-center justify-center mb-8
+                        ">
+                          <comp.icon className="w-6 h-6 text-white/85" />
                         </div>
 
-                        <h3 className="text-lg font-medium mb-4 text-white/90">
+                        <h3 className="text-lg font-medium mb-4">
                           {comp.title}
                         </h3>
 
-                        <p className="text-white/50 text-sm leading-relaxed">
+                        <p className="text-white/65 text-sm leading-relaxed">
                           {comp.description}
                         </p>
                       </CardContent>
@@ -189,22 +194,27 @@ export default function Landing() {
         <section className="py-32 md:py-40">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
-              <Card className="bg-[#111]/80 backdrop-blur-xl border border-white/10">
+              <Card className="bg-white/[0.06] border border-white/15">
                 <CardContent className="p-16 md:p-20">
-                  <h2 className="text-2xl md:text-3xl font-semibold mb-6 text-white/95">
+                  <h2 className="text-2xl md:text-3xl font-semibold mb-6">
                     Ready to Compete?
                   </h2>
-                  <p className="text-white/50 text-sm font-light mb-12">
+                  <p className="text-white/65 text-sm font-light mb-12">
                     Performance deserves visibility. Step into the arena.
                   </p>
 
-                  <Button 
-                    onClick={scrollToArena}
-                    className="h-12 px-12 rounded-full bg-white text-black hover:bg-white/90 transition-all shadow-xl shadow-black/40"
-                  >
-                    Start Now
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link to="/blog">
+                    <Button className="
+                      h-12 px-12 rounded-full
+                      bg-white text-black
+                      hover:bg-white/90
+                      transition-colors
+                      shadow-xl shadow-black/40
+                    ">
+                      Start Now
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </div>
