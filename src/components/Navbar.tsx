@@ -78,12 +78,15 @@ export function Navbar() {
             {/* Auth Button */}
             {user ? (
               <div className="flex items-center gap-2 ml-2">
-                <div className="flex items-center gap-1.5 text-white/50">
+                <Link 
+                  to="/dashboard" 
+                  className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5"
+                >
                   <User className="w-4 h-4" />
                   <span className="text-sm hidden lg:block truncate max-w-[120px]">
                     {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
                   </span>
-                </div>
+                </Link>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -148,17 +151,26 @@ export function Navbar() {
               
               {/* Mobile Auth Button */}
               {user ? (
-                <button
-                  onClick={() => {
-                    handleSignOut();
-                    setIsOpen(false);
-                  }}
-                  className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
-                >
-                  <User className="w-4 h-4" />
-                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-                  <LogOut className="w-4 h-4 ml-auto" />
-                </button>
+                <div className="flex flex-col gap-1">
+                  <Link
+                    to="/dashboard"
+                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setIsOpen(false);
+                    }}
+                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
               ) : (
                 <Link
                   to="/auth"

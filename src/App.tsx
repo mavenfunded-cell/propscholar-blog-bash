@@ -19,6 +19,7 @@ import SubmissionSuccess from "./pages/SubmissionSuccess";
 import ReelSubmissionSuccess from "./pages/ReelSubmissionSuccess";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/blog" element={<BlogCompetitions />} />
             <Route path="/reels" element={<ReelCompetitions />} />
             <Route path="/auth" element={<Auth />} />
