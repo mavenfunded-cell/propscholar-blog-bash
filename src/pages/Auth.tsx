@@ -32,10 +32,35 @@ export default function Auth() {
         const referralCode = localStorage.getItem('referral_code');
         if (referralCode) {
           try {
-            const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
-            const result = data as any;
-            if (result?.success) {
-              toast.success(`Welcome! Your referrer received ${result.coins} coins.`);
+            // Wait a bit for user_coins record to be created by trigger
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Ensure user_coins record exists
+            const { data: existingCoins } = await supabase
+              .from('user_coins')
+              .select('id, referred_by')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
+            // If no record exists, create it first
+            if (!existingCoins) {
+              await supabase.from('user_coins').insert({
+                user_id: user.id,
+                email: user.email || ''
+              });
+              // Wait for insert to complete
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Only apply if not already referred
+            if (!existingCoins?.referred_by) {
+              const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
+              const result = data as any;
+              if (result?.success) {
+                toast.success(`Welcome! Your referrer received ${result.coins} coins.`);
+              } else if (result?.error && result.error !== 'Referral already applied') {
+                console.log('Referral error:', result.error);
+              }
             }
           } catch (err) {
             console.log('Referral not applied:', err);
