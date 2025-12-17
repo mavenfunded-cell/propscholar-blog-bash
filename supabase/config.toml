@@ -2,3 +2,9 @@ project_id = "tisijoiblvcrigwhzprn"
 
 [functions.send-auth-email]
 verify_jwt = false
+
+[functions.send-magic-link]
+verify_jwt = false
+
+[functions.verify-magic-link]
+verify_jwt = false

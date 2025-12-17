@@ -34,14 +34,17 @@ export default function Auth() {
     try {
       emailSchema.parse({ email });
       
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
+      // Use custom magic link function via Resend
+      const { data, error } = await supabase.functions.invoke('send-magic-link', {
+        body: { 
+          email,
+          redirectTo: window.location.origin,
         }
       });
       
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
       setMagicLinkSent(true);
       toast.success('Magic link sent! Check your email.');
     } catch (err) {
