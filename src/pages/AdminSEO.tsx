@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Save, 
@@ -17,7 +18,12 @@ import {
   Globe,
   FileText,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  Map,
+  Bot,
+  ExternalLink,
+  RefreshCw,
+  Copy
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,14 +33,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 interface SEOSetting {
   id: string;
@@ -61,6 +59,12 @@ export default function AdminSEO() {
   const [saving, setSaving] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newPage, setNewPage] = useState({ page_path: '', page_name: '' });
+  
+  // Sitemap & Robots state
+  const [sitemapPreview, setSitemapPreview] = useState<string>('');
+  const [loadingSitemap, setLoadingSitemap] = useState(false);
+  const [robotsTxt, setRobotsTxt] = useState<string>('');
+  const [savingRobots, setSavingRobots] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -91,6 +95,7 @@ export default function AdminSEO() {
 
     setIsAdmin(true);
     fetchSEOSettings();
+    fetchRobotsTxt();
   };
 
   const fetchSEOSettings = async () => {
@@ -106,6 +111,81 @@ export default function AdminSEO() {
       toast.error('Failed to fetch SEO settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRobotsTxt = async () => {
+    try {
+      const { data } = await supabase
+        .from('reward_settings')
+        .select('setting_value')
+        .eq('setting_key', 'robots_txt')
+        .maybeSingle();
+
+      if (data?.setting_value && typeof data.setting_value === 'object' && 'content' in data.setting_value) {
+        setRobotsTxt((data.setting_value as { content: string }).content || getDefaultRobots());
+      } else {
+        setRobotsTxt(getDefaultRobots());
+      }
+    } catch {
+      setRobotsTxt(getDefaultRobots());
+    }
+  };
+
+  const getDefaultRobots = () => `User-agent: *
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://propscholar.space/sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin/`;
+
+  const fetchSitemapPreview = async () => {
+    setLoadingSitemap(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap`);
+      const text = await response.text();
+      setSitemapPreview(text);
+    } catch (error) {
+      toast.error('Failed to fetch sitemap preview');
+    } finally {
+      setLoadingSitemap(false);
+    }
+  };
+
+  const saveRobotsTxt = async () => {
+    setSavingRobots(true);
+    try {
+      const { data: existing } = await supabase
+        .from('reward_settings')
+        .select('id')
+        .eq('setting_key', 'robots_txt')
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('reward_settings')
+          .update({ setting_value: { content: robotsTxt } })
+          .eq('setting_key', 'robots_txt');
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('reward_settings')
+          .insert({ setting_key: 'robots_txt', setting_value: { content: robotsTxt } });
+        if (error) throw error;
+      }
+
+      toast.success('robots.txt saved!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save robots.txt');
+    } finally {
+      setSavingRobots(false);
     }
   };
 
@@ -180,6 +260,16 @@ export default function AdminSEO() {
     }
   };
 
+  const copySitemapUrl = () => {
+    navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap`);
+    toast.success('Sitemap URL copied!');
+  };
+
+  const copyRobotsUrl = () => {
+    navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/robots`);
+    toast.success('Robots URL copied!');
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -204,203 +294,318 @@ export default function AdminSEO() {
                 <Search className="w-6 h-6 md:w-8 md:h-8" />
                 SEO Management
               </h1>
-              <p className="text-sm text-muted-foreground">Manage meta tags and keywords for all pages</p>
+              <p className="text-sm text-muted-foreground">Manage meta tags, sitemap, and robots.txt</p>
             </div>
           </div>
-          
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Page
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Page</DialogTitle>
-                <DialogDescription>Add SEO settings for a new page</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Page Path</Label>
-                  <Input 
-                    placeholder="/example-page" 
-                    value={newPage.page_path}
-                    onChange={(e) => setNewPage({ ...newPage, page_path: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Page Name</Label>
-                  <Input 
-                    placeholder="Example Page" 
-                    value={newPage.page_name}
-                    onChange={(e) => setNewPage({ ...newPage, page_name: e.target.value })}
-                  />
-                </div>
-                <Button onClick={addNewPage} className="w-full">Add Page</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Pages List */}
-          <Card className="p-4 bg-card/50 border-border/50 lg:col-span-1">
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+        <Tabs defaultValue="pages" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="pages" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
-              Pages ({seoSettings.length})
-            </h3>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto">
-              {seoSettings.map((seo) => (
-                <div
-                  key={seo.id}
-                  onClick={() => setSelectedSeo(seo)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedSeo?.id === seo.id 
-                      ? 'bg-primary/20 border border-primary/30' 
-                      : 'bg-background/50 border border-border/30 hover:bg-background/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{seo.page_name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deletePage(seo.id);
-                      }}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{seo.page_path}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
+              Pages
+            </TabsTrigger>
+            <TabsTrigger value="sitemap" className="flex items-center gap-2">
+              <Map className="w-4 h-4" />
+              Sitemap
+            </TabsTrigger>
+            <TabsTrigger value="robots" className="flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              Robots
+            </TabsTrigger>
+          </TabsList>
 
-          {/* SEO Editor */}
-          <Card className="p-4 md:p-6 bg-card/50 border-border/50 lg:col-span-2">
-            {selectedSeo ? (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-foreground flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    Edit: {selectedSeo.page_name}
-                  </h3>
-                  <Button onClick={saveSEOSettings} disabled={saving}>
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+          {/* Pages Tab */}
+          <TabsContent value="pages" className="mt-6">
+            <div className="flex justify-end mb-4">
+              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Page
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Page</DialogTitle>
+                    <DialogDescription>Add SEO settings for a new page</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Page Path</Label>
+                      <Input 
+                        placeholder="/example-page" 
+                        value={newPage.page_path}
+                        onChange={(e) => setNewPage({ ...newPage, page_path: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Page Name</Label>
+                      <Input 
+                        placeholder="Example Page" 
+                        value={newPage.page_name}
+                        onChange={(e) => setNewPage({ ...newPage, page_name: e.target.value })}
+                      />
+                    </div>
+                    <Button onClick={addNewPage} className="w-full">Add Page</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Pages List */}
+              <Card className="p-4 bg-card/50 border-border/50 lg:col-span-1">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Pages ({seoSettings.length})
+                </h3>
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {seoSettings.map((seo) => (
+                    <div
+                      key={seo.id}
+                      onClick={() => setSelectedSeo(seo)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedSeo?.id === seo.id 
+                          ? 'bg-primary/20 border border-primary/30' 
+                          : 'bg-background/50 border border-border/30 hover:bg-background/80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{seo.page_name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deletePage(seo.id);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{seo.page_path}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* SEO Editor */}
+              <Card className="p-4 md:p-6 bg-card/50 border-border/50 lg:col-span-2">
+                {selectedSeo ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-foreground flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Edit: {selectedSeo.page_name}
+                      </h3>
+                      <Button onClick={saveSEOSettings} disabled={saving}>
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                        Save
+                      </Button>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <Label>Page Title</Label>
+                        <Input
+                          value={selectedSeo.title || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, title: e.target.value })}
+                          placeholder="Page Title - PropScholar"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Recommended: 50-60 characters</p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <Label>Meta Description</Label>
+                        <Textarea
+                          value={selectedSeo.description || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, description: e.target.value })}
+                          placeholder="A brief description of this page..."
+                          rows={3}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Recommended: 150-160 characters ({selectedSeo.description?.length || 0})</p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <Label>Keywords</Label>
+                        <Textarea
+                          value={selectedSeo.keywords || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, keywords: e.target.value })}
+                          placeholder="keyword1, keyword2, keyword3..."
+                          rows={2}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Comma-separated keywords</p>
+                      </div>
+
+                      <div>
+                        <Label>OG Title (Social)</Label>
+                        <Input
+                          value={selectedSeo.og_title || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, og_title: e.target.value })}
+                          placeholder="Leave empty to use page title"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>OG Image URL</Label>
+                        <Input
+                          value={selectedSeo.og_image || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, og_image: e.target.value })}
+                          placeholder="https://..."
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <Label>OG Description (Social)</Label>
+                        <Textarea
+                          value={selectedSeo.og_description || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, og_description: e.target.value })}
+                          placeholder="Leave empty to use meta description"
+                          rows={2}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Canonical URL</Label>
+                        <Input
+                          value={selectedSeo.canonical_url || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, canonical_url: e.target.value })}
+                          placeholder="https://propscholar.space/..."
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Robots</Label>
+                        <Input
+                          value={selectedSeo.robots || ''}
+                          onChange={(e) => setSelectedSeo({ ...selectedSeo, robots: e.target.value })}
+                          placeholder="index, follow"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="mt-6 p-4 rounded-lg bg-background/50 border border-border/30">
+                      <p className="text-xs text-muted-foreground mb-2">Google Preview</p>
+                      <div className="text-blue-400 text-lg hover:underline cursor-pointer truncate">
+                        {selectedSeo.title || 'Page Title'}
+                      </div>
+                      <div className="text-green-400 text-sm truncate">
+                        {selectedSeo.canonical_url || `https://propscholar.space${selectedSeo.page_path}`}
+                      </div>
+                      <div className="text-muted-foreground text-sm line-clamp-2">
+                        {selectedSeo.description || 'Meta description will appear here...'}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
+                    <Search className="w-12 h-12 mb-4 opacity-50" />
+                    <p>Select a page to edit its SEO settings</p>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Sitemap Tab */}
+          <TabsContent value="sitemap" className="mt-6">
+            <Card className="p-4 md:p-6 bg-card/50 border-border/50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Map className="w-5 h-5" />
+                  Sitemap.xml
+                </h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={copySitemapUrl}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy URL
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={fetchSitemapPreview} disabled={loadingSitemap}>
+                    {loadingSitemap ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                    Preview
+                  </Button>
+                  <Button size="sm" asChild>
+                    <a href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Open
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-background/50 rounded-lg p-4 border border-border/30 mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  <strong>Sitemap URL:</strong>
+                </p>
+                <code className="text-sm text-primary break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap</code>
+                <p className="text-xs text-muted-foreground mt-2">
+                  This sitemap is dynamically generated from your SEO settings and active events.
+                </p>
+              </div>
+
+              {sitemapPreview && (
+                <div className="mt-4">
+                  <Label className="mb-2 block">Preview:</Label>
+                  <pre className="bg-background/80 p-4 rounded-lg overflow-x-auto text-xs text-foreground/80 max-h-[400px] overflow-y-auto">
+                    {sitemapPreview}
+                  </pre>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          {/* Robots Tab */}
+          <TabsContent value="robots" className="mt-6">
+            <Card className="p-4 md:p-6 bg-card/50 border-border/50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Bot className="w-5 h-5" />
+                  Robots.txt
+                </h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={copyRobotsUrl}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy URL
+                  </Button>
+                  <Button onClick={saveRobotsTxt} disabled={savingRobots}>
+                    {savingRobots ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                     Save
                   </Button>
                 </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <Label>Page Title</Label>
-                    <Input
-                      value={selectedSeo.title || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, title: e.target.value })}
-                      placeholder="Page Title - PropScholar"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Recommended: 50-60 characters</p>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <Label>Meta Description</Label>
-                    <Textarea
-                      value={selectedSeo.description || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, description: e.target.value })}
-                      placeholder="A brief description of this page..."
-                      rows={3}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Recommended: 150-160 characters ({selectedSeo.description?.length || 0})</p>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <Label>Keywords</Label>
-                    <Textarea
-                      value={selectedSeo.keywords || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, keywords: e.target.value })}
-                      placeholder="keyword1, keyword2, keyword3..."
-                      rows={2}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Comma-separated keywords</p>
-                  </div>
-
-                  <div>
-                    <Label>OG Title (Social)</Label>
-                    <Input
-                      value={selectedSeo.og_title || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, og_title: e.target.value })}
-                      placeholder="Leave empty to use page title"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>OG Image URL</Label>
-                    <Input
-                      value={selectedSeo.og_image || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, og_image: e.target.value })}
-                      placeholder="https://..."
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <Label>OG Description (Social)</Label>
-                    <Textarea
-                      value={selectedSeo.og_description || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, og_description: e.target.value })}
-                      placeholder="Leave empty to use meta description"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Canonical URL</Label>
-                    <Input
-                      value={selectedSeo.canonical_url || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, canonical_url: e.target.value })}
-                      placeholder="https://propscholar.space/..."
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Robots</Label>
-                    <Input
-                      value={selectedSeo.robots || ''}
-                      onChange={(e) => setSelectedSeo({ ...selectedSeo, robots: e.target.value })}
-                      placeholder="index, follow"
-                    />
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div className="mt-6 p-4 rounded-lg bg-background/50 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-2">Google Preview</p>
-                  <div className="text-blue-400 text-lg hover:underline cursor-pointer truncate">
-                    {selectedSeo.title || 'Page Title'}
-                  </div>
-                  <div className="text-green-400 text-sm truncate">
-                    {selectedSeo.canonical_url || `https://propscholar.space${selectedSeo.page_path}`}
-                  </div>
-                  <div className="text-muted-foreground text-sm line-clamp-2">
-                    {selectedSeo.description || 'Meta description will appear here...'}
-                  </div>
-                </div>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
-                <Search className="w-12 h-12 mb-4 opacity-50" />
-                <p>Select a page to edit its SEO settings</p>
+
+              <div className="bg-background/50 rounded-lg p-4 border border-border/30 mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  <strong>Robots URL:</strong>
+                </p>
+                <code className="text-sm text-primary break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/robots</code>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Configure which pages search engine crawlers can access.
+                </p>
               </div>
-            )}
-          </Card>
-        </div>
+
+              <div>
+                <Label className="mb-2 block">Edit robots.txt:</Label>
+                <Textarea
+                  value={robotsTxt}
+                  onChange={(e) => setRobotsTxt(e.target.value)}
+                  className="font-mono text-sm"
+                  rows={15}
+                  placeholder="User-agent: *\nAllow: /"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Common directives: User-agent, Allow, Disallow, Sitemap
+                </p>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
