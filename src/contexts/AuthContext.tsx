@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +19,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const referralAppliedRef = useRef(false);
+
+  // Apply referral code after authentication
+  const applyReferralCode = async (userId: string, userEmail: string) => {
+    if (referralAppliedRef.current) return;
+    
+    const referralCode = localStorage.getItem('referral_code');
+    if (!referralCode) return;
+    
+    referralAppliedRef.current = true;
+    
+    try {
+      // Wait for user_coins record to be created by trigger
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Ensure user_coins record exists
+      const { data: existingCoins } = await supabase
+        .from('user_coins')
+        .select('id, referred_by')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      // If no record exists, create it first
+      if (!existingCoins) {
+        await supabase.from('user_coins').insert({
+          user_id: userId,
+          email: userEmail || ''
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else if (existingCoins.referred_by) {
+        // Already referred, skip
+        localStorage.removeItem('referral_code');
+        return;
+      }
+      
+      // Apply referral code
+      const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
+      const result = data as any;
+      
+      if (result?.success) {
+        toast.success(`Welcome! Your referrer received ${result.coins} coins.`);
+      } else {
+        console.log('Referral result:', result);
+      }
+    } catch (err) {
+      console.error('Referral error:', err);
+    } finally {
+      localStorage.removeItem('referral_code');
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -28,9 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setTimeout(() => {
             checkAdminRole(session.user.id);
+            // Apply referral code on sign in
+            if (event === 'SIGNED_IN') {
+              applyReferralCode(session.user.id, session.user.email || '');
+            }
           }, 0);
         } else {
           setIsAdmin(false);
+          referralAppliedRef.current = false;
         }
       }
     );
@@ -41,6 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.user) {
         checkAdminRole(session.user.id);
+        // Also try to apply referral on initial load (for returning after OAuth)
+        applyReferralCode(session.user.id, session.user.email || '');
       }
       setLoading(false);
     });
