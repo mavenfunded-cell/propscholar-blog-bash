@@ -9,6 +9,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Token validation: 64 hex characters (32 bytes)
+const TOKEN_REGEX = /^[a-f0-9]{64}$/;
+
+function validateToken(token: unknown): string {
+  if (typeof token !== 'string') {
+    throw new Error("Token must be a string");
+  }
+  const trimmed = token.trim().toLowerCase();
+  if (!trimmed) {
+    throw new Error("Token is required");
+  }
+  if (!TOKEN_REGEX.test(trimmed)) {
+    throw new Error("Invalid token format");
+  }
+  return trimmed;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("verify-magic-link function called");
 
@@ -17,11 +34,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { token } = await req.json();
+    const body = await req.json();
     
-    if (!token) {
-      throw new Error("Token is required");
-    }
+    // Validate token format
+    const token = validateToken(body.token);
 
     console.log("Verifying token");
 
@@ -44,6 +60,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if token is expired
     if (new Date(tokenData.expires_at) < new Date()) {
       console.error("Token expired");
+      // Clean up expired token
+      await supabase
+        .from('magic_link_tokens')
+        .update({ used: true })
+        .eq('id', tokenData.id);
       throw new Error("Token has expired");
     }
 
@@ -60,14 +81,12 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(u => u.email === email);
 
-    let session = null;
-
     if (existingUser) {
       // User exists - generate a session for them
       console.log("Existing user found, generating session");
       
       // Generate a magic link that auto-signs in
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      const { error: linkError } = await supabase.auth.admin.generateLink({
         type: 'magiclink',
         email: email,
       });
@@ -82,7 +101,6 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         email,
         isNewUser: false,
-        // The frontend will use signInWithOtp to complete
       }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -92,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Creating new user");
       
       const tempPassword = crypto.randomUUID();
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      const { error: createError } = await supabase.auth.admin.createUser({
         email: email,
         password: tempPassword,
         email_confirm: true,
@@ -118,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
-        status: 500,
+        status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );

@@ -10,6 +10,59 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_LENGTH = 255;
+const ALLOWED_REDIRECT_DOMAINS = ['propscholar.space', 'localhost', '127.0.0.1'];
+
+function validateEmail(email: unknown): string {
+  if (typeof email !== 'string') {
+    throw new Error("Email must be a string");
+  }
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) {
+    throw new Error("Email is required");
+  }
+  if (trimmed.length > MAX_EMAIL_LENGTH) {
+    throw new Error("Email is too long");
+  }
+  if (!EMAIL_REGEX.test(trimmed)) {
+    throw new Error("Invalid email format");
+  }
+  // Check for injection attempts
+  if (trimmed.includes('\n') || trimmed.includes('\r')) {
+    throw new Error("Invalid email format");
+  }
+  return trimmed;
+}
+
+function validateRedirectUrl(redirectTo: unknown): string {
+  if (!redirectTo) {
+    return "https://propscholar.space";
+  }
+  if (typeof redirectTo !== 'string') {
+    throw new Error("Invalid redirect URL");
+  }
+  const trimmed = redirectTo.trim();
+  if (trimmed.length > 500) {
+    throw new Error("Redirect URL is too long");
+  }
+  try {
+    const url = new URL(trimmed);
+    const hostname = url.hostname;
+    const isAllowed = ALLOWED_REDIRECT_DOMAINS.some(
+      domain => hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+    if (!isAllowed) {
+      console.warn("Blocked redirect to unauthorized domain:", hostname);
+      return "https://propscholar.space";
+    }
+    return trimmed;
+  } catch {
+    throw new Error("Invalid redirect URL format");
+  }
+}
+
 function generateToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -24,11 +77,11 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, redirectTo } = await req.json();
+    const body = await req.json();
     
-    if (!email) {
-      throw new Error("Email is required");
-    }
+    // Validate inputs
+    const email = validateEmail(body.email);
+    const redirectTo = validateRedirectUrl(body.redirectTo);
 
     console.log("Generating magic link for:", email);
 
@@ -61,8 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build the magic link URL
-    const baseUrl = redirectTo || "https://propscholar.space";
-    const magicLinkUrl = `${baseUrl}/auth/verify?token=${token}`;
+    const magicLinkUrl = `${redirectTo}/auth/verify?token=${token}`;
 
     console.log("Sending magic link to:", email);
 
@@ -114,10 +166,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!emailResponse.ok) {
       console.error("Resend API error:", emailResult);
-      // Common errors:
-      // - Domain not verified: Check https://resend.com/domains
-      // - Invalid from address: Ensure noreply@propscholar.space domain is verified
-      // - Rate limited: Check Resend dashboard for limits
       throw new Error(emailResult.message || emailResult.name || "Failed to send email. Please try Google Sign In instead.");
     }
 
@@ -131,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
-        status: 500,
+        status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
