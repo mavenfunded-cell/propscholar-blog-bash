@@ -158,11 +158,29 @@ const Dashboard = () => {
         setReelSubmissions(enrichedReels);
       }
 
-      // Fetch winner claims for this user
+      // Fetch winner claims for this user - match by submission email from their submissions
+      const userSubmissionEmails = [user.email];
+      
+      // Also get emails from user's submissions
+      if (blogs && blogs.length > 0) {
+        blogs.forEach(b => {
+          if (b.email && !userSubmissionEmails.includes(b.email)) {
+            userSubmissionEmails.push(b.email);
+          }
+        });
+      }
+      if (reels && reels.length > 0) {
+        reels.forEach(r => {
+          if (r.email && !userSubmissionEmails.includes(r.email)) {
+            userSubmissionEmails.push(r.email);
+          }
+        });
+      }
+
       const { data: winnerClaimsData } = await supabase
         .from('winner_claims')
         .select('*')
-        .eq('user_email', user.email);
+        .in('user_email', userSubmissionEmails);
 
       if (winnerClaimsData && winnerClaimsData.length > 0) {
         // Get event titles
@@ -467,10 +485,18 @@ const Dashboard = () => {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  if (claim) {
-                                    setUnclaimedWin({ ...claim, event_title: win.event_title });
-                                    setShowWinnerDialog(true);
-                                  }
+                                  // Create claim object even if it doesn't exist yet
+                                  const claimObj: WinnerClaim = claim || {
+                                    id: '',
+                                    winner_type: 'blog_title' in win ? 'blog' : 'reel',
+                                    event_id: win.event_id,
+                                    submission_id: win.id,
+                                    position: win.position || 1,
+                                    status: 'unclaimed',
+                                    event_title: win.event_title
+                                  };
+                                  setUnclaimedWin({ ...claimObj, event_title: win.event_title });
+                                  setShowWinnerDialog(true);
                                 }}
                                 className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs"
                               >

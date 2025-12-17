@@ -271,7 +271,9 @@ export default function AdminRewardClaims() {
                   </p>
                 )}
                 {claim.notes && (
-                  <p className="text-xs text-muted-foreground">Notes: {claim.notes}</p>
+                  <div className="text-xs text-muted-foreground whitespace-pre-line bg-muted/30 p-2 rounded mt-1">
+                    {claim.notes}
+                  </div>
                 )}
               </div>
 

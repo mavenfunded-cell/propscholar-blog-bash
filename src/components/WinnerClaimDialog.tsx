@@ -53,17 +53,50 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('winner_claims')
-        .update({
-          claim_name: name.trim(),
-          claim_email: email.trim(),
-          status: 'pending',
-          claimed_at: new Date().toISOString()
-        })
-        .eq('id', claim.id);
+      if (claim.id) {
+        // Update existing claim
+        const { error } = await supabase
+          .from('winner_claims')
+          .update({
+            claim_name: name.trim(),
+            claim_email: email.trim(),
+            status: 'pending',
+            claimed_at: new Date().toISOString()
+          })
+          .eq('id', claim.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Create new claim (for winners without existing claim record)
+        // First, we need to find the winner_id from the winners table
+        const winnerTable = claim.winner_type === 'blog' ? 'winners' : 'reel_winners';
+        const { data: winnerData } = await supabase
+          .from(winnerTable)
+          .select('id')
+          .eq('submission_id', claim.submission_id)
+          .single();
+
+        if (!winnerData) {
+          throw new Error('Winner record not found');
+        }
+
+        const { error } = await supabase
+          .from('winner_claims')
+          .insert({
+            winner_id: winnerData.id,
+            winner_type: claim.winner_type,
+            event_id: claim.event_id,
+            submission_id: claim.submission_id,
+            user_email: email.trim(), // Use claim email as user_email
+            position: claim.position,
+            claim_name: name.trim(),
+            claim_email: email.trim(),
+            status: 'pending',
+            claimed_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
 
       toast.success('Reward claim submitted! You will receive it within 48 hours.');
       setName('');
