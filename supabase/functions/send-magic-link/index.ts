@@ -128,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "PropScholar <noreply@propscholar.space>",
         to: [email],
-        subject: "Your Magic Link to Sign In",
+        subject: "Your Verification Link to Sign In",
         html: `
           <!DOCTYPE html>
           <html>
