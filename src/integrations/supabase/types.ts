@@ -655,16 +655,10 @@ export type Database = {
         Returns: Json
       }
       claim_signup_coins: { Args: { _user_id: string }; Returns: Json }
-      claim_social_coins:
-        | { Args: { _platform: string; _user_id: string }; Returns: Json }
-        | {
-            Args: {
-              _platform: string
-              _screenshot_url?: string
-              _user_id: string
-            }
-            Returns: Json
-          }
+      claim_social_coins: {
+        Args: { _platform: string; _screenshot_url?: string }
+        Returns: Json
+      }
       generate_slug: { Args: { title: string }; Returns: string }
       get_event_winners: {
         Args: { _event_id: string }

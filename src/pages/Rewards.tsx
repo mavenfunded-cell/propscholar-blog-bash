@@ -358,7 +358,6 @@ export default function Rewards() {
 
       // Claim social coins with screenshot (coins added after admin approval)
       const { data, error } = await supabase.rpc('claim_social_coins', { 
-        _user_id: user.id, 
         _platform: socialDialog.platform,
         _screenshot_url: screenshotUrl
       });
@@ -413,9 +412,11 @@ export default function Rewards() {
 
       if (reward.reward_type === 'discount_30' || reward.reward_type === 'discount_50') {
         // Use the secure RPC to claim coupon
+        const expiryDays = reward.expiry_days ?? 14;
+
         const { data: couponResult, error: couponError } = await supabase.rpc('claim_coupon', {
           _reward_type: reward.reward_type,
-          _expiry_days: reward.expiry_days
+          _expiry_days: expiryDays
         });
 
         if (couponError) throw couponError;
@@ -439,7 +440,7 @@ export default function Rewards() {
 
       // Create reward claim - fulfilled for coupons, pending only for prop_account
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + reward.expiry_days);
+      expiresAt.setDate(expiresAt.getDate() + (reward.expiry_days ?? 14));
 
       const claimStatus = reward.reward_type === 'prop_account' ? 'pending' : 'fulfilled';
 
