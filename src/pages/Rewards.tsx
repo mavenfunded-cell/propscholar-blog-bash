@@ -463,7 +463,12 @@ export default function Rewards() {
       expiresAt.setDate(expiresAt.getDate() + (reward.expiry_days ?? 14));
 
       const claimStatus = reward.reward_type === 'prop_account' ? 'pending' : 'fulfilled';
-      const notes = claimName && claimEmail ? `Name: ${claimName}, Email: ${claimEmail}` : null;
+      
+      // Build notes with name and email for prop_account claims
+      let claimNotes = null;
+      if (reward.reward_type === 'prop_account' && claimName && claimEmail) {
+        claimNotes = `Claim Name: ${claimName}\nClaim Email: ${claimEmail}`;
+      }
 
       await supabase.from('reward_claims').insert({
         user_id: user.id,
@@ -473,7 +478,7 @@ export default function Rewards() {
         coupon_id: couponId,
         coupon_code: couponCode,
         expires_at: expiresAt.toISOString(),
-        notes: notes
+        notes: claimNotes
       });
 
       // Show success dialog for coupon rewards, toast for $10K
