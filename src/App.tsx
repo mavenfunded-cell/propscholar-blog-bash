@@ -29,6 +29,7 @@ import AdminRewardClaims from "./pages/AdminRewardClaims";
 import AdminSocialFollows from "./pages/AdminSocialFollows";
 import AdminWinnerClaims from "./pages/AdminWinnerClaims";
 import AdminSEO from "./pages/AdminSEO";
+import AdminSubdomainGuard from "./components/AdminSubdomainGuard";
 
 const queryClient = new QueryClient();
 
@@ -58,18 +59,18 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verify" element={<AuthVerify />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/events/new" element={<EventForm />} />
-            <Route path="/admin/events/:id/edit" element={<EventForm />} />
-            <Route path="/admin/events/:id/submissions" element={<EventSubmissions />} />
-            <Route path="/admin/rewards" element={<AdminRewardSettings />} />
-            <Route path="/admin/coupons" element={<AdminCoupons />} />
-            <Route path="/admin/users-coins" element={<AdminUserCoins />} />
-            <Route path="/admin/claims" element={<AdminRewardClaims />} />
-            <Route path="/admin/social-follows" element={<AdminSocialFollows />} />
-            <Route path="/admin/winner-claims" element={<AdminWinnerClaims />} />
-            <Route path="/admin/seo" element={<AdminSEO />} />
+            <Route path="/admin" element={<AdminSubdomainGuard><AdminLogin /></AdminSubdomainGuard>} />
+            <Route path="/admin/dashboard" element={<AdminSubdomainGuard><AdminDashboard /></AdminSubdomainGuard>} />
+            <Route path="/admin/events/new" element={<AdminSubdomainGuard><EventForm /></AdminSubdomainGuard>} />
+            <Route path="/admin/events/:id/edit" element={<AdminSubdomainGuard><EventForm /></AdminSubdomainGuard>} />
+            <Route path="/admin/events/:id/submissions" element={<AdminSubdomainGuard><EventSubmissions /></AdminSubdomainGuard>} />
+            <Route path="/admin/rewards" element={<AdminSubdomainGuard><AdminRewardSettings /></AdminSubdomainGuard>} />
+            <Route path="/admin/coupons" element={<AdminSubdomainGuard><AdminCoupons /></AdminSubdomainGuard>} />
+            <Route path="/admin/users-coins" element={<AdminSubdomainGuard><AdminUserCoins /></AdminSubdomainGuard>} />
+            <Route path="/admin/claims" element={<AdminSubdomainGuard><AdminRewardClaims /></AdminSubdomainGuard>} />
+            <Route path="/admin/social-follows" element={<AdminSubdomainGuard><AdminSocialFollows /></AdminSubdomainGuard>} />
+            <Route path="/admin/winner-claims" element={<AdminSubdomainGuard><AdminWinnerClaims /></AdminSubdomainGuard>} />
+            <Route path="/admin/seo" element={<AdminSubdomainGuard><AdminSEO /></AdminSubdomainGuard>} />
             <Route path="/blog/:slug" element={<EventPage />} />
             <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
             <Route path="/reels/:slug" element={<ReelEventPage />} />

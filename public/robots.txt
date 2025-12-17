@@ -12,3 +12,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://tisijoiblvcrigwhzprn.supabase.co/functions/v1/sitemap
+
+# Disallow admin pages
+Disallow: /admin/
