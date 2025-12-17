@@ -19,6 +19,8 @@ import ReelEventPage from "./pages/ReelEventPage";
 import SubmissionSuccess from "./pages/SubmissionSuccess";
 import ReelSubmissionSuccess from "./pages/ReelSubmissionSuccess";
 import Terms from "./pages/Terms";
+import About from "./pages/About";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Rewards from "./pages/Rewards";
@@ -58,6 +60,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verify" element={<AuthVerify />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             {/* Admin */}
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

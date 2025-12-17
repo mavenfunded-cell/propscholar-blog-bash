@@ -10,9 +10,9 @@ export function Footer() {
   ];
 
   const companyLinks = [
-    { label: "About Us", href: "https://propscholar.com/about" },
+    { label: "About Us", href: "/about" },
     { label: "Terms & Conditions", href: "/terms" },
-    { label: "Privacy Policy", href: "https://propscholar.com/privacy-policy" },
+    { label: "Privacy Policy", href: "/privacy" },
     { label: "FAQ", href: "https://propscholar.com/blogs" },
   ];
 
@@ -100,7 +100,7 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-4 text-xs text-white/40">
               <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
-              <a href="https://propscholar.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy</a>
+              <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             </div>
           </div>
         </div>
