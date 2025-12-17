@@ -5,7 +5,6 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +12,7 @@ import { toast } from 'sonner';
 import { Calendar, FileText, AlertCircle, ArrowLeft, Trophy, XCircle, Crown, Medal, Award } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 
 interface Event {
   id: string;
@@ -431,14 +431,16 @@ export default function EventPage() {
                       />
                     </div>
 
-                    {/* Blog Title */}
+                    {/* Article Title */}
                     <div className="space-y-2">
-                      <Label htmlFor="blogTitle">Blog Title</Label>
+                      <Label htmlFor="blogTitle">
+                        Article Title <span className="text-destructive">*</span>
+                      </Label>
                       <Input
                         id="blogTitle"
                         value={blogTitle}
                         onChange={(e) => setBlogTitle(e.target.value)}
-                        placeholder="Enter your blog title"
+                        placeholder="e.g., How to Start Trading with PropScholar"
                         required
                         className="bg-secondary/50 border-border focus:border-primary"
                       />
@@ -447,39 +449,22 @@ export default function EventPage() {
                     {/* Blog */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="blog">Your Blog Content</Label>
+                        <Label>Article Content <span className="text-destructive">*</span></Label>
                         <span className={`text-sm ${wordCount >= event.min_words ? 'text-success' : 'text-muted-foreground'}`}>
                           {wordCount} / {event.min_words} words
                         </span>
                       </div>
-                      <Textarea
-                        id="blog"
+                      <MarkdownEditor
                         value={blog}
-                        onChange={(e) => setBlog(e.target.value)}
+                        onChange={setBlog}
                         onPaste={handleBlogPaste}
-                        placeholder="Type your blog entry here using Markdown syntax... (Copy/Paste is disabled)"
+                        placeholder="Write your article content in Markdown..."
+                        minHeight="350px"
                         rows={14}
-                        className="no-select resize-y min-h-[350px] bg-secondary/50 border-border focus:border-primary font-mono text-sm"
-                        required
                       />
-                      <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground">
-                          Copy and paste is disabled. You must type your entry directly.
-                        </p>
-                        <div className="rounded-md bg-secondary/30 p-3 text-xs text-muted-foreground">
-                          <p className="font-semibold mb-2">Markdown Syntax Guide:</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <span><code className="bg-background/50 px-1 rounded"># Heading 1</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">## Heading 2</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">**bold text**</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">*italic text*</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">- list item</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">1. numbered list</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">[link](url)</code></span>
-                            <span><code className="bg-background/50 px-1 rounded">&gt; blockquote</code></span>
-                          </div>
-                        </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Copy and paste is disabled. You must type your entry directly.
+                      </p>
                     </div>
 
                     {/* Submit */}
