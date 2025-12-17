@@ -99,7 +99,7 @@ export default function Auth() {
       if (data?.error) throw new Error(data.error);
       
       setMagicLinkSent(true);
-      toast.success('Magic link sent! Check your email.');
+      toast.success('Verification link sent! Check your email.');
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
@@ -180,7 +180,7 @@ export default function Auth() {
                 <CardTitle className="text-xl text-white">Welcome</CardTitle>
                 <CardDescription className="text-white/50">
                   {magicLinkSent 
-                    ? 'Check your email for the magic link' 
+                    ? 'Check your email for the verification link' 
                     : 'Choose your preferred sign-in method'
                   }
                 </CardDescription>
@@ -192,7 +192,7 @@ export default function Auth() {
                       <Mail className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">Magic link sent!</p>
+                      <p className="text-white font-medium">Verification link sent!</p>
                       <p className="text-sm text-white/50 mt-1">
                         We sent a sign-in link to <strong className="text-white">{email}</strong>
                       </p>
@@ -274,10 +274,10 @@ export default function Auth() {
                         {submitting ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Sending Magic Link...
+                            Sending Verification Link...
                           </>
                         ) : (
-                          'Send Magic Link'
+                          'Send Verification Link'
                         )}
                       </Button>
                     </form>
