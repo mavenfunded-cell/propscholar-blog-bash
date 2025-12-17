@@ -113,7 +113,12 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Email response:", emailResult);
 
     if (!emailResponse.ok) {
-      throw new Error(emailResult.message || "Failed to send email");
+      console.error("Resend API error:", emailResult);
+      // Common errors:
+      // - Domain not verified: Check https://resend.com/domains
+      // - Invalid from address: Ensure noreply@propscholar.space domain is verified
+      // - Rate limited: Check Resend dashboard for limits
+      throw new Error(emailResult.message || emailResult.name || "Failed to send email. Please try Google Sign In instead.");
     }
 
     return new Response(JSON.stringify({ success: true }), {

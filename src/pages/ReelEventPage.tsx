@@ -189,13 +189,14 @@ export default function ReelEventPage() {
     try {
       toast.info('Uploading video... Please wait');
       const videoUrl = await uploadVideo();
+      const submissionEmail = email.toLowerCase();
 
       const { error } = await supabase
         .from('reel_submissions')
         .insert([{
           event_id: event.id,
           name,
-          email: email.toLowerCase(),
+          email: submissionEmail,
           phone,
           title,
           description: description || null,
@@ -208,6 +209,16 @@ export default function ReelEventPage() {
           return;
         }
         throw error;
+      }
+
+      // Grant participation coins (if user is registered)
+      try {
+        await supabase.rpc('grant_participation_coins', { 
+          _email: submissionEmail, 
+          _participation_type: 'reel' 
+        });
+      } catch (coinErr) {
+        console.log('Participation coins not granted:', coinErr);
       }
 
       toast.success('Reel submitted successfully!');
