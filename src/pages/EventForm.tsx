@@ -169,9 +169,11 @@ export default function EventForm() {
         if (error) throw error;
         toast.success('Event updated successfully');
       } else {
-        const { error } = await supabase
+        const { data: newEvent, error } = await supabase
           .from('events')
-          .insert([eventData]);
+          .insert([eventData])
+          .select()
+          .single();
 
         if (error) {
           if (error.code === '23505') {
@@ -181,6 +183,24 @@ export default function EventForm() {
           }
           throw error;
         }
+        
+        // Send notification emails to all users
+        try {
+          await supabase.functions.invoke('notify-new-event', {
+            body: {
+              event_id: newEvent.id,
+              event_title: newEvent.title,
+              event_description: newEvent.description,
+              event_type: newEvent.competition_type,
+              start_date: newEvent.start_date,
+              end_date: newEvent.end_date,
+            }
+          });
+          console.log('Event notification emails sent');
+        } catch (notifyError) {
+          console.error('Failed to send notification emails:', notifyError);
+        }
+        
         toast.success('Event created successfully');
       }
 

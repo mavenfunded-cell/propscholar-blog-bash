@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.verify-magic-link]
 verify_jwt = false
+
+[functions.notify-new-event]
+verify_jwt = false
+
+[functions.notify-balance-change]
+verify_jwt = false
