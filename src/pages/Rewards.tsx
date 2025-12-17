@@ -549,62 +549,62 @@ export default function Rewards() {
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2 flex items-center justify-center gap-3">
-              <Coins className="w-10 h-10 text-yellow-500" />
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-4xl font-bold text-foreground mb-2 flex items-center justify-center gap-2 md:gap-3">
+              <Coins className="w-7 h-7 md:w-10 md:h-10 text-yellow-500" />
               Space Coins
             </h1>
-            <p className="text-muted-foreground">Earn coins and redeem exclusive rewards</p>
+            <p className="text-sm md:text-base text-muted-foreground">Earn coins and redeem exclusive rewards</p>
           </div>
 
           {/* Balance Card */}
-          <Card className="p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20">
-            <div className="grid md:grid-cols-3 gap-6 text-center">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
-                <p className="text-4xl font-bold text-yellow-500 tabular-nums">{userCoins?.balance || 0}</p>
+          <Card className="p-4 md:p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center">
+              <div className="pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
+                <p className="text-xs md:text-sm text-muted-foreground mb-1">Available Balance</p>
+                <p className="text-3xl md:text-4xl font-bold text-yellow-500 tabular-nums">{userCoins?.balance || 0}</p>
                 <p className="text-xs text-muted-foreground">Space Coins</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Earned</p>
-                <p className="text-2xl font-semibold text-green-400 tabular-nums">{userCoins?.total_earned || 0}</p>
+              <div className="pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
+                <p className="text-xs md:text-sm text-muted-foreground mb-1">Total Earned</p>
+                <p className="text-xl md:text-2xl font-semibold text-green-400 tabular-nums">{userCoins?.total_earned || 0}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Spent</p>
-                <p className="text-2xl font-semibold text-foreground tabular-nums">{userCoins?.total_spent || 0}</p>
+                <p className="text-xs md:text-sm text-muted-foreground mb-1">Total Spent</p>
+                <p className="text-xl md:text-2xl font-semibold text-foreground tabular-nums">{userCoins?.total_spent || 0}</p>
               </div>
             </div>
           </Card>
 
           <Tabs defaultValue="earn" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="earn">Earn Coins</TabsTrigger>
-              <TabsTrigger value="rewards">Claim Rewards</TabsTrigger>
-              <TabsTrigger value="claimed">My Rewards</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-6 h-auto">
+              <TabsTrigger value="earn" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">Earn Coins</TabsTrigger>
+              <TabsTrigger value="rewards" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">Claim Rewards</TabsTrigger>
+              <TabsTrigger value="claimed" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">My Rewards</TabsTrigger>
+              <TabsTrigger value="history" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">History</TabsTrigger>
             </TabsList>
 
             {/* Earn Coins Tab */}
             <TabsContent value="earn" className="space-y-6">
               {/* Signup Bonus */}
               {settings.signup_coins?.enabled && !userCoins?.signup_coins_claimed && (
-                <Card className="p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-full bg-green-500/20">
-                        <Gift className="w-6 h-6 text-green-400" />
+                <Card className="p-4 md:p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="p-2 md:p-3 rounded-full bg-green-500/20">
+                        <Gift className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground">Welcome Bonus</h3>
-                        <p className="text-sm text-muted-foreground">Claim your signup reward</p>
+                        <h3 className="font-semibold text-foreground text-sm md:text-base">Welcome Bonus</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground">Claim your signup reward</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-yellow-500">+{settings.signup_coins?.value || 5}</p>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <p className="text-xl md:text-2xl font-bold text-yellow-500">+{settings.signup_coins?.value || 5}</p>
                       <Button 
                         onClick={claimSignupCoins} 
                         disabled={claimingSignup}
-                        className="mt-2 bg-green-600 hover:bg-green-700"
+                        className="bg-green-600 hover:bg-green-700 text-sm flex-1 sm:flex-none"
                       >
                         {claimingSignup ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Claim Now'}
                       </Button>
@@ -614,15 +614,15 @@ export default function Rewards() {
               )}
 
               {/* Social Follows */}
-              <Card className="p-6 bg-card/50 backdrop-blur-xl border-border/50">
-                <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                  <Share2 className="w-5 h-5" />
+              <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
+                <h3 className="text-lg md:text-xl font-bold text-foreground mb-3 md:mb-4 flex items-center gap-2">
+                  <Share2 className="w-4 h-4 md:w-5 md:h-5" />
                   Follow Us & Earn
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
                   Follow us on social media and upload a screenshot to earn coins. Max screenshot size: 2MB.
                 </p>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   {platforms.map(platform => {
                     const setting = settings[`social_${platform}`];
                     if (!setting?.enabled) return null;
@@ -635,15 +635,15 @@ export default function Rewards() {
                     return (
                       <div 
                         key={platform}
-                        className={`p-4 rounded-lg border ${isFollowed ? (isPending ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30') : 'bg-background/50 border-border/30'}`}
+                        className={`p-3 md:p-4 rounded-lg border ${isFollowed ? (isPending ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30') : 'bg-background/50 border-border/30'}`}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${platformColors[platform]}`}>
-                              <Icon className="w-5 h-5" />
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className={`p-1.5 md:p-2 rounded-lg ${platformColors[platform]}`}>
+                              <Icon className="w-4 h-4 md:w-5 md:h-5" />
                             </div>
                             <div>
-                              <p className="font-medium text-foreground capitalize">{platform}</p>
+                              <p className="font-medium text-foreground capitalize text-sm md:text-base">{platform}</p>
                               <p className="text-xs text-muted-foreground">
                                 {isFollowed ? (isPending ? 'Pending Review' : 'Verified') : `+${setting.value} coins`}
                               </p>
@@ -651,19 +651,19 @@ export default function Rewards() {
                           </div>
                           {isFollowed ? (
                             isPending ? (
-                              <Clock className="w-5 h-5 text-yellow-400" />
+                              <Clock className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
                             ) : (
-                              <CheckCircle className="w-5 h-5 text-green-400" />
+                              <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
                             )
                           ) : (
                             <Button
                               size="sm"
                               onClick={() => openSocialDialog(platform)}
                               disabled={claimingSocial === platform}
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1 text-xs md:text-sm px-2 md:px-3"
                             >
                               {claimingSocial === platform ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
                               ) : (
                                 <>
                                   <Upload className="w-3 h-3" />
@@ -681,19 +681,19 @@ export default function Rewards() {
 
               {/* Referral */}
               {settings.referral_coins?.enabled && (
-                <Card className="p-6 bg-card/50 backdrop-blur-xl border-border/50">
-                  <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                    <Share2 className="w-5 h-5" />
+                <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
+                  <h3 className="text-lg md:text-xl font-bold text-foreground mb-3 md:mb-4 flex items-center gap-2">
+                    <Share2 className="w-4 h-4 md:w-5 md:h-5" />
                     Refer & Earn
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
                     Share your referral link. Earn {settings.referral_coins?.value || 1} coin when your friend signs up using your link!
                   </p>
-                  <div className="flex gap-2 mb-4">
-                    <div className="flex-1 p-3 rounded-lg bg-background/50 border border-border/30 text-sm text-muted-foreground truncate">
+                  <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                    <div className="flex-1 p-2 md:p-3 rounded-lg bg-background/50 border border-border/30 text-xs md:text-sm text-muted-foreground truncate">
                       {`${REFERRAL_DOMAIN}/auth?ref=${userCoins?.referral_code || ''}`}
                     </div>
-                    <Button onClick={copyReferralCode} variant="outline">
+                    <Button onClick={copyReferralCode} variant="outline" className="w-full sm:w-auto">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
