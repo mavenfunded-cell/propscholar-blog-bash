@@ -111,7 +111,7 @@ export default function Auth() {
             <div className="text-center mb-8">
               <Link to="/" className="inline-flex items-center gap-3">
                 <img 
-                  src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962041/Untitled_design_2_qambfs.png" 
+                  src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962713/Untitled_design_3_nkt1ky.png" 
                   alt="PropScholar Logo" 
                   className="h-14 w-auto"
                 />
