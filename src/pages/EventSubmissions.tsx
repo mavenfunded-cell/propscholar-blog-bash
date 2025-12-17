@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ReactMarkdown from 'react-markdown';
 
 interface Event {
   id: string;
@@ -31,6 +32,7 @@ interface Submission {
   name: string;
   email: string;
   phone: string;
+  blog_title: string | null;
   blog: string;
   word_count: number;
   submitted_at: string;
@@ -194,7 +196,7 @@ export default function EventSubmissions() {
       return;
     }
 
-    const headers = ['Name', 'Email', 'Phone', 'Word Count', 'Time Spent', 'Submitted At', 'Is Winner', 'Position', 'Blog Content'];
+    const headers = ['Name', 'Email', 'Phone', 'Word Count', 'Time Spent', 'Submitted At', 'Is Winner', 'Position', 'Blog Title', 'Blog Content'];
     const rows = submissions.map(s => {
       const position = getWinnerPosition(s.id);
       return [
@@ -206,6 +208,7 @@ export default function EventSubmissions() {
         format(new Date(s.submitted_at), 'yyyy-MM-dd HH:mm:ss'),
         position ? 'Yes' : 'No',
         position?.toString() || '',
+        `"${(s.blog_title || '').replace(/"/g, '""')}"`,
         `"${s.blog.replace(/"/g, '""')}"`
       ];
     });
@@ -378,12 +381,17 @@ export default function EventSubmissions() {
                         </div>
                       </div>
                     </div>
-                    <p 
-                      className="mt-4 text-sm text-muted-foreground line-clamp-2 cursor-pointer"
+                    <div 
+                      className="mt-4 cursor-pointer"
                       onClick={() => setSelectedSubmission(submission)}
                     >
-                      {submission.blog}
-                    </p>
+                      {submission.blog_title && (
+                        <p className="text-sm font-semibold text-foreground mb-1">{submission.blog_title}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {submission.blog}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -441,8 +449,27 @@ export default function EventSubmissions() {
                 </div>
 
                 <ScrollArea className="h-[400px] rounded-lg border border-border p-4">
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {selectedSubmission.blog}
+                  {selectedSubmission.blog_title && (
+                    <h1 className="text-xl font-bold mb-4 text-foreground">{selectedSubmission.blog_title}</h1>
+                  )}
+                  <div className="prose prose-sm prose-invert max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({children}) => <h1 className="text-xl font-bold mt-4 mb-2 text-foreground">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-lg font-semibold mt-3 mb-2 text-foreground">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-base font-semibold mt-3 mb-1 text-foreground">{children}</h3>,
+                        p: ({children}) => <p className="mb-3 text-foreground/90 leading-relaxed">{children}</p>,
+                        ul: ({children}) => <ul className="list-disc pl-5 mb-3 space-y-1">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal pl-5 mb-3 space-y-1">{children}</ol>,
+                        li: ({children}) => <li className="text-foreground/90">{children}</li>,
+                        blockquote: ({children}) => <blockquote className="border-l-4 border-primary/50 pl-4 italic text-muted-foreground my-3">{children}</blockquote>,
+                        strong: ({children}) => <strong className="font-bold text-foreground">{children}</strong>,
+                        em: ({children}) => <em className="italic">{children}</em>,
+                        a: ({href, children}) => <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                      }}
+                    >
+                      {selectedSubmission.blog}
+                    </ReactMarkdown>
                   </div>
                 </ScrollArea>
               </div>

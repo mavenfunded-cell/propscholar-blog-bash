@@ -80,6 +80,7 @@ export type Database = {
       submissions: {
         Row: {
           blog: string
+          blog_title: string | null
           email: string
           event_id: string
           id: string
@@ -91,6 +92,7 @@ export type Database = {
         }
         Insert: {
           blog: string
+          blog_title?: string | null
           email: string
           event_id: string
           id?: string
@@ -102,6 +104,7 @@ export type Database = {
         }
         Update: {
           blog?: string
+          blog_title?: string | null
           email?: string
           event_id?: string
           id?: string
