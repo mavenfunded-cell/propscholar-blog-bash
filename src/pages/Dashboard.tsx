@@ -7,10 +7,12 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins, CheckCircle, Pencil, Check, X } from 'lucide-react';
 import { WinnerClaimDialog } from '@/components/WinnerClaimDialog';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { useSEO } from '@/hooks/useSEO';
+import { toast } from 'sonner';
 
 interface Submission {
   id: string;
@@ -63,6 +65,9 @@ const Dashboard = () => {
   const [winnerClaims, setWinnerClaims] = useState<WinnerClaim[]>([]);
   const [unclaimedWin, setUnclaimedWin] = useState<WinnerClaim | null>(null);
   const [showWinnerDialog, setShowWinnerDialog] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -217,6 +222,39 @@ const Dashboard = () => {
     fetchDashboardData();
   };
 
+  const handleEditName = () => {
+    setEditedName(profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
+    setIsEditingName(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setEditedName('');
+  };
+
+  const handleSaveName = async () => {
+    if (!user || !editedName.trim()) return;
+    
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: editedName.trim() })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? { ...prev, full_name: editedName.trim() } : { full_name: editedName.trim(), phone: null, avatar_url: null });
+      setIsEditingName(false);
+      toast.success('Username updated successfully!');
+    } catch (error) {
+      console.error('Error updating name:', error);
+      toast.error('Failed to update username');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const totalWins = [...blogSubmissions, ...reelSubmissions].filter(s => s.is_winner).length;
   const totalParticipations = blogSubmissions.length + reelSubmissions.length;
 
@@ -277,9 +315,49 @@ const Dashboard = () => {
                 )}
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-xl md:text-2xl font-bold text-foreground">
-                  {profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || 'PropScholar User'}
-                </h2>
+                {isEditingName ? (
+                  <div className="flex items-center gap-2 justify-center md:justify-start">
+                    <Input
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      className="max-w-[200px] h-9"
+                      placeholder="Enter your name"
+                      autoFocus
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                      onClick={handleSaveName}
+                      disabled={savingName || !editedName.trim()}
+                    >
+                      {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                      onClick={handleCancelEdit}
+                      disabled={savingName}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 justify-center md:justify-start">
+                    <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                      {profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || 'PropScholar User'}
+                    </h2>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={handleEditName}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
                 <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-2 text-muted-foreground">
                   <div className="flex items-center justify-center md:justify-start gap-2 text-sm">
                     <Mail className="w-4 h-4" />
