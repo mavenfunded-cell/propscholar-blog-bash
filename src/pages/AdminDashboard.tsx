@@ -25,7 +25,8 @@ import {
   Coins,
   Gift,
   Settings,
-  Ticket
+  Ticket,
+  Share2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -328,7 +329,7 @@ export default function AdminDashboard() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Reward System Quick Links */}
-        <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mb-8 grid grid-cols-2 md:grid-cols-5 gap-4">
           <Link to="/admin/rewards">
             <Card className="hover:border-primary/50 transition-colors cursor-pointer">
               <CardHeader className="pb-2">
@@ -365,6 +366,16 @@ export default function AdminDashboard() {
                 <CardDescription className="flex items-center gap-2">
                   <Gift className="w-4 h-4 text-green-400" />
                   Reward Claims
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link to="/admin/social-follows">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-blue-400" />
+                  Social Screenshots
                 </CardDescription>
               </CardHeader>
             </Card>
