@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 
 const navLinks = [
-  { name: 'Blog', href: '/', external: false },
+  { name: 'Space', href: '/', external: false },
   { name: 'About', href: 'https://propscholar.com/about', external: true },
   { name: 'Terms', href: '/terms', external: false },
   { name: 'Shop', href: 'https://propscholar.com/shop', external: true },
