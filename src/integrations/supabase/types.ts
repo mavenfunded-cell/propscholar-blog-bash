@@ -668,6 +668,10 @@ export type Database = {
           winner_position: number
         }[]
       }
+      grant_participation_coins: {
+        Args: { _email: string; _participation_type: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

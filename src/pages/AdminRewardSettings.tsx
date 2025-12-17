@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Loader2, Coins, Gift, Share2, Users } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Coins, Gift, Share2, Users, FileText, Video } from 'lucide-react';
 
 interface RewardSetting {
   id: string;
@@ -149,6 +149,8 @@ export default function AdminRewardSettings() {
 
   const signupSetting = settings.find(s => s.setting_key === 'signup_coins');
   const referralSetting = settings.find(s => s.setting_key === 'referral_coins');
+  const blogParticipationSetting = settings.find(s => s.setting_key === 'participation_blog');
+  const reelParticipationSetting = settings.find(s => s.setting_key === 'participation_reel');
   const socialSettings = settings.filter(s => s.setting_key.startsWith('social_'));
 
   return (
@@ -231,6 +233,67 @@ export default function AdminRewardSettings() {
                   type="number"
                   value={referralSetting?.setting_value?.value || 0}
                   onChange={(e) => updateSetting('referral_coins', 'value', parseInt(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Participation Coin Settings */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Blog Participation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-orange-400" />
+                Blog Participation Coins
+              </CardTitle>
+              <CardDescription>Coins awarded when user submits a blog entry</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Enable Blog Participation Coins</Label>
+                <Switch
+                  checked={blogParticipationSetting?.setting_value?.enabled || false}
+                  onCheckedChange={(checked) => updateSetting('participation_blog', 'enabled', checked)}
+                />
+              </div>
+              <div>
+                <Label>Coin Value</Label>
+                <Input
+                  type="number"
+                  value={blogParticipationSetting?.setting_value?.value || 0}
+                  onChange={(e) => updateSetting('participation_blog', 'value', parseInt(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reel Participation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5 text-pink-400" />
+                Reel Participation Coins
+              </CardTitle>
+              <CardDescription>Coins awarded when user submits a reel entry</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Enable Reel Participation Coins</Label>
+                <Switch
+                  checked={reelParticipationSetting?.setting_value?.enabled || false}
+                  onCheckedChange={(checked) => updateSetting('participation_reel', 'enabled', checked)}
+                />
+              </div>
+              <div>
+                <Label>Coin Value</Label>
+                <Input
+                  type="number"
+                  value={reelParticipationSetting?.setting_value?.value || 0}
+                  onChange={(e) => updateSetting('participation_reel', 'value', parseInt(e.target.value) || 0)}
                   className="mt-1"
                 />
               </div>

@@ -194,12 +194,13 @@ export default function EventPage() {
     setSubmitting(true);
 
     try {
+      const submissionEmail = email.toLowerCase();
       const { error } = await supabase
         .from('submissions')
         .insert([{
           event_id: event.id,
           name,
-          email: email.toLowerCase(),
+          email: submissionEmail,
           phone,
           blog_title: blogTitle,
           blog,
@@ -213,6 +214,16 @@ export default function EventPage() {
           return;
         }
         throw error;
+      }
+
+      // Grant participation coins (if user is registered)
+      try {
+        await supabase.rpc('grant_participation_coins', { 
+          _email: submissionEmail, 
+          _participation_type: 'blog' 
+        });
+      } catch (coinErr) {
+        console.log('Participation coins not granted:', coinErr);
       }
 
       navigate(`/blog/${slug}/success`);

@@ -26,14 +26,27 @@ export default function Auth() {
   const referralCode = searchParams.get('ref');
 
   useEffect(() => {
-    if (!loading && user) {
-      // Store referral code in localStorage to use after signup
-      if (referralCode) {
-        localStorage.setItem('referral_code', referralCode);
+    const applyReferralAndRedirect = async () => {
+      if (!loading && user) {
+        // Apply referral code after login/signup
+        const referralCode = localStorage.getItem('referral_code');
+        if (referralCode) {
+          try {
+            const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
+            const result = data as any;
+            if (result?.success) {
+              toast.success(`Welcome! Your referrer received ${result.coins} coins.`);
+            }
+          } catch (err) {
+            console.log('Referral not applied:', err);
+          }
+          localStorage.removeItem('referral_code');
+        }
+        navigate('/');
       }
-      navigate('/');
-    }
-  }, [user, loading, navigate, referralCode]);
+    };
+    applyReferralAndRedirect();
+  }, [user, loading, navigate]);
   
   // Store referral code when page loads
   useEffect(() => {
