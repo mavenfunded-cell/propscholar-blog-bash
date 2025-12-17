@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, X, Image as ImageIcon, PenTool, Video } from 'lucide-react';
 
 export default function EventForm() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function EventForm() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  const [competitionType, setCompetitionType] = useState<'blog' | 'reel'>('blog');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [slug, setSlug] = useState('');
@@ -64,6 +66,7 @@ export default function EventForm() {
 
       if (error) throw error;
 
+      setCompetitionType((data.competition_type as 'blog' | 'reel') || 'blog');
       setTitle(data.title);
       setDescription(data.description);
       setSlug(data.slug);
@@ -151,9 +154,10 @@ export default function EventForm() {
         slug,
         start_date: new Date(startDate).toISOString(),
         end_date: new Date(endDate).toISOString(),
-        min_words: minWords,
+        min_words: competitionType === 'blog' ? minWords : 0,
         rewards: rewards || null,
         featured_image_url: imageUrl,
+        competition_type: competitionType,
       };
 
       if (isEditing) {
@@ -221,11 +225,37 @@ export default function EventForm() {
           <CardHeader>
             <CardTitle>{isEditing ? 'Edit Event' : 'Create New Event'}</CardTitle>
             <CardDescription>
-              {isEditing ? 'Update the event details below' : 'Fill in the details for your new blog writing event'}
+              {isEditing ? 'Update the event details below' : 'Fill in the details for your new competition event'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Competition Type */}
+              {!isEditing && (
+                <div className="space-y-2">
+                  <Label>Competition Type</Label>
+                  <Select value={competitionType} onValueChange={(value: 'blog' | 'reel') => setCompetitionType(value)}>
+                    <SelectTrigger className="bg-secondary/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="blog">
+                        <div className="flex items-center gap-2">
+                          <PenTool className="w-4 h-4 text-blue-400" />
+                          Blog Competition
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="reel">
+                        <div className="flex items-center gap-2">
+                          <Video className="w-4 h-4 text-purple-400" />
+                          Reel Competition
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Event Title</Label>
@@ -233,7 +263,7 @@ export default function EventForm() {
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Trading Psychology Contest 2025"
+                  placeholder={competitionType === 'blog' ? 'e.g., Trading Psychology Contest 2025' : 'e.g., Best Trading Reel Contest'}
                   required
                 />
               </div>
@@ -242,7 +272,7 @@ export default function EventForm() {
               <div className="space-y-2">
                 <Label htmlFor="slug">URL Slug</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">/events/</span>
+                  <span className="text-sm text-muted-foreground">/{competitionType === 'reel' ? 'reels' : 'events'}/</span>
                   <Input
                     id="slug"
                     value={slug}
@@ -327,19 +357,21 @@ export default function EventForm() {
                 </div>
               </div>
 
-              {/* Min Words */}
-              <div className="space-y-2">
-                <Label htmlFor="minWords">Minimum Word Count</Label>
-                <Input
-                  id="minWords"
-                  type="number"
-                  min={50}
-                  max={5000}
-                  value={minWords}
-                  onChange={(e) => setMinWords(parseInt(e.target.value) || 250)}
-                  required
-                />
-              </div>
+              {/* Min Words (Blog only) */}
+              {competitionType === 'blog' && (
+                <div className="space-y-2">
+                  <Label htmlFor="minWords">Minimum Word Count</Label>
+                  <Input
+                    id="minWords"
+                    type="number"
+                    min={50}
+                    max={5000}
+                    value={minWords}
+                    onChange={(e) => setMinWords(parseInt(e.target.value) || 250)}
+                    required
+                  />
+                </div>
+              )}
 
               {/* Rewards */}
               <div className="space-y-2">
@@ -358,7 +390,11 @@ export default function EventForm() {
 
               {/* Submit */}
               <div className="flex gap-4">
-                <Button type="submit" variant="gold" disabled={loading} className="flex-1">
+                <Button 
+                  type="submit" 
+                  disabled={loading} 
+                  className={`flex-1 ${competitionType === 'reel' ? 'bg-purple-500 hover:bg-purple-600' : ''}`}
+                >
                   {loading ? 'Saving...' : (isEditing ? 'Update Event' : 'Create Event')}
                 </Button>
                 <Link to="/admin/dashboard">

@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   Plus, 
@@ -18,7 +19,9 @@ import {
   CheckCircle,
   Users,
   ExternalLink,
-  Trash2
+  Trash2,
+  PenTool,
+  Video
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -44,6 +47,7 @@ interface Event {
   min_words: number;
   status: string;
   created_at: string;
+  competition_type: string;
 }
 
 interface EventWithCount extends Event {
@@ -81,8 +85,9 @@ export default function AdminDashboard() {
       // Fetch submission counts for each event
       const eventsWithCounts = await Promise.all(
         (eventsData || []).map(async (event) => {
+          const table = event.competition_type === 'reel' ? 'reel_submissions' : 'submissions';
           const { count } = await supabase
-            .from('submissions')
+            .from(table)
             .select('*', { count: 'exact', head: true })
             .eq('event_id', event.id);
 
@@ -160,8 +165,142 @@ export default function AdminDashboard() {
     );
   }
 
-  const activeEvents = events.filter(e => e.status === 'active' && !isEventExpired(e.end_date));
-  const totalSubmissions = events.reduce((sum, e) => sum + e.submission_count, 0);
+  const blogEvents = events.filter(e => e.competition_type === 'blog');
+  const reelEvents = events.filter(e => e.competition_type === 'reel');
+  
+  const activeBlogEvents = blogEvents.filter(e => e.status === 'active' && !isEventExpired(e.end_date));
+  const activeReelEvents = reelEvents.filter(e => e.status === 'active' && !isEventExpired(e.end_date));
+  
+  const totalBlogSubmissions = blogEvents.reduce((sum, e) => sum + e.submission_count, 0);
+  const totalReelSubmissions = reelEvents.reduce((sum, e) => sum + e.submission_count, 0);
+
+  const renderEventCard = (event: EventWithCount) => (
+    <Card key={event.id} className="overflow-hidden hover:border-border transition-colors">
+      <div className="flex flex-col md:flex-row">
+        {event.featured_image_url && (
+          <div className="md:w-48 h-40 md:h-auto flex-shrink-0">
+            <img 
+              src={event.featured_image_url} 
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <div className="flex-1 p-6">
+          <div className="flex flex-wrap items-start gap-2 mb-2">
+            <Badge 
+              className={
+                event.status === 'active' && !isEventExpired(event.end_date)
+                  ? 'bg-success/20 text-success border-success/30'
+                  : 'bg-muted text-muted-foreground'
+              }
+            >
+              {event.status === 'active' && !isEventExpired(event.end_date) ? 'Active' : 'Closed'}
+            </Badge>
+            {isEventExpired(event.end_date) && event.status === 'active' && (
+              <Badge variant="outline" className="border-warning text-warning">
+                Expired
+              </Badge>
+            )}
+          </div>
+          
+          <h3 className="text-xl font-display font-semibold mb-1">{event.title}</h3>
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{event.description}</p>
+          
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              <span>{format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}</span>
+            </div>
+            {event.competition_type === 'blog' && (
+              <div className="flex items-center gap-1">
+                <FileText className="w-4 h-4" />
+                <span>Min {event.min_words} words</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              <span>{event.submission_count} submissions</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/admin/events/${event.id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Edit2 className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
+            </Link>
+            <Link to={`/admin/events/${event.id}/submissions`}>
+              <Button variant="outline" size="sm">
+                <Eye className="w-4 h-4 mr-1" />
+                Submissions
+              </Button>
+            </Link>
+            <a 
+              href={event.competition_type === 'reel' ? `/reels/${event.slug}` : `/events/${event.slug}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
+              <Button variant="ghost" size="sm">
+                <ExternalLink className="w-4 h-4 mr-1" />
+                View Public
+              </Button>
+            </a>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => toggleEventStatus(event)}
+            >
+              {event.status === 'active' ? (
+                <>
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Close
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Reopen
+                </>
+              )}
+            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Event Permanently?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the event 
+                    "{event.title}" and all {event.submission_count} associated submissions.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteEvent(event.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={deletingEventId === event.id}
+                  >
+                    {deletingEventId === event.id ? 'Deleting...' : 'Delete Permanently'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -184,178 +323,121 @@ export default function AdminDashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Events</CardDescription>
-              <CardTitle className="text-3xl">{events.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Active Events</CardDescription>
-              <CardTitle className="text-3xl text-success">{activeEvents.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Submissions</CardDescription>
-              <CardTitle className="text-3xl text-gold">{totalSubmissions}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        <Tabs defaultValue="blog" className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <TabsList className="bg-secondary/50">
+              <TabsTrigger value="blog" className="gap-2">
+                <PenTool className="w-4 h-4" />
+                Blog ({blogEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="reel" className="gap-2">
+                <Video className="w-4 h-4" />
+                Reels ({reelEvents.length})
+              </TabsTrigger>
+            </TabsList>
+            
+            <Link to="/admin/events/new">
+              <Button variant="default">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Event
+              </Button>
+            </Link>
+          </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-display font-semibold">Events</h2>
-          <Link to="/admin/events/new">
-            <Button variant="gold">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
-          </Link>
-        </div>
+          {/* Blog Tab */}
+          <TabsContent value="blog" className="space-y-6">
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-transparent">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <PenTool className="w-4 h-4 text-blue-400" />
+                    Blog Events
+                  </CardDescription>
+                  <CardTitle className="text-3xl">{blogEvents.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Active Blog Contests</CardDescription>
+                  <CardTitle className="text-3xl text-success">{activeBlogEvents.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Blog Submissions</CardDescription>
+                  <CardTitle className="text-3xl text-primary">{totalBlogSubmissions}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
 
-        {/* Events List */}
-        <div className="space-y-4">
-          {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden hover:border-border transition-colors">
-              <div className="flex flex-col md:flex-row">
-                {event.featured_image_url && (
-                  <div className="md:w-48 h-40 md:h-auto flex-shrink-0">
-                    <img 
-                      src={event.featured_image_url} 
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="flex-1 p-6">
-                  <div className="flex flex-wrap items-start gap-2 mb-2">
-                    <Badge 
-                      className={
-                        event.status === 'active' && !isEventExpired(event.end_date)
-                          ? 'bg-success/20 text-success border-success/30'
-                          : 'bg-muted text-muted-foreground'
-                      }
-                    >
-                      {event.status === 'active' && !isEventExpired(event.end_date) ? 'Active' : 'Closed'}
-                    </Badge>
-                    {isEventExpired(event.end_date) && event.status === 'active' && (
-                      <Badge variant="outline" className="border-warning text-warning">
-                        Expired
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <h3 className="text-xl font-display font-semibold mb-1">{event.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{event.description}</p>
-                  
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <FileText className="w-4 h-4" />
-                      <span>Min {event.min_words} words</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{event.submission_count} submissions</span>
-                    </div>
-                  </div>
+            {/* Blog Events List */}
+            <div className="space-y-4">
+              {blogEvents.map(renderEventCard)}
 
-                  <div className="flex flex-wrap gap-2">
-                    <Link to={`/admin/events/${event.id}/edit`}>
-                      <Button variant="outline" size="sm">
-                        <Edit2 className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                    </Link>
-                    <Link to={`/admin/events/${event.id}/submissions`}>
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4 mr-1" />
-                        Submissions
-                      </Button>
-                    </Link>
-                    <a href={`/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="sm">
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                        View Public
-                      </Button>
-                    </a>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => toggleEventStatus(event)}
-                    >
-                      {event.status === 'active' ? (
-                        <>
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Close
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Reopen
-                        </>
-                      )}
+              {blogEvents.length === 0 && (
+                <Card className="p-12 text-center">
+                  <PenTool className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No Blog Events Yet</h3>
+                  <p className="text-muted-foreground mb-4">Create your first blog writing event to get started.</p>
+                  <Link to="/admin/events/new">
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Blog Event
                     </Button>
-                    
-                    {/* Delete Event Button */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Event Permanently?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the event 
-                            "{event.title}" and all {event.submission_count} associated submissions.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteEvent(event.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={deletingEventId === event.id}
-                          >
-                            {deletingEventId === event.id ? 'Deleting...' : 'Delete Permanently'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+                  </Link>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
 
-          {events.length === 0 && (
-            <Card className="p-12 text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Events Yet</h3>
-              <p className="text-muted-foreground mb-4">Create your first blog writing event to get started.</p>
-              <Link to="/admin/events/new">
-                <Button variant="gold">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Event
-                </Button>
-              </Link>
-            </Card>
-          )}
-        </div>
+          {/* Reel Tab */}
+          <TabsContent value="reel" className="space-y-6">
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Video className="w-4 h-4 text-purple-400" />
+                    Reel Events
+                  </CardDescription>
+                  <CardTitle className="text-3xl">{reelEvents.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Active Reel Contests</CardDescription>
+                  <CardTitle className="text-3xl text-success">{activeReelEvents.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Reel Submissions</CardDescription>
+                  <CardTitle className="text-3xl text-purple-400">{totalReelSubmissions}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+
+            {/* Reel Events List */}
+            <div className="space-y-4">
+              {reelEvents.map(renderEventCard)}
+
+              {reelEvents.length === 0 && (
+                <Card className="p-12 text-center">
+                  <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No Reel Events Yet</h3>
+                  <p className="text-muted-foreground mb-4">Create your first reel making event to get started.</p>
+                  <Link to="/admin/events/new">
+                    <Button className="bg-purple-500 hover:bg-purple-600">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Reel Event
+                    </Button>
+                  </Link>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
