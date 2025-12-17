@@ -7,7 +7,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2 } from 'lucide-react';
+import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins } from 'lucide-react';
 
 interface Submission {
   id: string;
@@ -45,6 +45,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [blogSubmissions, setBlogSubmissions] = useState<Submission[]>([]);
   const [reelSubmissions, setReelSubmissions] = useState<ReelSubmission[]>([]);
+  const [coinBalance, setCoinBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,6 +73,14 @@ const Dashboard = () => {
 
       setProfile(profileData);
 
+      // Fetch coin balance
+      const { data: coinsData } = await supabase
+        .from('user_coins')
+        .select('balance')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      setCoinBalance(coinsData?.balance || 0);
       // Fetch blog submissions with event titles and winner status
       const { data: blogs } = await supabase
         .from('submissions')
@@ -215,6 +224,26 @@ const Dashboard = () => {
               </Link>
             </div>
           </Card>
+
+          {/* Space Coins Card */}
+          <Link to="/rewards">
+            <Card className="p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-yellow-500/20">
+                    <Coins className="w-8 h-8 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-yellow-500">{coinBalance}</h3>
+                    <p className="text-sm text-muted-foreground">Space Coins</p>
+                  </div>
+                </div>
+                <Button variant="outline" className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                  Earn & Claim Rewards
+                </Button>
+              </div>
+            </Card>
+          </Link>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
