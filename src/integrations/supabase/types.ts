@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       events: {
         Row: {
+          competition_type: string
           created_at: string
           description: string
           end_date: string
@@ -30,6 +31,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          competition_type?: string
           created_at?: string
           description: string
           end_date: string
@@ -44,6 +46,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          competition_type?: string
           created_at?: string
           description?: string
           end_date?: string
@@ -85,6 +88,92 @@ export type Database = {
           used?: boolean | null
         }
         Relationships: []
+      }
+      reel_submissions: {
+        Row: {
+          description: string | null
+          email: string
+          event_id: string
+          id: string
+          name: string
+          phone: string
+          submitted_at: string
+          thumbnail_url: string | null
+          title: string
+          video_url: string
+        }
+        Insert: {
+          description?: string | null
+          email: string
+          event_id: string
+          id?: string
+          name: string
+          phone: string
+          submitted_at?: string
+          thumbnail_url?: string | null
+          title: string
+          video_url: string
+        }
+        Update: {
+          description?: string | null
+          email?: string
+          event_id?: string
+          id?: string
+          name?: string
+          phone?: string
+          submitted_at?: string
+          thumbnail_url?: string | null
+          title?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reel_submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reel_winners: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          position: number
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          position?: number
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          position?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reel_winners_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reel_winners_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "reel_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       submission_rate_limit: {
         Row: {
