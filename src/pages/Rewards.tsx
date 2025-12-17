@@ -606,11 +606,11 @@ export default function Rewards() {
 
 
           <Tabs defaultValue="earn" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-6 h-auto">
-              <TabsTrigger value="earn" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">Earn Coins</TabsTrigger>
-              <TabsTrigger value="rewards" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">Claim Rewards</TabsTrigger>
-              <TabsTrigger value="claimed" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">My Rewards</TabsTrigger>
-              <TabsTrigger value="history" className="text-xs md:text-sm py-2 md:py-2.5 px-1 md:px-3">History</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-6 h-auto gap-1 p-1">
+              <TabsTrigger value="earn" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">Earn</TabsTrigger>
+              <TabsTrigger value="rewards" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">Redeem</TabsTrigger>
+              <TabsTrigger value="claimed" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">Claimed</TabsTrigger>
+              <TabsTrigger value="history" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">History</TabsTrigger>
             </TabsList>
 
             {/* Earn Coins Tab */}
