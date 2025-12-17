@@ -70,7 +70,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
+      navigate('/space');
     }
   }, [user, isAdmin, loading, navigate]);
 
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/admin');
+    navigate('/space');
   };
 
   const isEventExpired = (endDate: string) => new Date(endDate) < new Date();
@@ -232,13 +232,13 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to={`/admin/events/${event.id}/edit`}>
+            <Link to={`/space/events/${event.id}/edit`}>
               <Button variant="outline" size="sm">
                 <Edit2 className="w-4 h-4 mr-1" />
                 Edit
               </Button>
             </Link>
-            <Link to={`/admin/events/${event.id}/submissions`}>
+            <Link to={`/space/events/${event.id}/submissions`}>
               <Button variant="outline" size="sm">
                 <Eye className="w-4 h-4 mr-1" />
                 Submissions
@@ -331,78 +331,78 @@ export default function AdminDashboard() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Reward System Quick Links */}
-        <div className="mb-8 grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Link to="/admin/rewards">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-yellow-400" />
-                  Reward Settings
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link to="/admin/coupons">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Ticket className="w-4 h-4 text-purple-400" />
-                  Coupon Management
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link to="/admin/users-coins">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-yellow-400" />
-                  User Coins
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link to="/admin/claims">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-green-400" />
-                  Reward Claims
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link to="/admin/winner-claims">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer border-yellow-500/30">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-yellow-500" />
-                  Winner Claims
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link to="/admin/social-follows">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Share2 className="w-4 h-4 text-blue-400" />
-                  Social Screenshots
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-          <Link to="/admin/seo">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer border-green-500/30">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-green-400" />
-                  SEO Management
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        </div>
+          <div className="mb-8 grid grid-cols-2 md:grid-cols-6 gap-4">
+            <Link to="/space/rewards">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-yellow-400" />
+                    Reward Settings
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/space/coupons">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Ticket className="w-4 h-4 text-purple-400" />
+                    Coupon Management
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/space/users-coins">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-yellow-400" />
+                    User Coins
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/space/claims">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Gift className="w-4 h-4 text-green-400" />
+                    Reward Claims
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/space/winner-claims">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-yellow-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-yellow-500" />
+                    Winner Claims
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/space/social-follows">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-blue-400" />
+                    Social Screenshots
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/space/seo">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-green-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-green-400" />
+                    SEO Management
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          </div>
 
         <Tabs defaultValue="blog" className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -417,7 +417,7 @@ export default function AdminDashboard() {
               </TabsTrigger>
             </TabsList>
             
-            <Link to="/admin/events/new">
+            <Link to="/space/events/new">
               <Button variant="default">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Event
@@ -461,7 +461,7 @@ export default function AdminDashboard() {
                   <PenTool className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">No Blog Events Yet</h3>
                   <p className="text-muted-foreground mb-4">Create your first blog writing event to get started.</p>
-                  <Link to="/admin/events/new">
+                  <Link to="/space/events/new">
                     <Button>
                       <Plus className="w-4 h-4 mr-2" />
                       Create Blog Event
@@ -508,7 +508,7 @@ export default function AdminDashboard() {
                   <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">No Reel Events Yet</h3>
                   <p className="text-muted-foreground mb-4">Create your first reel making event to get started.</p>
-                  <Link to="/admin/events/new">
+                  <Link to="/space/events/new">
                     <Button className="bg-purple-500 hover:bg-purple-600">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Reel Event

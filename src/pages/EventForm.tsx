@@ -34,7 +34,7 @@ export default function EventForm() {
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
-      navigate('/admin');
+      navigate('/space');
     }
   }, [user, isAdmin, authLoading, navigate]);
 
@@ -78,7 +78,7 @@ export default function EventForm() {
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
-      navigate('/admin/dashboard');
+      navigate('/space/dashboard');
     } finally {
       setLoadingEvent(false);
     }
@@ -204,7 +204,7 @@ export default function EventForm() {
         toast.success('Event created successfully');
       }
 
-      navigate('/admin/dashboard');
+      navigate('/space/dashboard');
     } catch (err) {
       console.error('Error saving event:', err);
       toast.error('Failed to save event');
@@ -234,7 +234,7 @@ export default function EventForm() {
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Link 
-          to="/admin/dashboard" 
+          to="/space/dashboard" 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -417,7 +417,7 @@ export default function EventForm() {
                 >
                   {loading ? 'Saving...' : (isEditing ? 'Update Event' : 'Create Event')}
                 </Button>
-                <Link to="/admin/dashboard">
+                <Link to="/space/dashboard">
                   <Button type="button" variant="outline">
                     Cancel
                   </Button>
