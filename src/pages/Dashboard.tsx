@@ -352,7 +352,10 @@ const Dashboard = () => {
             <Tabs defaultValue="blogs" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="blogs" className="text-sm">Blogs ({blogSubmissions.length})</TabsTrigger>
-                <TabsTrigger value="reels" className="text-sm">Reels ({reelSubmissions.length})</TabsTrigger>
+                <TabsTrigger value="reels" className="text-sm relative" disabled>
+                  Reels
+                  <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-yellow-500/20 text-yellow-400 rounded-full">Soon</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="blogs">
