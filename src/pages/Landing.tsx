@@ -94,8 +94,6 @@ export default function Landing() {
                 text-5xl md:text-7xl lg:text-8xl
                 font-light tracking-tight mb-10
                 whitespace-normal md:whitespace-nowrap
-                opacity-0 blur-sm translate-y-4
-                transition-all duration-700 delay-100
               ">
                 You Win, <span className="font-semibold">We Reward.</span>
               </h1>
