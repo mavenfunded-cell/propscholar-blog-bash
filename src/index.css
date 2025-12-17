@@ -144,6 +144,10 @@
   .glass-card {
     @apply backdrop-blur-md bg-card/80 border border-border/50;
   }
+
+  .glass-button {
+    @apply backdrop-blur-md bg-foreground/5 hover:bg-foreground/10 transition-all;
+  }
 }
 
 @layer utilities {
