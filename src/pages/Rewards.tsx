@@ -169,36 +169,51 @@ export default function Rewards() {
 
       if (coinsData) {
         setUserCoins(coinsData);
-      } else {
-        // Check for referral code in localStorage
-        const referralCode = localStorage.getItem('referral_code');
-        let referredBy = null;
         
-        if (referralCode) {
-          // Find referrer by code
-          const { data: referrer } = await supabase
-            .from('user_coins')
-            .select('user_id')
-            .eq('referral_code', referralCode)
-            .maybeSingle();
-          
-          if (referrer) {
-            referredBy = referrer.user_id;
+        // Check if we have a referral code to apply (and haven't already)
+        const referralCode = localStorage.getItem('referral_code');
+        if (referralCode && !coinsData.referred_by) {
+          // Apply referral code via RPC
+          const { data: refResult } = await supabase.rpc('apply_referral_code', { 
+            _referral_code: referralCode 
+          });
+          const result = refResult as any;
+          if (result?.success) {
+            toast.success(`Referral applied! Referrer received ${result.coins} coins.`);
           }
           localStorage.removeItem('referral_code');
+          // Re-fetch to get updated data
+          const { data: updatedCoins } = await supabase
+            .from('user_coins')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (updatedCoins) setUserCoins(updatedCoins);
         }
-        
-        // Create user_coins record with referral
+      } else {
+        // Create user_coins record first
         const { data: newCoins } = await supabase
           .from('user_coins')
           .insert({ 
             user_id: user.id, 
-            email: user.email || '',
-            referred_by: referredBy
+            email: user.email || ''
           })
           .select()
           .single();
         setUserCoins(newCoins);
+        
+        // Now apply referral code if exists
+        const referralCode = localStorage.getItem('referral_code');
+        if (referralCode) {
+          const { data: refResult } = await supabase.rpc('apply_referral_code', { 
+            _referral_code: referralCode 
+          });
+          const result = refResult as any;
+          if (result?.success) {
+            toast.success(`Referral applied! Referrer received ${result.coins} coins.`);
+          }
+          localStorage.removeItem('referral_code');
+        }
       }
 
       // Fetch transactions
@@ -344,20 +359,14 @@ export default function Rewards() {
       // Claim social coins with screenshot (coins added after admin approval)
       const { data, error } = await supabase.rpc('claim_social_coins', { 
         _user_id: user.id, 
-        _platform: socialDialog.platform 
+        _platform: socialDialog.platform,
+        _screenshot_url: screenshotUrl
       });
       
       if (error) throw error;
       
       const result = data as any;
       if (result?.success) {
-        // Update with screenshot URL
-        await supabase
-          .from('social_follows')
-          .update({ screenshot_url: screenshotUrl })
-          .eq('user_id', user.id)
-          .eq('platform', socialDialog.platform);
-
         toast.success(`Screenshot submitted for ${socialDialog.platform}! Coins will be added after admin approval.`);
         setSocialDialog({ open: false, platform: null });
         setScreenshotFile(null);
@@ -403,20 +412,17 @@ export default function Rewards() {
       let couponId = null;
 
       if (reward.reward_type === 'discount_30' || reward.reward_type === 'discount_50') {
-        // Try to get an available coupon - check for 'unused' OR 'available' status
-        const { data: coupon, error: couponError } = await supabase
-          .from('coupon_pools')
-          .select('*')
-          .eq('reward_type', reward.reward_type)
-          .in('status', ['unused', 'available'])
-          .is('assigned_to', null)
-          .limit(1)
-          .maybeSingle();
+        // Use the secure RPC to claim coupon
+        const { data: couponResult, error: couponError } = await supabase.rpc('claim_coupon', {
+          _reward_type: reward.reward_type,
+          _expiry_days: reward.expiry_days
+        });
 
         if (couponError) throw couponError;
 
-        if (!coupon) {
-          toast.error('No coupons available at the moment. Please try again later or contact support.');
+        const result = couponResult as any;
+        if (!result?.success) {
+          toast.error(result?.error || 'No coupons available at the moment. Please try again later or contact support.');
           // Refund coins since no coupon available
           await supabase.rpc('add_coins', {
             _user_id: user.id,
@@ -427,23 +433,8 @@ export default function Rewards() {
           return;
         }
 
-        // Assign coupon to user
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + reward.expiry_days);
-
-        await supabase
-          .from('coupon_pools')
-          .update({
-            status: 'assigned',
-            assigned_to: user.id,
-            assigned_email: user.email,
-            assigned_at: new Date().toISOString(),
-            expires_at: expiresAt.toISOString()
-          })
-          .eq('id', coupon.id);
-
-        couponCode = coupon.coupon_code;
-        couponId = coupon.id;
+        couponCode = result.coupon_code;
+        couponId = result.coupon_id;
       }
 
       // Create reward claim - fulfilled for coupons, pending only for prop_account
