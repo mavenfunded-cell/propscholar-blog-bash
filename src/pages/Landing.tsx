@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, PenTool, Video, Sparkles, ExternalLink } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
 
 const competitions = [
   {
@@ -40,6 +41,7 @@ const scrollToArena = () => {
 };
 
 export default function Landing() {
+  useSEO();
   const heroRef = useRef<HTMLDivElement>(null);
   const competitionsRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);

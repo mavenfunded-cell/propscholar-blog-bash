@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins, CheckCircle } from 'lucide-react';
 import { WinnerClaimDialog } from '@/components/WinnerClaimDialog';
+import { DashboardSkeleton } from '@/components/DashboardSkeleton';
+import { useSEO } from '@/hooks/useSEO';
 
 interface Submission {
   id: string;
@@ -233,10 +235,19 @@ const Dashboard = () => {
     { name: 'Trustpilot', icon: Award, url: 'https://trustpilot.com/review/propscholar.com', color: 'hover:text-green-400' },
   ];
 
+  // Apply SEO
+  useSEO();
+
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-24 pb-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <DashboardSkeleton />
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }

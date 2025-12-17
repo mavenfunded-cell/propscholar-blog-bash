@@ -27,7 +27,8 @@ import {
   Settings,
   Ticket,
   Share2,
-  Trophy
+  Trophy,
+  Search
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -387,6 +388,16 @@ export default function AdminDashboard() {
                 <CardDescription className="flex items-center gap-2">
                   <Share2 className="w-4 h-4 text-blue-400" />
                   Social Screenshots
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link to="/admin/seo">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer border-green-500/30">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-green-400" />
+                  SEO Management
                 </CardDescription>
               </CardHeader>
             </Card>

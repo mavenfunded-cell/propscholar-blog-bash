@@ -1,7 +1,9 @@
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { useSEO } from '@/hooks/useSEO';
 
 export default function Terms() {
+  useSEO();
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
