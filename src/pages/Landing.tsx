@@ -1,7 +1,8 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { RocketLoader } from '@/components/RocketLoader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,24 @@ const scrollToArena = () => {
 export default function Landing() {
   useSEO();
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const [showLoader, setShowLoader] = useState(true);
+  const [loaderComplete, setLoaderComplete] = useState(false);
+
+  // Check if this is first visit in session
+  useEffect(() => {
+    const hasSeenLoader = sessionStorage.getItem('landing_loader_shown');
+    if (hasSeenLoader) {
+      setShowLoader(false);
+      setLoaderComplete(true);
+    }
+  }, []);
+
+  const handleLoaderComplete = useCallback(() => {
+    setLoaderComplete(true);
+    sessionStorage.setItem('landing_loader_shown', 'true');
+    // Small delay for smooth transition
+    setTimeout(() => setShowLoader(false), 100);
+  }, []);
 
   // Optimized scroll reveal with 70% viewport trigger
   const setupScrollReveal = useCallback(() => {
@@ -82,6 +101,11 @@ export default function Landing() {
     setupScrollReveal();
     return () => observerRef.current?.disconnect();
   }, [setupScrollReveal]);
+
+  // Show loader on first visit
+  if (showLoader) {
+    return <RocketLoader minDuration={2200} onComplete={handleLoaderComplete} />;
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0a0a0a] text-white">
