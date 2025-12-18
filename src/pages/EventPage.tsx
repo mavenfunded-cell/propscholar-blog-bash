@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User, X, ThumbsUp } from 'lucide-react';
+import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User, X, ThumbsUp, LogIn } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
@@ -73,6 +74,7 @@ const submissionSchema = z.object({
 export default function EventPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -83,12 +85,11 @@ export default function EventPage() {
   const [submitting, setSubmitting] = useState(false);
   
   // Voting state
-  const [votingSubmissionId, setVotingSubmissionId] = useState<string | null>(null);
-  const [voterName, setVoterName] = useState('');
   const [voting, setVoting] = useState(false);
   const [showVoters, setShowVoters] = useState<string | null>(null);
   const [voters, setVoters] = useState<Vote[]>([]);
-  const [hasVoted, setHasVoted] = useState<Record<string, boolean>>({});
+  const [userVotedSubmissions, setUserVotedSubmissions] = useState<string[]>([]);
+  const [userProfile, setUserProfile] = useState<{ full_name: string | null } | null>(null);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -195,49 +196,73 @@ export default function EventPage() {
     setShowVoters(submissionId);
   };
 
-  // Check localStorage for existing votes on mount
+  // Fetch user's votes and profile when logged in
   useEffect(() => {
-    if (event) {
-      const votedSubmissions = JSON.parse(localStorage.getItem(`votes_${event.id}`) || '{}');
-      setHasVoted(votedSubmissions);
+    if (user && event) {
+      fetchUserVotes();
+      fetchUserProfile();
     }
-  }, [event]);
+  }, [user, event]);
 
-  const handleVote = async () => {
-    if (!votingSubmissionId || !voterName.trim()) {
-      toast.error('Please enter your name');
+  const fetchUserVotes = async () => {
+    if (!user || !event) return;
+    
+    const { data } = await supabase
+      .from('blog_votes')
+      .select('submission_id')
+      .eq('user_id', user.id);
+    
+    if (data) {
+      setUserVotedSubmissions(data.map(v => v.submission_id));
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    setUserProfile(data);
+  };
+
+  const handleVote = async (submissionId: string) => {
+    if (!user) {
+      toast.error('Please login to vote');
+      navigate('/auth');
       return;
     }
 
-    // Check if already voted for this submission
-    if (hasVoted[votingSubmissionId]) {
+    if (userVotedSubmissions.includes(submissionId)) {
       toast.error('You have already voted for this submission');
-      setVotingSubmissionId(null);
       return;
     }
 
     setVoting(true);
     try {
+      // Get voter name from profile or email
+      const voterName = userProfile?.full_name || user.email?.split('@')[0] || 'Anonymous';
+      
       const { error } = await supabase
         .from('blog_votes')
         .insert({
-          submission_id: votingSubmissionId,
-          voter_name: voterName.trim()
+          submission_id: submissionId,
+          voter_name: voterName,
+          user_id: user.id
         });
 
       if (error) {
-        throw error;
-      } else {
-        // Mark as voted in localStorage
-        const newVoted = { ...hasVoted, [votingSubmissionId]: true };
-        setHasVoted(newVoted);
-        if (event) {
-          localStorage.setItem(`votes_${event.id}`, JSON.stringify(newVoted));
+        if (error.code === '23505') {
+          toast.error('You have already voted for this submission');
+        } else {
+          throw error;
         }
-        
+      } else {
+        setUserVotedSubmissions([...userVotedSubmissions, submissionId]);
         toast.success('Vote submitted successfully!');
-        setVotingSubmissionId(null);
-        setVoterName('');
         if (event) {
           fetchLiveSubmissions(event.id);
         }
@@ -676,14 +701,14 @@ export default function EventPage() {
                             </button>
                             <Button
                               size="sm"
-                              onClick={() => setVotingSubmissionId(submission.id)}
-                              disabled={hasVoted[submission.id]}
-                              className={hasVoted[submission.id] 
+                              onClick={() => handleVote(submission.id)}
+                              disabled={voting || userVotedSubmissions.includes(submission.id)}
+                              className={userVotedSubmissions.includes(submission.id) 
                                 ? "bg-white/20 text-white/60 cursor-not-allowed" 
                                 : "bg-white text-black hover:bg-white/90"}
                             >
                               <ThumbsUp className="w-4 h-4 mr-1" />
-                              {hasVoted[submission.id] ? 'Voted' : 'Vote'}
+                              {userVotedSubmissions.includes(submission.id) ? 'Voted' : (user ? 'Vote' : 'Login to Vote')}
                             </Button>
                           </div>
                         </div>
@@ -776,34 +801,6 @@ export default function EventPage() {
               <ReactMarkdown>{selectedSubmission?.blog || ''}</ReactMarkdown>
             </div>
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      {/* Vote Modal */}
-      <Dialog open={!!votingSubmissionId} onOpenChange={() => setVotingSubmissionId(null)}>
-        <DialogContent className="max-w-md bg-[#111] border-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-white">Cast Your Vote</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="voterName" className="text-white/80">Your Name *</Label>
-              <Input
-                id="voterName"
-                value={voterName}
-                onChange={(e) => setVoterName(e.target.value)}
-                placeholder="Enter your name"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-              />
-            </div>
-            <Button
-              onClick={handleVote}
-              disabled={voting || !voterName.trim()}
-              className="w-full bg-white text-black hover:bg-white/90"
-            >
-              {voting ? 'Submitting...' : 'Submit Vote'}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
