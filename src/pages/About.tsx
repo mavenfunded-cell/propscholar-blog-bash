@@ -1,6 +1,8 @@
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { Button } from '@/components/ui/button';
 import { useSEO } from '@/hooks/useSEO';
+import { ArrowRight, TrendingUp, Users, Clock, Zap } from 'lucide-react';
 
 export default function About() {
   useSEO();
@@ -84,6 +86,65 @@ export default function About() {
                   </a>
                 </p>
               </section>
+            </div>
+          </div>
+
+          {/* PropScholar CTA Section */}
+          <div className="max-w-4xl mx-auto mt-24">
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] p-10 md:p-14">
+              {/* Subtle glow effect */}
+              <div className="absolute top-0 right-0 w-72 h-72 bg-white/[0.02] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="relative">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+                  {/* Left Content */}
+                  <div className="flex-1">
+                    <p className="text-[10px] tracking-[0.3em] uppercase text-white/35 mb-3">
+                      Begin Your Trading Journey
+                    </p>
+                    <h3 className="text-2xl md:text-3xl font-light mb-3">
+                      Your Skills, <span className="font-semibold">Our Platform</span>
+                    </h3>
+                    <p className="text-white/50 text-sm leading-relaxed max-w-md">
+                      Join thousands of traders who trust PropScholar's scholarship model to turn their trading expertise into real opportunity.
+                    </p>
+                  </div>
+
+                  {/* Right CTA */}
+                  <div className="flex-shrink-0">
+                    <a
+                      href="https://propscholar.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button className="h-11 px-8 rounded-full bg-white/90 text-black hover:bg-white transition-all shadow-lg shadow-black/20 border-0 text-sm font-medium">
+                        Start Trading
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Feature Pills */}
+                <div className="flex flex-wrap gap-3 mt-8 pt-8 border-t border-white/[0.06]">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                    <TrendingUp className="w-3.5 h-3.5 text-white/40" />
+                    <span className="text-xs text-white/50">Start from $5</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                    <Users className="w-3.5 h-3.5 text-white/40" />
+                    <span className="text-xs text-white/50">3000+ Traders</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                    <Clock className="w-3.5 h-3.5 text-white/40" />
+                    <span className="text-xs text-white/50">4 Hr Payouts</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                    <Zap className="w-3.5 h-3.5 text-white/40" />
+                    <span className="text-xs text-white/50">Scholarship Model</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>
