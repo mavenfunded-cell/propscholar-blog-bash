@@ -114,7 +114,7 @@ export default function About() {
             <div className="max-w-4xl mx-auto text-center">
               {/* Animated badge */}
               <div className="hero-fade-in delay-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] mb-8">
-                <Rocket className="w-4 h-4 text-purple-400" />
+                <Rocket className="w-4 h-4 text-white/60" />
                 <span className="text-sm text-white/60 tracking-wide">PropScholar Space</span>
               </div>
 
@@ -122,7 +122,7 @@ export default function About() {
               <h1 className="hero-fade-in delay-100 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight mb-8 leading-[1.1]">
                 The Space Where Traders
                 <br />
-                <span className="font-semibold bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent">
+                <span className="font-semibold text-white">
                   Grow Beyond Limits
                 </span>
               </h1>
@@ -165,7 +165,7 @@ export default function About() {
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-6xl mx-auto">
               {/* Text content */}
               <div className="scroll-reveal">
-                <p className="text-[11px] tracking-[0.3em] uppercase text-purple-400/70 mb-4">
+                <p className="text-[11px] tracking-[0.3em] uppercase text-white/40 mb-4">
                   About The Platform
                 </p>
                 <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-6">
@@ -187,23 +187,23 @@ export default function About() {
 
               {/* Image */}
               <div className="scroll-reveal relative" style={{ transitionDelay: '150ms' }}>
-                <div className="relative rounded-3xl overflow-hidden">
+                <div className="relative rounded-3xl overflow-hidden border border-white/[0.08]">
                   <img 
                     src={spaceGalaxy} 
                     alt="Galaxy visualization" 
-                    className="w-full h-[400px] object-cover"
+                    className="w-full h-[400px] object-cover grayscale opacity-80"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/40 via-transparent to-blue-900/30" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-black/60 via-transparent to-black/40" />
                   
                   {/* Floating elements */}
-                  <div className="absolute top-6 right-6 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10">
-                    <span className="text-sm text-white/80">🚀 Launch Your Journey</span>
+                  <div className="absolute top-6 right-6 px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10">
+                    <span className="text-sm text-white/70">🚀 Launch Your Journey</span>
                   </div>
                 </div>
                 
-                {/* Glow effect */}
-                <div className="absolute -inset-4 bg-purple-500/10 rounded-3xl blur-2xl -z-10" />
+                {/* Glow effect - monochrome */}
+                <div className="absolute -inset-4 bg-white/[0.02] rounded-3xl blur-2xl -z-10" />
               </div>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function About() {
         <section className="py-24 md:py-32 relative">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-blue-400/70 mb-4">
+              <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-white/40 mb-4">
                 Our Purpose
               </p>
               <h2 className="scroll-reveal text-3xl md:text-4xl font-light tracking-tight" style={{ transitionDelay: '80ms' }}>
@@ -282,7 +282,7 @@ export default function About() {
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-16">
-                <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-indigo-400/70 mb-4">
+                <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-white/40 mb-4">
                   The Connection
                 </p>
                 <h2 className="scroll-reveal text-3xl md:text-4xl font-light tracking-tight mb-6" style={{ transitionDelay: '80ms' }}>
@@ -294,9 +294,9 @@ export default function About() {
               <div className="scroll-reveal relative" style={{ transitionDelay: '150ms' }}>
                 <div className="grid md:grid-cols-2 gap-8">
                   {/* PropScholar.com */}
-                  <div className="relative p-8 rounded-2xl bg-gradient-to-br from-blue-950/40 to-blue-900/10 border border-blue-500/15">
+                  <div className="relative p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.08]">
                     <div className="absolute -top-3 left-8">
-                      <span className="px-3 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30">
+                      <span className="px-3 py-1 text-xs font-medium bg-white/[0.06] text-white/70 rounded-full border border-white/[0.12]">
                         propscholar.com
                       </span>
                     </div>
@@ -309,9 +309,9 @@ export default function About() {
                   </div>
 
                   {/* PropScholar Space */}
-                  <div className="relative p-8 rounded-2xl bg-gradient-to-br from-purple-950/40 to-purple-900/10 border border-purple-500/15">
+                  <div className="relative p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.08]">
                     <div className="absolute -top-3 left-8">
-                      <span className="px-3 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
+                      <span className="px-3 py-1 text-xs font-medium bg-white/[0.06] text-white/70 rounded-full border border-white/[0.12]">
                         propscholar.space
                       </span>
                     </div>
@@ -324,8 +324,8 @@ export default function About() {
                   </div>
                 </div>
 
-                {/* Connector line */}
-                <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-blue-500/50 via-white/20 to-purple-500/50" />
+                {/* Connector line - monochrome */}
+                <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-white/20 via-white/40 to-white/20" />
                 <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                   <div className="w-8 h-8 rounded-full bg-[#0a0a12] border border-white/20 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-white/60" />
@@ -345,7 +345,7 @@ export default function About() {
         <section className="py-24 md:py-32">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-emerald-400/70 mb-4">
+              <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-white/40 mb-4">
                 Our Foundation
               </p>
               <h2 className="scroll-reveal text-3xl md:text-4xl font-light tracking-tight" style={{ transitionDelay: '80ms' }}>
@@ -393,8 +393,8 @@ export default function About() {
         <section className="py-24 md:py-32 relative">
           <div className="container mx-auto px-4">
             <div className="scroll-reveal max-w-3xl mx-auto text-center relative">
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 blur-3xl rounded-full -z-10" />
+              {/* Glow effect - monochrome */}
+              <div className="absolute inset-0 bg-white/[0.02] blur-3xl rounded-full -z-10" />
               
               <p className="text-[11px] tracking-[0.3em] uppercase text-white/40 mb-6">
                 Ready to Begin?
@@ -412,7 +412,7 @@ export default function About() {
 
               <div className="flex flex-wrap justify-center gap-4">
                 <Link to="/blog">
-                  <Button className="btn-premium h-12 px-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:opacity-90 border-0 text-sm font-medium shadow-lg shadow-purple-500/20">
+                  <Button className="btn-premium h-12 px-10 rounded-full bg-white text-black hover:bg-white/90 border-0 text-sm font-medium">
                     Explore Events
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
