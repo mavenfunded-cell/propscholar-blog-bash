@@ -5,9 +5,10 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, ThumbsUp } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, ThumbsUp, Gift, Coins, Star, Award } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSEO } from '@/hooks/useSEO';
 
@@ -38,6 +39,8 @@ export default function BlogCompetitions() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
+  const [showRewardsModal, setShowRewardsModal] = useState(false);
+  const [selectedRewardEvent, setSelectedRewardEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -99,6 +102,13 @@ export default function BlogCompetitions() {
     }
   };
 
+  const openRewardsModal = (event: Event, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedRewardEvent(event);
+    setShowRewardsModal(true);
+  };
+
   const isEventActive = (event: Event) => {
     return event.status === 'active' && new Date(event.end_date) > new Date();
   };
@@ -151,9 +161,15 @@ export default function BlogCompetitions() {
               <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight text-white">
                 Blog Writing <span className="text-white/70">Contest</span>
               </h1>
-              <p className="text-lg text-white/50 max-w-2xl">
+              <p className="text-lg text-white/50 max-w-2xl mb-6">
                 Share your trading insights, market analysis, and financial knowledge through compelling articles.
               </p>
+              <Link to="/rewards">
+                <Button className="gap-2 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-semibold">
+                  <Gift className="w-4 h-4" />
+                  Go to Rewards
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -195,23 +211,32 @@ export default function BlogCompetitions() {
                         <CardDescription className="text-white/50 line-clamp-2">{event.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-sm text-white/50">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              <span>Ends {format(new Date(event.end_date), 'MMM d')}</span>
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-sm text-white/50">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                <span>Ends {format(new Date(event.end_date), 'MMM d')}</span>
+                              </div>
                             </div>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                fetchLeaderboard(event);
+                              }}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 hover:from-yellow-500/30 hover:to-amber-600/30 transition-all"
+                            >
+                              <Trophy className="w-4 h-4 text-yellow-500" />
+                              <span className="text-xs font-bold text-yellow-500">Leaderboard</span>
+                            </button>
                           </div>
                           <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              fetchLeaderboard(event);
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 hover:from-yellow-500/30 hover:to-amber-600/30 transition-all"
+                            onClick={(e) => openRewardsModal(event, e)}
+                            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-white/70 hover:text-white"
                           >
-                            <Trophy className="w-4 h-4 text-yellow-500" />
-                            <span className="text-xs font-bold text-yellow-500">Leaderboard</span>
+                            <Gift className="w-4 h-4" />
+                            <span className="text-sm font-medium">View Rewards</span>
                           </button>
                         </div>
                       </CardContent>
@@ -387,6 +412,100 @@ export default function BlogCompetitions() {
               </div>
             )}
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rewards Modal */}
+      <Dialog open={showRewardsModal} onOpenChange={setShowRewardsModal}>
+        <DialogContent className="max-w-md bg-[#111] border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-white/10">
+            <DialogTitle className="text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500/20 to-amber-600/20 flex items-center justify-center">
+                <Gift className="w-5 h-5 text-yellow-500" />
+              </div>
+              <div>
+                <span className="block">Participation Rewards</span>
+                <span className="text-sm font-normal text-white/50">
+                  {selectedRewardEvent?.title}
+                </span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            {/* Participation Coins */}
+            <div className="p-4 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-600/10 border border-yellow-500/20">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <Coins className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Space Coins</p>
+                  <p className="text-sm text-white/50">Earn coins for participating</p>
+                </div>
+              </div>
+              <p className="text-sm text-white/60 mt-2">
+                Submit your blog entry to earn Space Coins that can be redeemed for exclusive rewards.
+              </p>
+            </div>
+
+            {/* Winner Prizes */}
+            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-white/70" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Winner Prizes</p>
+                  <p className="text-sm text-white/50">Top performers get special rewards</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  <span className="text-white/70">1st Place - PropScholar Account + Bonus Coins</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Medal className="w-4 h-4 text-gray-400" />
+                  <span className="text-white/70">2nd Place - Exclusive Coupon + Coins</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Medal className="w-4 h-4 text-amber-600" />
+                  <span className="text-white/70">3rd Place - Special Discount + Coins</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Special Bonus */}
+            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-white/70" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Bonus Rewards</p>
+                  <p className="text-sm text-white/50">Extra coins for social media engagement</p>
+                </div>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col gap-2 pt-2">
+              {selectedRewardEvent && (
+                <Link to={`/blog/${selectedRewardEvent.slug}`} onClick={() => setShowRewardsModal(false)}>
+                  <Button className="w-full gap-2 bg-white text-black hover:bg-white/90">
+                    <PenTool className="w-4 h-4" />
+                    Participate Now
+                  </Button>
+                </Link>
+              )}
+              <Link to="/rewards" onClick={() => setShowRewardsModal(false)}>
+                <Button variant="outline" className="w-full gap-2 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                  <Gift className="w-4 h-4" />
+                  Go to Rewards
+                </Button>
+              </Link>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

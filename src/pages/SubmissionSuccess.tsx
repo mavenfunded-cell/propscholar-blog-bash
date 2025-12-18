@@ -3,7 +3,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Home, User } from 'lucide-react';
+import { CheckCircle, Home, User, Gift, Coins } from 'lucide-react';
 
 export default function SubmissionSuccess() {
   const location = useLocation();
@@ -47,16 +47,33 @@ export default function SubmissionSuccess() {
                 Submission Successful!
               </h1>
               
-              <p className="text-white/60 mb-6">
+              <p className="text-white/60 mb-4">
                 Your blog entry has been submitted successfully. Our team will review your submission and winners will be announced soon.
               </p>
 
-              <Link to="/">
-                <Button variant="outline" className="w-full gap-2 border-white/20 text-white hover:bg-white/5">
-                  <Home className="w-4 h-4" />
-                  Back to Home
-                </Button>
-              </Link>
+              {/* Coins Earned Info */}
+              <div className="mb-6 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-center justify-center gap-2 text-yellow-500">
+                  <Coins className="w-5 h-5" />
+                  <span className="font-medium">You earned Space Coins for participating!</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Link to="/rewards">
+                  <Button className="w-full gap-2 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-semibold">
+                    <Gift className="w-4 h-4" />
+                    Go to Rewards
+                  </Button>
+                </Link>
+                
+                <Link to="/">
+                  <Button variant="outline" className="w-full gap-2 border-white/20 text-white hover:bg-white/5">
+                    <Home className="w-4 h-4" />
+                    Back to Home
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </main>
