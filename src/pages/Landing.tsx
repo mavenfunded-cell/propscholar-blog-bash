@@ -89,27 +89,35 @@ export default function Landing() {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
         
+              {/* Top label */}
               <p className="reveal-on-scroll text-[11px] tracking-[0.32em] uppercase text-white/45 mb-8 font-medium opacity-0 blur-sm translate-y-4 transition-all duration-700">
                 PropScholar Space
               </p>
         
-              <h1
-                className="
-                  reveal-on-scroll
-                  text-4xl md:text-6xl lg:text-7xl
-                  font-light tracking-tight mb-8
-                  whitespace-normal md:whitespace-nowrap
-                "
-              >
-                You Compete.{" "}
-                <span className="font-semibold">We Reward.</span>
-              </h1>
+              {/* Heading – OPTICALLY CENTERED */}
+              <div className="flex justify-center">
+                <h1
+                  className="
+                    reveal-on-scroll
+                    text-4xl md:text-6xl lg:text-7xl
+                    font-light tracking-tight
+                    text-center
+                    max-w-2xl
+                    mb-8
+                  "
+                >
+                  You Compete.{" "}
+                  <span className="font-semibold">We Reward.</span>
+                </h1>
+              </div>
         
-              <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-xl mx-auto leading-relaxed font-light mb-12 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
+              {/* Sub text */}
+              <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-lg mx-auto leading-relaxed font-light mb-12 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
                 PropScholar, the leading trading scholarship platform’s Giveaway Hub
                 where participants compete and win exciting rewards.
               </p>
         
+              {/* CTAs */}
               <div className="reveal-on-scroll flex flex-wrap justify-center gap-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-300">
                 <Button
                   onClick={scrollToArena}
@@ -137,6 +145,7 @@ export default function Landing() {
             </div>
           </div>
         </section>
+
 
 
         {/* ===== COMPETITIONS ===== */}
