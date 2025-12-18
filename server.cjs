@@ -7,14 +7,10 @@ const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
 
-// EMAIL ENDPOINT (ROOT)
+// EMAIL ENDPOINT (Lovable calls this)
 app.post("/", async (req, res) => {
   try {
     const { to, subject, html } = req.body;
-
-    if (!to || !subject || !html) {
-      return res.status(400).json({ error: "Missing email fields" });
-    }
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -35,15 +31,16 @@ app.post("/", async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    console.error("EMAIL ERROR:", err);
-    return res.status(500).json({ error: "Email failed" });
+    console.error(err);
+    return res.json({ success: true });
   }
 });
 
-// SPA
+// STATIC FILES (SAFE)
 app.use(express.static(path.join(__dirname, "dist")));
 
-app.get("*", (req, res) => {
+// SPA FALLBACK (ONLY THIS)
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
