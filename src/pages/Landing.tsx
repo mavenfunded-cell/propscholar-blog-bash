@@ -193,11 +193,26 @@ export default function Landing() {
         </section>
 
         {/* ===== PROPSCHOLAR CONNECTION ===== */}
-        <section className="py-24 md:py-32 relative">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
+        <section className="py-24 md:py-32 relative overflow-hidden">
+          {/* Animated space background */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Orbital rings */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[900px] md:h-[900px]">
+              <div className="absolute inset-0 rounded-full border border-white/[0.03] animate-[spin_60s_linear_infinite]" />
+              <div className="absolute inset-8 rounded-full border border-white/[0.04] animate-[spin_45s_linear_infinite_reverse]" />
+              <div className="absolute inset-16 rounded-full border border-white/[0.05] animate-[spin_30s_linear_infinite]" />
+            </div>
+            {/* Floating particles */}
+            <div className="absolute top-[20%] left-[15%] w-1 h-1 bg-white/20 rounded-full animate-pulse" style={{ animationDuration: '3s' }} />
+            <div className="absolute top-[30%] right-[20%] w-1.5 h-1.5 bg-white/15 rounded-full animate-pulse" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+            <div className="absolute bottom-[25%] left-[25%] w-1 h-1 bg-white/25 rounded-full animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+            <div className="absolute bottom-[35%] right-[15%] w-0.5 h-0.5 bg-white/30 rounded-full animate-pulse" style={{ animationDuration: '3.5s', animationDelay: '1.5s' }} />
+          </div>
+
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-5xl mx-auto">
               {/* Section Header */}
-              <div className="text-center mb-16">
+              <div className="text-center mb-20">
                 <p className="scroll-reveal text-[11px] tracking-[0.32em] uppercase text-white/30 mb-4 font-medium">
                   The Ecosystem
                 </p>
@@ -206,78 +221,82 @@ export default function Landing() {
                 </h2>
               </div>
 
-              {/* Connection Flow */}
+              {/* Horizontal Connection Flow */}
               <div className="scroll-reveal relative" style={{ transitionDelay: '150ms' }}>
-                {/* Vertical connector line */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent hidden md:block" />
-                
-                {/* Step 1 - PropScholar.com */}
-                <div className="relative mb-16 md:mb-24">
-                  <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
-                    <div className="md:text-right mb-6 md:mb-0">
-                      <div className="inline-block mb-4">
-                        <span className="px-3 py-1 text-[10px] tracking-wider uppercase bg-white/[0.04] text-white/50 rounded-full border border-white/[0.08]">
+                <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-0">
+                  
+                  {/* Platform 1 - PropScholar.com */}
+                  <div className="w-full md:w-[280px] group">
+                    <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-white/[0.12] transition-all duration-500 hover:-translate-y-1">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="px-3 py-1 text-[9px] tracking-widest uppercase bg-[#0a0a0a] text-white/50 rounded-full border border-white/[0.1]">
                           propscholar.com
                         </span>
                       </div>
-                      <h3 className="text-lg md:text-xl font-medium text-white/90 mb-3">
-                        Begin Your Trading Journey
-                      </h3>
-                      <p className="text-sm text-white/40 leading-relaxed">
-                        Take evaluations, prove your trading skills, and access funded accounts through PropScholar's scholarship model.
-                      </p>
-                    </div>
-                    <div className="hidden md:flex justify-start">
-                      <div className="w-3 h-3 rounded-full bg-white/20 border border-white/30 relative">
-                        <div className="absolute inset-0 rounded-full bg-white/10 animate-ping" style={{ animationDuration: '2s' }} />
+                      <div className="flex flex-col items-center text-center pt-4">
+                        <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                          <span className="text-lg">🎯</span>
+                        </div>
+                        <h3 className="text-base font-medium text-white/90 mb-2">Challenges</h3>
+                        <p className="text-xs text-white/40 leading-relaxed">
+                          Evaluations & funded accounts
+                        </p>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Step 2 - Connection */}
-                <div className="relative mb-16 md:mb-24">
-                  <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
-                    <div className="hidden md:flex justify-end">
-                      <div className="w-3 h-3 rounded-full bg-white/30 border border-white/40 relative">
-                        <div className="absolute inset-0 rounded-full bg-white/15 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                  {/* Animated Connector */}
+                  <div className="hidden md:flex items-center justify-center w-24 relative">
+                    <div className="w-full h-px bg-gradient-to-r from-white/10 via-white/20 to-white/10" />
+                    <div className="absolute w-2 h-2 bg-white/30 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                    <div className="absolute w-1.5 h-1.5 bg-white/50 rounded-full" />
+                  </div>
+                  <div className="md:hidden flex flex-col items-center h-12">
+                    <div className="flex-1 w-px bg-gradient-to-b from-white/10 via-white/20 to-white/10" />
+                    <div className="absolute w-2 h-2 bg-white/30 rounded-full animate-pulse" />
+                  </div>
+
+                  {/* Center - Connection Hub */}
+                  <div className="w-full md:w-[200px] group">
+                    <div className="relative p-5 rounded-2xl bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/[0.08] hover:border-white/[0.15] transition-all duration-500">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-14 h-14 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-3 relative">
+                          <Sparkles className="w-6 h-6 text-white/60" />
+                          <div className="absolute inset-0 rounded-full border border-white/20 animate-ping" style={{ animationDuration: '3s' }} />
+                        </div>
+                        <h3 className="text-sm font-semibold text-white/80 mb-1">One Ecosystem</h3>
+                        <p className="text-[10px] text-white/35">Seamless integration</p>
                       </div>
-                    </div>
-                    <div className="mb-6 md:mb-0">
-                      <div className="inline-block mb-4">
-                        <span className="px-3 py-1 text-[10px] tracking-wider uppercase bg-white/[0.04] text-white/50 rounded-full border border-white/[0.08]">
-                          Seamless Integration
-                        </span>
-                      </div>
-                      <h3 className="text-lg md:text-xl font-medium text-white/90 mb-3">
-                        Unified Ecosystem
-                      </h3>
-                      <p className="text-sm text-white/40 leading-relaxed">
-                        Your progress, rewards, and achievements flow between platforms. One account, complete access.
-                      </p>
                     </div>
                   </div>
-                </div>
 
-                {/* Step 3 - PropScholar Space */}
-                <div className="relative">
-                  <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
-                    <div className="md:text-right mb-6 md:mb-0">
-                      <div className="inline-block mb-4">
-                        <span className="px-3 py-1 text-[10px] tracking-wider uppercase bg-white/[0.06] text-white/60 rounded-full border border-white/[0.12]">
+                  {/* Animated Connector */}
+                  <div className="hidden md:flex items-center justify-center w-24 relative">
+                    <div className="w-full h-px bg-gradient-to-r from-white/10 via-white/20 to-white/10" />
+                    <div className="absolute w-2 h-2 bg-white/30 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" style={{ animationDelay: '1s' }} />
+                    <div className="absolute w-1.5 h-1.5 bg-white/50 rounded-full" />
+                  </div>
+                  <div className="md:hidden flex flex-col items-center h-12">
+                    <div className="flex-1 w-px bg-gradient-to-b from-white/10 via-white/20 to-white/10" />
+                    <div className="absolute w-2 h-2 bg-white/30 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+                  </div>
+
+                  {/* Platform 2 - PropScholar Space */}
+                  <div className="w-full md:w-[280px] group">
+                    <div className="relative p-6 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-white/[0.12] transition-all duration-500 hover:-translate-y-1">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="px-3 py-1 text-[9px] tracking-widest uppercase bg-[#0a0a0a] text-white/60 rounded-full border border-white/[0.12]">
                           propscholar.space
                         </span>
                       </div>
-                      <h3 className="text-lg md:text-xl font-medium text-white/90 mb-3">
-                        Grow & Engage
-                      </h3>
-                      <p className="text-sm text-white/40 leading-relaxed">
-                        Compete in events, earn Space Coins, learn from the community, and unlock exclusive rewards.
-                      </p>
-                    </div>
-                    <div className="hidden md:flex justify-start">
-                      <div className="w-3 h-3 rounded-full bg-white/40 border border-white/50 relative">
-                        <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" style={{ animationDuration: '2s', animationDelay: '1s' }} />
+                      <div className="flex flex-col items-center text-center pt-4">
+                        <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                          <span className="text-lg">🚀</span>
+                        </div>
+                        <h3 className="text-base font-medium text-white/90 mb-2">Community</h3>
+                        <p className="text-xs text-white/40 leading-relaxed">
+                          Events, rewards & learning
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -285,7 +304,7 @@ export default function Landing() {
               </div>
 
               {/* Summary */}
-              <p className="scroll-reveal text-center text-white/30 text-xs mt-16 max-w-md mx-auto tracking-wide" style={{ transitionDelay: '250ms' }}>
+              <p className="scroll-reveal text-center text-white/25 text-xs mt-16 max-w-md mx-auto tracking-wide" style={{ transitionDelay: '250ms' }}>
                 Two platforms. One mission. Empowering traders to succeed.
               </p>
             </div>

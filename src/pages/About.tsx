@@ -63,16 +63,25 @@ export default function About() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#030303] text-white">
-      {/* Premium Dark Background */}
+      {/* Premium Dark Background with Space */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-[#050505] to-[#080808]" />
         
+        {/* Space image overlay */}
+        <img 
+          src={spaceHero} 
+          alt="" 
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.08] grayscale"
+          loading="eager"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#030303]/60 via-[#030303]/80 to-[#030303]" />
+        
         {/* Subtle ambient glow - monochrome */}
-        <div className="absolute top-[10%] left-[15%] w-[600px] h-[600px] rounded-full bg-white/[0.015] blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute top-[50%] right-[10%] w-[500px] h-[500px] rounded-full bg-white/[0.01] blur-[100px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+        <div className="absolute top-[10%] left-[15%] w-[600px] h-[600px] rounded-full bg-white/[0.012] blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-[50%] right-[10%] w-[500px] h-[500px] rounded-full bg-white/[0.008] blur-[100px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
         
         {/* Star field effect - more subtle */}
-        <div className="absolute inset-0 opacity-25" style={{
+        <div className="absolute inset-0 opacity-20" style={{
           backgroundImage: `radial-gradient(1px 1px at 20px 30px, white, transparent),
                            radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.6), transparent),
                            radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.4), transparent),
