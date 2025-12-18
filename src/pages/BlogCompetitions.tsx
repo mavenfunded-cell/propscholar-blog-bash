@@ -5,7 +5,9 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, ThumbsUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSEO } from '@/hooks/useSEO';
 
@@ -21,10 +23,20 @@ interface Event {
   competition_type: string;
 }
 
+interface LeaderboardEntry {
+  id: string;
+  name: string;
+  blog_title: string | null;
+  vote_count: number;
+}
+
 export default function BlogCompetitions() {
   useSEO();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -44,6 +56,28 @@ export default function BlogCompetitions() {
       console.error('Error fetching events:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLeaderboard = async (event: Event) => {
+    setSelectedEvent(event);
+    setLoadingLeaderboard(true);
+    try {
+      const { data, error } = await supabase
+        .rpc('get_live_event_submissions', { _event_id: event.id });
+      
+      if (!error && data) {
+        setLeaderboard(data.map((s: { submission_id: string; submission_name: string; submission_title: string | null; vote_count: number }) => ({
+          id: s.submission_id,
+          name: s.submission_name,
+          blog_title: s.submission_title,
+          vote_count: s.vote_count
+        })));
+      }
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+    } finally {
+      setLoadingLeaderboard(false);
     }
   };
 
@@ -145,10 +179,17 @@ export default function BlogCompetitions() {
                               <span>Ends {format(new Date(event.end_date), 'MMM d')}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              fetchLeaderboard(event);
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 hover:from-yellow-500/30 hover:to-amber-600/30 transition-all"
+                          >
                             <Trophy className="w-4 h-4 text-yellow-500" />
                             <span className="text-xs font-bold text-yellow-500">Leaderboard</span>
-                          </div>
+                          </button>
                         </div>
                       </CardContent>
                     </Card>
@@ -240,6 +281,91 @@ export default function BlogCompetitions() {
 
         <Footer />
       </div>
+
+      {/* Leaderboard Modal */}
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] bg-[#111] border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-white/10">
+            <DialogTitle className="text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500/20 to-amber-600/20 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+              </div>
+              <div>
+                <span className="block">{selectedEvent?.title}</span>
+                <span className="text-sm font-normal text-white/50">
+                  {leaderboard.length} participants • {leaderboard.reduce((sum, s) => sum + s.vote_count, 0)} votes
+                </span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            {loadingLeaderboard ? (
+              <div className="p-8 text-center">
+                <div className="animate-pulse text-white/50">Loading leaderboard...</div>
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <div className="p-8 text-center text-white/50">
+                No submissions yet
+              </div>
+            ) : (
+              <div className="p-4 space-y-2">
+                {[...leaderboard]
+                  .sort((a, b) => b.vote_count - a.vote_count)
+                  .map((entry, index) => {
+                    const rank = index + 1;
+                    return (
+                      <div 
+                        key={entry.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                          rank === 1 
+                            ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' 
+                            : rank === 2 
+                              ? 'bg-gradient-to-r from-gray-400/10 to-transparent border-gray-400/30'
+                              : rank === 3
+                                ? 'bg-gradient-to-r from-amber-600/10 to-transparent border-amber-600/30'
+                                : 'bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          rank === 1 
+                            ? 'bg-yellow-500/20' 
+                            : rank === 2 
+                              ? 'bg-gray-400/20'
+                              : rank === 3
+                                ? 'bg-amber-600/20'
+                                : 'bg-white/10'
+                        }`}>
+                          {rank <= 3 ? (
+                            rank === 1 ? <Crown className="w-4 h-4 text-yellow-500" /> :
+                            rank === 2 ? <Medal className="w-4 h-4 text-gray-400" /> :
+                            <Medal className="w-4 h-4 text-amber-600" />
+                          ) : (
+                            <span className="text-sm font-bold text-white/60">#{rank}</span>
+                          )}
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-semibold text-white">
+                            {entry.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white truncate">{entry.name}</p>
+                          {entry.blog_title && (
+                            <p className="text-sm text-white/50 truncate">{entry.blog_title}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/5">
+                          <ThumbsUp className="w-3 h-3 text-white/40" />
+                          <span className="text-sm font-bold text-white">{entry.vote_count}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
