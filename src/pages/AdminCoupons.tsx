@@ -58,7 +58,7 @@ export default function AdminCoupons() {
   const [loadingData, setLoadingData] = useState(true);
   const [adding, setAdding] = useState(false);
   const [newCoupons, setNewCoupons] = useState('');
-  const [newType, setNewType] = useState<string>('discount_30');
+  const [newType, setNewType] = useState<string>('discount_20');
   const [revokeReason, setRevokeReason] = useState('');
 
   useEffect(() => {
@@ -181,6 +181,7 @@ export default function AdminCoupons() {
     );
   }
 
+  const discount20Coupons = coupons.filter(c => c.reward_type === 'discount_20');
   const discount30Coupons = coupons.filter(c => c.reward_type === 'discount_30');
   const discount50Coupons = coupons.filter(c => c.reward_type === 'discount_50');
 
@@ -264,7 +265,7 @@ export default function AdminCoupons() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              {coupon.status === 'unused' && (
+              {(coupon.status === 'unused' || coupon.status === 'revoked') && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="sm" className="text-destructive">
@@ -273,9 +274,9 @@ export default function AdminCoupons() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Coupon?</AlertDialogTitle>
+                      <AlertDialogTitle>Delete Coupon Permanently?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone.
+                        This will permanently remove the coupon. This action cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -284,7 +285,7 @@ export default function AdminCoupons() {
                         onClick={() => deleteCoupon(coupon.id)}
                         className="bg-destructive text-destructive-foreground"
                       >
-                        Delete
+                        Delete Permanently
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -363,6 +364,7 @@ export default function AdminCoupons() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="discount_20">20% Discount</SelectItem>
                     <SelectItem value="discount_30">30% Discount</SelectItem>
                     <SelectItem value="discount_50">50% Discount</SelectItem>
                   </SelectContent>
@@ -387,11 +389,26 @@ export default function AdminCoupons() {
         </Card>
 
         {/* Coupon Lists */}
-        <Tabs defaultValue="30" className="space-y-4">
+        <Tabs defaultValue="20" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="20">20% Coupons ({discount20Coupons.length})</TabsTrigger>
             <TabsTrigger value="30">30% Coupons ({discount30Coupons.length})</TabsTrigger>
             <TabsTrigger value="50">50% Coupons ({discount50Coupons.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="20">
+            <Card>
+              <CardHeader>
+                <CardTitle>20% Discount Coupons</CardTitle>
+                <CardDescription>
+                  Available: {discount20Coupons.filter(c => c.status === 'unused').length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderCouponList(discount20Coupons)}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="30">
             <Card>
