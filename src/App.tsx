@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import Landing from "./pages/Landing";
-import Arena from "./pages/Arena";
 import BlogCompetitions from "./pages/BlogCompetitions";
 import ReelCompetitions from "./pages/ReelCompetitions";
 import Auth from "./pages/Auth";
@@ -55,7 +54,6 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/arena" element={<Arena />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/rewards" element={<Rewards />} />
             <Route path="/blog" element={<BlogCompetitions />} />
