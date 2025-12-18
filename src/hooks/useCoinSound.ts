@@ -16,7 +16,7 @@ const playCreditSound = () => {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
 
-    // Soft main chime - lower volume, gentler frequencies
+    // Soft main chime
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
@@ -54,7 +54,6 @@ const playDebitSound = () => {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
 
-    // Soft main tone
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
@@ -68,7 +67,6 @@ const playDebitSound = () => {
     osc1.start(now);
     osc1.stop(now + 0.35);
 
-    // Soft low undertone
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
@@ -92,7 +90,7 @@ const playSuccessSound = () => {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
 
-    const notes = [392, 494, 587, 784]; // G4, B4, D5, G5 - gentle major chord
+    const notes = [392, 494, 587, 784]; // G4, B4, D5, G5
     
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -118,11 +116,10 @@ const playSubmissionSound = () => {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
 
-    // Soft confirmation tone
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(523, now); // C5
+    osc1.frequency.setValueAtTime(523, now);
     gain1.gain.setValueAtTime(0, now);
     gain1.gain.linearRampToValueAtTime(0.05, now + 0.02);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
@@ -131,11 +128,10 @@ const playSubmissionSound = () => {
     osc1.start(now);
     osc1.stop(now + 0.3);
 
-    // Higher gentle tone
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(659, now + 0.1); // E5
+    osc2.frequency.setValueAtTime(659, now + 0.1);
     gain2.gain.setValueAtTime(0, now + 0.1);
     gain2.gain.linearRampToValueAtTime(0.04, now + 0.12);
     gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
@@ -144,11 +140,10 @@ const playSubmissionSound = () => {
     osc2.start(now + 0.1);
     osc2.stop(now + 0.4);
 
-    // Final soft chime
     const osc3 = ctx.createOscillator();
     const gain3 = ctx.createGain();
     osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(784, now + 0.2); // G5
+    osc3.frequency.setValueAtTime(784, now + 0.2);
     gain3.gain.setValueAtTime(0, now + 0.2);
     gain3.gain.linearRampToValueAtTime(0.035, now + 0.22);
     gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
@@ -161,9 +156,182 @@ const playSubmissionSound = () => {
   }
 };
 
+// Winner celebration sound - triumphant fanfare
+const playWinnerSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Triumphant ascending fanfare C-E-G-C (octave)
+    const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+    
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.12);
+      gain.gain.setValueAtTime(0, now + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.08, now + i * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.6);
+    });
+
+    // Add a soft shimmer on the final note
+    const shimmer = ctx.createOscillator();
+    const shimmerGain = ctx.createGain();
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(2094, now + 0.48); // C7
+    shimmerGain.gain.setValueAtTime(0, now + 0.48);
+    shimmerGain.gain.linearRampToValueAtTime(0.03, now + 0.52);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(ctx.destination);
+    shimmer.start(now + 0.48);
+    shimmer.stop(now + 1.0);
+  } catch (e) {
+    console.warn('Audio not supported:', e);
+  }
+};
+
+// Click/tap sound - soft pop
+const playClickSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch (e) {
+    console.warn('Audio not supported:', e);
+  }
+};
+
+// Notification sound - gentle bell
+const playNotificationSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Two-note notification chime
+    const notes = [880, 1109]; // A5, C#6
+    
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.15);
+      gain.gain.setValueAtTime(0, now + i * 0.15);
+      gain.gain.linearRampToValueAtTime(0.05, now + i * 0.15 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.15);
+      osc.stop(now + i * 0.15 + 0.4);
+    });
+  } catch (e) {
+    console.warn('Audio not supported:', e);
+  }
+};
+
+// Error sound - soft low tone
+const playErrorSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  } catch (e) {
+    console.warn('Audio not supported:', e);
+  }
+};
+
+// Reward claim sound - magical sparkle
+const playRewardSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Sparkle effect with descending then ascending
+    const sparkleNotes = [1047, 1319, 1568, 1319, 1568, 2093]; // C6, E6, G6, E6, G6, C7
+    
+    sparkleNotes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.08);
+      gain.gain.setValueAtTime(0, now + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.035, now + i * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.35);
+    });
+  } catch (e) {
+    console.warn('Audio not supported:', e);
+  }
+};
+
+// Dialog open sound - soft whoosh
+const playDialogOpenSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Soft ascending whoosh
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(200, now);
+    filter.frequency.exponentialRampToValueAtTime(2000, now + 0.15);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  } catch (e) {
+    console.warn('Audio not supported:', e);
+  }
+};
+
 export function useCoinSound() {
   const lastPlayTime = useRef<number>(0);
-  const minInterval = 100; // Prevent sound spam
+  const minInterval = 100;
 
   const playCredit = useCallback(() => {
     const now = Date.now();
@@ -197,8 +365,78 @@ export function useCoinSound() {
     }
   }, []);
 
-  return { playCredit, playDebit, playSuccess, playSubmission };
+  const playWinner = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlayTime.current > minInterval) {
+      lastPlayTime.current = now;
+      playWinnerSound();
+    }
+  }, []);
+
+  const playClick = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlayTime.current > minInterval) {
+      lastPlayTime.current = now;
+      playClickSound();
+    }
+  }, []);
+
+  const playNotification = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlayTime.current > minInterval) {
+      lastPlayTime.current = now;
+      playNotificationSound();
+    }
+  }, []);
+
+  const playError = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlayTime.current > minInterval) {
+      lastPlayTime.current = now;
+      playErrorSound();
+    }
+  }, []);
+
+  const playReward = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlayTime.current > minInterval) {
+      lastPlayTime.current = now;
+      playRewardSound();
+    }
+  }, []);
+
+  const playDialogOpen = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlayTime.current > minInterval) {
+      lastPlayTime.current = now;
+      playDialogOpenSound();
+    }
+  }, []);
+
+  return { 
+    playCredit, 
+    playDebit, 
+    playSuccess, 
+    playSubmission,
+    playWinner,
+    playClick,
+    playNotification,
+    playError,
+    playReward,
+    playDialogOpen
+  };
 }
 
 // Export standalone functions for non-hook usage
-export { playCreditSound, playDebitSound, playSuccessSound, playSubmissionSound };
+export { 
+  playCreditSound, 
+  playDebitSound, 
+  playSuccessSound, 
+  playSubmissionSound,
+  playWinnerSound,
+  playClickSound,
+  playNotificationSound,
+  playErrorSound,
+  playRewardSound,
+  playDialogOpenSound
+};

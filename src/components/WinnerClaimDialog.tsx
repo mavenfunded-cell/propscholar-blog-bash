@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import {
 import { Trophy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { playWinnerSound, playDialogOpenSound } from '@/hooks/useCoinSound';
 
 interface WinnerClaim {
   id: string;
@@ -34,6 +35,15 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Play winner celebration sound when dialog opens
+  useEffect(() => {
+    if (open && claim) {
+      playDialogOpenSound();
+      // Slight delay for the fanfare
+      setTimeout(() => playWinnerSound(), 200);
+    }
+  }, [open, claim]);
 
   const getPositionText = (position: number) => {
     switch (position) {
