@@ -1,13 +1,20 @@
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Home, User, Gift, Coins } from 'lucide-react';
+import { playSuccessSound } from '@/hooks/useCoinSound';
 
 export default function SubmissionSuccess() {
   const location = useLocation();
   const submitterName = location.state?.name || 'Participant';
+
+  // Play success sound on mount
+  useEffect(() => {
+    playSuccessSound();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col relative">
@@ -44,7 +51,7 @@ export default function SubmissionSuccess() {
               </div>
               
               <h1 className="text-2xl font-bold mb-2 text-white">
-                Submission Successful!
+                Submission Successful
               </h1>
               
               <p className="text-white/60 mb-4">
@@ -55,7 +62,7 @@ export default function SubmissionSuccess() {
               <div className="mb-6 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-center justify-center gap-2 text-yellow-500">
                   <Coins className="w-5 h-5" />
-                  <span className="font-medium">You earned Space Coins for participating!</span>
+                  <span className="font-medium">You earned Space Coins for participating</span>
                 </div>
               </div>
 

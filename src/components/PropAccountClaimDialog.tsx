@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Award, Loader2 } from 'lucide-react';
+import { playDialogOpenSound } from '@/hooks/useCoinSound';
 
 interface Reward {
   id: string;
@@ -28,6 +29,13 @@ export function PropAccountClaimDialog({ reward, open, onOpenChange, onSubmit }:
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Play dialog open sound
+  useEffect(() => {
+    if (open && reward) {
+      playDialogOpenSound();
+    }
+  }, [open, reward]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

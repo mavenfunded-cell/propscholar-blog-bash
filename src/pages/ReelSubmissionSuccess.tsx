@@ -1,12 +1,19 @@
+import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, ArrowRight, Video, Gift, Coins } from 'lucide-react';
+import { playSuccessSound } from '@/hooks/useCoinSound';
 
 export default function ReelSubmissionSuccess() {
   const { slug } = useParams();
+
+  // Play success sound on mount
+  useEffect(() => {
+    playSuccessSound();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white relative">
@@ -32,7 +39,7 @@ export default function ReelSubmissionSuccess() {
                 <CheckCircle className="w-10 h-10 text-white" />
               </div>
               
-              <h1 className="text-2xl font-bold mb-3 text-white">Reel Submitted!</h1>
+              <h1 className="text-2xl font-bold mb-3 text-white">Reel Submitted</h1>
               
               <p className="text-white/60 mb-4">
                 Your reel has been uploaded successfully. Our team will review your submission and winners will be announced soon.
@@ -42,7 +49,7 @@ export default function ReelSubmissionSuccess() {
               <div className="mb-6 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-center justify-center gap-2 text-yellow-500">
                   <Coins className="w-5 h-5" />
-                  <span className="font-medium">You earned Space Coins for participating!</span>
+                  <span className="font-medium">You earned Space Coins for participating</span>
                 </div>
               </div>
 
