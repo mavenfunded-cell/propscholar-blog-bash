@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const RENDER_BACKEND_URL = "https://propscholar-blog-bash.onrender.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,15 +35,14 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending magic link to:", user.email);
     console.log("Magic link URL:", magicLinkUrl);
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
+    // Send email via Render backend
+    const emailResponse = await fetch(`${RENDER_BACKEND_URL}/api/send-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "PropScholar <noreply@propscholar.space>",
-        to: [user.email],
+        to: user.email,
         subject: "Your Magic Link to Sign In",
         html: `
           <!DOCTYPE html>

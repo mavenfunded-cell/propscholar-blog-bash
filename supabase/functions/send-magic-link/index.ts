@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const RENDER_BACKEND_URL = "https://propscholar-blog-bash.onrender.com";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -118,16 +118,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending magic link to:", email);
 
-    // Send email via Resend
-    const emailResponse = await fetch("https://api.resend.com/emails", {
+    // Send email via Render backend
+    const emailResponse = await fetch(`${RENDER_BACKEND_URL}/api/send-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "PropScholar <noreply@propscholar.space>",
-        to: [email],
+        to: email,
         subject: "Your Verification Link to Sign In",
         html: `
           <!DOCTYPE html>
@@ -165,8 +163,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Email response:", emailResult);
 
     if (!emailResponse.ok) {
-      console.error("Resend API error:", emailResult);
-      throw new Error(emailResult.message || emailResult.name || "Failed to send email. Please try Google Sign In instead.");
+      console.error("Render backend error:", emailResult);
+      throw new Error(emailResult.message || emailResult.error || "Failed to send email. Please try Google Sign In instead.");
     }
 
     return new Response(JSON.stringify({ success: true }), {
