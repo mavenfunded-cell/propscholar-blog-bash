@@ -1,24 +1,50 @@
-const express = require('express');
-const path = require('path');
+const express = require("express");
+const path = require("path");
+const nodemailer = require("nodemailer");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// Parse JSON bodies
 app.use(express.json());
 
-// ✅ Handle POST / for Lovable email trigger
-app.post('/', async (req, res) => {
-  console.log('Email request received from Lovable:', req.body);
-  return res.status(200).json({ success: true });
+// EMAIL ENDPOINT (ROOT)
+app.post("/", async (req, res) => {
+  try {
+    const { to, subject, html } = req.body;
+
+    if (!to || !subject || !html) {
+      return res.status(400).json({ error: "Missing email fields" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.MAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("EMAIL ERROR:", err);
+    return res.status(500).json({ error: "Email failed" });
+  }
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'dist')));
+// SPA
+app.use(express.static(path.join(__dirname, "dist")));
 
-// ✅ SPA fallback (FIXED for Node 22)
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 app.listen(PORT, () => {
