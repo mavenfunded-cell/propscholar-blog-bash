@@ -8,11 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User } from 'lucide-react';
+import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
+import ReactMarkdown from 'react-markdown';
 
 interface Event {
   id: string;
@@ -39,6 +42,7 @@ interface Submission {
   id: string;
   name: string;
   blog_title: string | null;
+  blog: string;
 }
 
 const submissionSchema = z.object({
@@ -59,6 +63,7 @@ export default function EventPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -121,10 +126,11 @@ export default function EventPage() {
           .rpc('get_event_submissions', { _event_id: data.id });
 
         if (!submissionsError && submissionsData) {
-          setSubmissions(submissionsData.map((s: { submission_id: string; submission_name: string; submission_title: string | null }) => ({
+          setSubmissions(submissionsData.map((s: { submission_id: string; submission_name: string; submission_title: string | null; submission_blog: string }) => ({
             id: s.submission_id,
             name: s.submission_name,
-            blog_title: s.submission_title
+            blog_title: s.submission_title,
+            blog: s.submission_blog
           })));
         }
       }
@@ -547,9 +553,10 @@ export default function EventPage() {
                     <CardContent>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {submissions.map((submission) => (
-                          <div 
+                          <button 
                             key={submission.id}
-                            className="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                            onClick={() => setSelectedSubmission(submission)}
+                            className="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors cursor-pointer text-left"
                           >
                             {/* Avatar with initials */}
                             <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-3">
@@ -565,7 +572,7 @@ export default function EventPage() {
                                 {submission.blog_title}
                               </p>
                             )}
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </CardContent>
@@ -578,6 +585,32 @@ export default function EventPage() {
 
         <Footer />
       </div>
+
+      {/* Submission View Modal */}
+      <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] bg-[#111] border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-white/10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-semibold text-white">
+                  {selectedSubmission?.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-white text-lg">
+                  {selectedSubmission?.blog_title || 'Untitled'}
+                </DialogTitle>
+                <p className="text-white/50 text-sm mt-1">by {selectedSubmission?.name}</p>
+              </div>
+            </div>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] p-6">
+            <div className="prose prose-invert prose-sm max-w-none">
+              <ReactMarkdown>{selectedSubmission?.blog || ''}</ReactMarkdown>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
