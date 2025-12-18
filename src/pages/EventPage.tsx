@@ -97,8 +97,8 @@ export default function EventPage() {
 
       setEvent(data);
 
-      // Check if event has ended
-      const eventEnded = new Date(data.end_date) < new Date();
+      // Check if event has ended (by date or status)
+      const eventEnded = new Date(data.end_date) < new Date() || data.status === 'closed';
 
       // Fetch winners using public function (works for all users)
       const { data: winnersData, error: winnersError } = await supabase
