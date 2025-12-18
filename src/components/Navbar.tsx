@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ const navLinks = [
   { name: 'Home', href: '/', external: false, icon: Home },
   { name: 'Events', href: '/blog', external: false, icon: Calendar },
   { name: 'Rewards', href: '/rewards', external: false, icon: Gift },
+  { name: 'About', href: '/about', external: false, icon: Info },
   { name: 'Shop', href: 'https://propscholar.com/shop', external: true, icon: null },
 ];
 
