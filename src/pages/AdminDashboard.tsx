@@ -29,7 +29,8 @@ import {
   Share2,
   Trophy,
   Search,
-  ThumbsUp
+  ThumbsUp,
+  Mail
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -409,6 +410,16 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <Search className="w-4 h-4 text-green-400" />
                     SEO Management
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/admin/emails">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-cyan-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-cyan-400" />
+                    Email Logs
                   </CardDescription>
                 </CardHeader>
               </Card>
