@@ -560,49 +560,49 @@ export default function Rewards() {
   const platforms = ['facebook', 'instagram', 'twitter', 'discord', 'youtube'];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#030303]">
       <Navbar />
       
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-4xl font-bold text-foreground mb-2 flex items-center justify-center gap-2 md:gap-3">
+            <h1 className="text-2xl md:text-4xl font-semibold text-white mb-2 flex items-center justify-center gap-2 md:gap-3">
               <Coins className="w-7 h-7 md:w-10 md:h-10 text-yellow-500" />
               Space Coins
             </h1>
-            <p className="text-sm md:text-base text-muted-foreground">Earn coins and redeem exclusive rewards</p>
+            <p className="text-sm md:text-base text-white/50">Earn coins and redeem exclusive rewards</p>
           </div>
           {/* Balance Card */}
-          <Card className="p-4 md:p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20">
+          <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06]">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center items-stretch">
               
               {/* Available Balance */}
-              <div className="flex flex-col justify-center h-full pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
-                <p className="text-xs md:text-sm text-muted-foreground mb-1">
+              <div className="flex flex-col justify-center h-full pb-4 md:pb-0 border-b md:border-b-0 border-white/[0.06]">
+                <p className="text-xs md:text-sm text-white/40 mb-1">
                   Available Balance
                 </p>
-                <p className="text-3xl md:text-4xl font-bold text-yellow-500 tabular-nums">
+                <p className="text-3xl md:text-4xl font-semibold text-yellow-500 tabular-nums">
                   {userCoins?.balance || 0}
                 </p>
               </div>
           
               {/* Total Earned */}
-              <div className="flex flex-col justify-center h-full pb-4 md:pb-0 border-b md:border-b-0 border-border/30">
-                <p className="text-xs md:text-sm text-muted-foreground mb-1">
+              <div className="flex flex-col justify-center h-full pb-4 md:pb-0 border-b md:border-b-0 border-white/[0.06]">
+                <p className="text-xs md:text-sm text-white/40 mb-1">
                   Total Earned
                 </p>
-                <p className="text-3xl md:text-4xl font-bold text-green-400 tabular-nums">
+                <p className="text-3xl md:text-4xl font-semibold text-white/80 tabular-nums">
                   {userCoins?.total_earned || 0}
                 </p>
               </div>
           
               {/* Total Spent */}
               <div className="flex flex-col justify-center h-full">
-                <p className="text-xs md:text-sm text-muted-foreground mb-1">
+                <p className="text-xs md:text-sm text-white/40 mb-1">
                   Total Spent
                 </p>
-                <p className="text-3xl md:text-4xl font-bold text-foreground tabular-nums">
+                <p className="text-3xl md:text-4xl font-semibold text-white/60 tabular-nums">
                   {userCoins?.total_spent || 0}
                 </p>
               </div>
@@ -612,34 +612,34 @@ export default function Rewards() {
 
 
           <Tabs defaultValue="earn" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-6 h-auto gap-1 p-1">
-              <TabsTrigger value="earn" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">Earn</TabsTrigger>
-              <TabsTrigger value="rewards" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">Redeem</TabsTrigger>
-              <TabsTrigger value="claimed" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">Claimed</TabsTrigger>
-              <TabsTrigger value="history" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3">History</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-6 h-auto gap-1 p-1 bg-[#0a0a0a] border border-white/[0.06]">
+              <TabsTrigger value="earn" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3 text-white/60 data-[state=active]:bg-white/[0.08] data-[state=active]:text-white">Earn</TabsTrigger>
+              <TabsTrigger value="rewards" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3 text-white/60 data-[state=active]:bg-white/[0.08] data-[state=active]:text-white">Redeem</TabsTrigger>
+              <TabsTrigger value="claimed" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3 text-white/60 data-[state=active]:bg-white/[0.08] data-[state=active]:text-white">Claimed</TabsTrigger>
+              <TabsTrigger value="history" className="text-[10px] md:text-sm py-2 md:py-2.5 px-1.5 md:px-3 text-white/60 data-[state=active]:bg-white/[0.08] data-[state=active]:text-white">History</TabsTrigger>
             </TabsList>
 
             {/* Earn Coins Tab */}
             <TabsContent value="earn" className="space-y-6">
               {/* Signup Bonus */}
               {settings.signup_coins?.enabled && !userCoins?.signup_coins_claimed && (
-                <Card className="p-4 md:p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20">
+                <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06]">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 md:gap-4">
-                      <div className="p-2 md:p-3 rounded-full bg-green-500/20">
-                        <Gift className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
+                      <div className="p-2 md:p-3 rounded-full bg-white/[0.06]">
+                        <Gift className="w-5 h-5 md:w-6 md:h-6 text-white/70" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground text-sm md:text-base">Welcome Bonus</h3>
-                        <p className="text-xs md:text-sm text-muted-foreground">Claim your signup reward</p>
+                        <h3 className="font-medium text-white text-sm md:text-base">Welcome Bonus</h3>
+                        <p className="text-xs md:text-sm text-white/40">Claim your signup reward</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <p className="text-xl md:text-2xl font-bold text-yellow-500">+{settings.signup_coins?.value || 5}</p>
+                      <p className="text-xl md:text-2xl font-semibold text-yellow-500">+{settings.signup_coins?.value || 5}</p>
                       <Button 
                         onClick={claimSignupCoins} 
                         disabled={claimingSignup}
-                        className="bg-green-600 hover:bg-green-700 text-sm flex-1 sm:flex-none"
+                        className="bg-white text-black hover:bg-white/90 text-sm flex-1 sm:flex-none"
                       >
                         {claimingSignup ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Claim Now'}
                       </Button>
@@ -649,12 +649,12 @@ export default function Rewards() {
               )}
 
               {/* Social Follows */}
-              <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
-                <h3 className="text-lg md:text-xl font-bold text-foreground mb-3 md:mb-4 flex items-center gap-2">
-                  <Share2 className="w-4 h-4 md:w-5 md:h-5" />
+              <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06]">
+                <h3 className="text-lg md:text-xl font-medium text-white mb-3 md:mb-4 flex items-center gap-2">
+                  <Share2 className="w-4 h-4 md:w-5 md:h-5 text-white/60" />
                   Follow Us & Earn
                 </h3>
-                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                <p className="text-xs md:text-sm text-white/40 mb-3 md:mb-4">
                   Follow us on social media and upload a screenshot to earn coins. Max screenshot size: 2MB.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -670,7 +670,7 @@ export default function Rewards() {
                     return (
                       <div 
                         key={platform}
-                        className={`p-3 md:p-4 rounded-lg border ${isFollowed ? (isPending ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30') : 'bg-background/50 border-border/30'}`}
+                        className={`p-3 md:p-4 rounded-lg border ${isFollowed ? (isPending ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-white/[0.04] border-white/[0.1]') : 'bg-[#080808] border-white/[0.06]'}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 md:gap-3">
@@ -678,8 +678,8 @@ export default function Rewards() {
                               <Icon className="w-4 h-4 md:w-5 md:h-5" />
                             </div>
                             <div>
-                              <p className="font-medium text-foreground capitalize text-sm md:text-base">{platform}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="font-medium text-white capitalize text-sm md:text-base">{platform}</p>
+                              <p className="text-xs text-white/40">
                                 {isFollowed ? (isPending ? 'Pending Review' : 'Verified') : `+${setting.value} coins`}
                               </p>
                             </div>
@@ -688,14 +688,14 @@ export default function Rewards() {
                             isPending ? (
                               <Clock className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
                             ) : (
-                              <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
+                              <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-white/60" />
                             )
                           ) : (
                             <Button
                               size="sm"
                               onClick={() => openSocialDialog(platform)}
                               disabled={claimingSocial === platform}
-                              className="flex items-center gap-1 text-xs md:text-sm px-2 md:px-3"
+                              className="flex items-center gap-1 text-xs md:text-sm px-2 md:px-3 bg-white/[0.08] hover:bg-white/[0.12] text-white border-0"
                             >
                               {claimingSocial === platform ? (
                                 <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
@@ -716,19 +716,19 @@ export default function Rewards() {
 
               {/* Referral */}
               {settings.referral_coins?.enabled && (
-                <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
-                  <h3 className="text-lg md:text-xl font-bold text-foreground mb-3 md:mb-4 flex items-center gap-2">
-                    <Share2 className="w-4 h-4 md:w-5 md:h-5" />
+                <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06]">
+                  <h3 className="text-lg md:text-xl font-medium text-white mb-3 md:mb-4 flex items-center gap-2">
+                    <Share2 className="w-4 h-4 md:w-5 md:h-5 text-white/60" />
                     Refer & Earn
                   </h3>
-                  <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                  <p className="text-xs md:text-sm text-white/40 mb-3 md:mb-4">
                     Share your referral link. Earn {settings.referral_coins?.value || 1} coin when your friend signs up using your link!
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                    <div className="flex-1 p-2 md:p-3 rounded-lg bg-background/50 border border-border/30 text-xs md:text-sm text-muted-foreground truncate">
+                    <div className="flex-1 p-2 md:p-3 rounded-lg bg-[#080808] border border-white/[0.06] text-xs md:text-sm text-white/50 truncate">
                       {`${REFERRAL_DOMAIN}/auth?ref=${userCoins?.referral_code || ''}`}
                     </div>
-                    <Button onClick={copyReferralCode} variant="outline" className="w-full sm:w-auto">
+                    <Button onClick={copyReferralCode} variant="outline" className="w-full sm:w-auto border-white/[0.1] bg-transparent text-white hover:bg-white/[0.05]">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
@@ -736,15 +736,15 @@ export default function Rewards() {
                   
                   {/* Referred Users */}
                   {referrals.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border/30">
-                      <h4 className="text-sm font-medium text-foreground mb-3">
+                    <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                      <h4 className="text-sm font-medium text-white mb-3">
                         Users who signed up from your link ({referrals.length})
                       </h4>
                       <div className="space-y-2 max-h-40 overflow-y-auto">
                         {referrals.map(ref => (
-                          <div key={ref.id} className="flex items-center justify-between p-2 rounded bg-background/30">
-                            <span className="text-sm text-muted-foreground">{ref.referred_email}</span>
-                            <span className="text-xs text-green-400">+{ref.coins_rewarded} coins</span>
+                          <div key={ref.id} className="flex items-center justify-between p-2 rounded bg-[#080808]">
+                            <span className="text-sm text-white/50">{ref.referred_email}</span>
+                            <span className="text-xs text-yellow-500">+{ref.coins_rewarded} coins</span>
                           </div>
                         ))}
                       </div>
@@ -754,12 +754,12 @@ export default function Rewards() {
               )}
 
               {/* Event Participation Info */}
-              <Card className="p-6 bg-card/50 backdrop-blur-xl border-border/50">
-                <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 bg-[#0a0a0a] border-white/[0.06]">
+                <h3 className="text-xl font-medium text-white mb-4 flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-500" />
                   Event Rewards
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-white/40">
                   Participate in blog and reel competitions to earn Space Coins. Win prizes and earn bonus coins!
                 </p>
               </Card>
@@ -768,9 +768,9 @@ export default function Rewards() {
             {/* Rewards Tab */}
             <TabsContent value="rewards" className="space-y-4">
               {rewards.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Gift className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No rewards available at the moment</p>
+                <Card className="p-12 text-center bg-[#0a0a0a] border-white/[0.06]">
+                  <Gift className="w-12 h-12 mx-auto mb-4 text-white/30" />
+                  <p className="text-white/40">No rewards available at the moment</p>
                 </Card>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -781,34 +781,34 @@ export default function Rewards() {
                     const isPropAccount = reward.reward_type === 'prop_account';
                     
                     return (
-                      <Card key={reward.id} className="overflow-hidden bg-card/50 backdrop-blur-xl border-border/50">
+                      <Card key={reward.id} className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] hover:border-white/[0.1] transition-colors">
                         <div className="p-6">
                           <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 rounded-full bg-primary/10 text-primary">
+                            <div className="p-3 rounded-full bg-white/[0.06] text-white/70">
                               {getRewardIcon(reward.reward_type, reward.name)}
                             </div>
                             <div>
-                              <h3 className="font-semibold text-foreground">{reward.name}</h3>
-                              <p className="text-xs text-muted-foreground">
+                              <h3 className="font-medium text-white">{reward.name}</h3>
+                              <p className="text-xs text-white/40">
                                 {isPropAccount ? 'Delivered within 24 hours' : `Expires in ${reward.expiry_days} days`}
                               </p>
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-4">{reward.description}</p>
+                          <p className="text-sm text-white/40 mb-4">{reward.description}</p>
                           {isPropAccount && (
-                            <p className="text-xs text-yellow-500 mb-4">
+                            <p className="text-xs text-yellow-500/80 mb-4">
                               ⚡ You will receive your account within 24 hours after claiming
                             </p>
                           )}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <Coins className="w-5 h-5 text-yellow-500" />
-                              <span className="font-bold text-yellow-500">{reward.coin_cost}</span>
+                              <span className="font-semibold text-yellow-500">{reward.coin_cost}</span>
                             </div>
                             <Button
                               onClick={() => claimReward(reward)}
                               disabled={!canClaim || !hasEnoughCoins || claiming === reward.id}
-                              className={!canClaim ? 'bg-muted' : ''}
+                              className={!canClaim ? 'bg-white/[0.06] text-white/40' : 'bg-white text-black hover:bg-white/90'}
                             >
                               {claiming === reward.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -825,28 +825,53 @@ export default function Rewards() {
                       </Card>
                     );
                   })}
+
+                  {/* 20% Discount for 100 coins */}
+                  <Card className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] hover:border-white/[0.1] transition-colors">
+                    <div className="p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-3 rounded-full bg-white/[0.06] text-white/70">
+                          <Percent className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">20% Discount</h3>
+                          <p className="text-xs text-white/40">Expires in 14 days</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-white/40 mb-4">Get 20% off on your next PropScholar challenge purchase</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <Coins className="w-5 h-5 text-yellow-500" />
+                          <span className="font-semibold text-yellow-500">100</span>
+                        </div>
+                        <Button className="bg-white text-black hover:bg-white/90">
+                          Claim
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
                   
                   {/* Merchandise Coming Soon Card */}
-                  <Card className="overflow-hidden bg-card/50 backdrop-blur-xl border-border/50 relative">
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-sm z-10">
-                      <span className="px-4 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium uppercase tracking-widest">
+                  <Card className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] relative">
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#030303]/90 backdrop-blur-sm z-10">
+                      <span className="px-4 py-2 rounded-full bg-white/[0.06] text-white/60 text-xs font-medium uppercase tracking-widest">
                         Coming Soon
                       </span>
                     </div>
                     <div className="p-6 opacity-50">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 rounded-full bg-purple-500/10 text-purple-400">
+                        <div className="p-3 rounded-full bg-white/[0.04] text-white/40">
                           <ShoppingBag className="w-6 h-6" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-foreground">PropScholar Merchandise</h3>
-                          <p className="text-xs text-muted-foreground">Exclusive branded items</p>
+                          <h3 className="font-medium text-white/60">PropScholar Merchandise</h3>
+                          <p className="text-xs text-white/30">Exclusive branded items</p>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-4">Get exclusive PropScholar branded merchandise including t-shirts, hoodies, and more</p>
+                      <p className="text-sm text-white/30 mb-4">Get exclusive PropScholar branded merchandise including t-shirts, hoodies, and more</p>
                       <div className="flex items-center gap-1">
-                        <Coins className="w-5 h-5 text-muted-foreground" />
-                        <span className="font-bold text-muted-foreground">TBD</span>
+                        <Coins className="w-5 h-5 text-white/20" />
+                        <span className="font-semibold text-white/20">TBD</span>
                       </div>
                     </div>
                   </Card>
