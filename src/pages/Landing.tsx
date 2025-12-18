@@ -15,7 +15,7 @@ const competitions = [
     description:
       'Publish original insights on trading, psychology, and market structure. Quality is rewarded.',
     icon: PenTool,
-    href: '/arena',
+    href: '/blog',
     status: 'active',
   },
   {
@@ -23,7 +23,7 @@ const competitions = [
     description:
       'Create short-form educational content that simplifies trading for the community.',
     icon: Video,
-    href: '/arena',
+    href: '/reels',
     status: 'coming-soon',
   },
   {
@@ -31,7 +31,7 @@ const competitions = [
     description:
       'Compete through structured trading knowledge challenges and rankings.',
     icon: Sparkles,
-    href: '/arena',
+    href: '#',
     status: 'coming-soon',
   },
 ];

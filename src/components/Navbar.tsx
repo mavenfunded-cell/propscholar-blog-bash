@@ -6,11 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const navLinks = [
-  { name: 'Home', href: '/', external: false, icon: Home },
-  { name: 'Events', href: '/blog', external: false, icon: Calendar },
-  { name: 'Rewards', href: '/rewards', external: false, icon: Gift },
-  { name: 'About', href: '/about', external: false, icon: Info },
-  { name: 'Shop', href: 'https://propscholar.com/shop', external: true, icon: null },
+  { name: 'Home', href: '/', external: false, icon: Home, scrollTo: null },
+  { name: 'Events', href: '/', external: false, icon: Calendar, scrollTo: 'choose-your-arena' },
+  { name: 'Rewards', href: '/rewards', external: false, icon: Gift, scrollTo: null },
+  { name: 'About', href: '/about', external: false, icon: Info, scrollTo: null },
+  { name: 'Shop', href: 'https://propscholar.com/shop', external: true, icon: null, scrollTo: null },
 ];
 
 export function Navbar() {
@@ -79,11 +79,25 @@ export function Navbar() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => {
-              const isActive = !link.external && (
+              const isActive = !link.external && !link.scrollTo && (
                 link.href === '/' 
                   ? location.pathname === '/' 
                   : location.pathname.startsWith(link.href)
               );
+              
+              const handleClick = (e: React.MouseEvent) => {
+                if (link.scrollTo) {
+                  e.preventDefault();
+                  if (location.pathname !== '/') {
+                    navigate('/');
+                    setTimeout(() => {
+                      document.getElementById(link.scrollTo!)?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  } else {
+                    document.getElementById(link.scrollTo)?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }
+              };
               
               return link.external ? (
                 <a
@@ -99,6 +113,7 @@ export function Navbar() {
                 <Link
                   key={link.name}
                   to={link.href}
+                  onClick={handleClick}
                   className={`px-4 py-2 text-sm font-medium transition-colors rounded-md ${
                     isActive 
                       ? 'text-white bg-white/10' 
@@ -173,12 +188,27 @@ export function Navbar() {
           <nav className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => {
-                const isActive = !link.external && (
+                const isActive = !link.external && !link.scrollTo && (
                   link.href === '/' 
                     ? location.pathname === '/' 
                     : location.pathname.startsWith(link.href)
                 );
                 const IconComponent = link.icon;
+                
+                const handleMobileClick = (e: React.MouseEvent) => {
+                  setIsOpen(false);
+                  if (link.scrollTo) {
+                    e.preventDefault();
+                    if (location.pathname !== '/') {
+                      navigate('/');
+                      setTimeout(() => {
+                        document.getElementById(link.scrollTo!)?.scrollIntoView({ behavior: 'smooth' });
+                      }, 100);
+                    } else {
+                      document.getElementById(link.scrollTo)?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }
+                };
                 
                 return link.external ? (
                   <a
@@ -195,12 +225,12 @@ export function Navbar() {
                   <Link
                     key={link.name}
                     to={link.href}
+                    onClick={handleMobileClick}
                     className={`px-4 py-3 text-sm font-medium transition-colors rounded-md flex items-center gap-2 ${
                       isActive 
                         ? 'text-white bg-white/10' 
                         : 'text-white/50 hover:text-white hover:bg-white/5'
                     }`}
-                    onClick={() => setIsOpen(false)}
                   >
                     {IconComponent && <IconComponent className="w-4 h-4" />}
                     {link.name}
