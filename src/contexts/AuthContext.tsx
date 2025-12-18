@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const referralAppliedRef = useRef(false);
 
-  // Apply referral code after authentication
+  // Apply referral code after authentication - ONLY for new users
   const applyReferralCode = async (userId: string, userEmail: string) => {
     if (referralAppliedRef.current) return;
     
@@ -34,12 +34,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Wait for user_coins record to be created by trigger
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Ensure user_coins record exists
+      // Check if user_coins record exists
       const { data: existingCoins } = await supabase
         .from('user_coins')
-        .select('id, referred_by')
+        .select('id, referred_by, created_at')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      // Check if this is a new user (created within last 2 minutes)
+      const isNewUser = !existingCoins || 
+        (existingCoins.created_at && 
+         new Date().getTime() - new Date(existingCoins.created_at).getTime() < 2 * 60 * 1000);
+      
+      // If not a new user, don't apply referral
+      if (!isNewUser) {
+        localStorage.removeItem('referral_code');
+        return;
+      }
       
       // If no record exists, create it first
       if (!existingCoins) {
@@ -54,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Apply referral code
+      // Apply referral code only for new users
       const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
       const result = data as any;
       
@@ -79,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setTimeout(() => {
             checkAdminRole(session.user.id);
-            // Apply referral code on sign in
+            // Apply referral code on sign in - will check if user is new
             if (event === 'SIGNED_IN') {
               applyReferralCode(session.user.id, session.user.email || '');
             }
@@ -97,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.user) {
         checkAdminRole(session.user.id);
-        // Also try to apply referral on initial load (for returning after OAuth)
+        // Try to apply referral on initial load - will check if user is new
         applyReferralCode(session.user.id, session.user.email || '');
       }
       setLoading(false);

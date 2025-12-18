@@ -35,14 +35,19 @@ export default function Auth() {
             // Wait a bit for user_coins record to be created by trigger
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Ensure user_coins record exists
+            // Check if user_coins record exists
             const { data: existingCoins } = await supabase
               .from('user_coins')
-              .select('id, referred_by')
+              .select('id, referred_by, created_at')
               .eq('user_id', user.id)
               .maybeSingle();
             
-            // If no record exists, create it first
+            // Check if this is a new user (created within last 2 minutes)
+            const isNewUser = !existingCoins || 
+              (existingCoins.created_at && 
+               new Date().getTime() - new Date(existingCoins.created_at).getTime() < 2 * 60 * 1000);
+            
+            // If no record exists, create it first (new user)
             if (!existingCoins) {
               await supabase.from('user_coins').insert({
                 user_id: user.id,
@@ -52,8 +57,10 @@ export default function Auth() {
               await new Promise(resolve => setTimeout(resolve, 500));
             }
             
-            // Only apply if not already referred
-            if (!existingCoins?.referred_by) {
+            // Only apply referral if:
+            // 1. User is new (account created within last 2 minutes)
+            // 2. Not already referred
+            if (isNewUser && !existingCoins?.referred_by) {
               const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
               const result = data as any;
               if (result?.success) {
