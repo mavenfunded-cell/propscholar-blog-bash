@@ -336,26 +336,26 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#030303]">
       <Navbar />
       
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">My Dashboard</h1>
-            <p className="text-muted-foreground">Track your PropScholar journey</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">My Dashboard</h1>
+            <p className="text-white/50">Track your PropScholar journey</p>
           </div>
 
           {/* Profile Section */}
-          <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
+          <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06]">
             <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
               <div className="relative group">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/[0.06] flex items-center justify-center overflow-hidden">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-8 h-8 md:w-10 md:h-10 text-primary" />
+                    <User className="w-8 h-8 md:w-10 md:h-10 text-white/60" />
                   )}
                 </div>
                 <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -379,14 +379,14 @@ const Dashboard = () => {
                     <Input
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
-                      className="max-w-[200px] h-9"
+                      className="max-w-[200px] h-9 bg-white/[0.04] border-white/[0.1] text-white"
                       placeholder="Enter your name"
                       autoFocus
                     />
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                      className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/[0.06]"
                       onClick={handleSaveName}
                       disabled={savingName || !editedName.trim()}
                     >
@@ -395,7 +395,7 @@ const Dashboard = () => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                      className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/[0.06]"
                       onClick={handleCancelEdit}
                       disabled={savingName}
                     >
@@ -404,20 +404,20 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 justify-center md:justify-start">
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                    <h2 className="text-xl md:text-2xl font-bold text-white">
                       {profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || 'PropScholar User'}
                     </h2>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      className="h-7 w-7 text-white/40 hover:text-white"
                       onClick={handleEditName}
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
                   </div>
                 )}
-                <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-2 text-muted-foreground">
+                <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-2 text-white/50">
                   <div className="flex items-center justify-center md:justify-start gap-2 text-sm">
                     <Mail className="w-4 h-4" />
                     <span className="truncate max-w-[200px] md:max-w-none">{user.email}</span>
@@ -438,7 +438,7 @@ const Dashboard = () => {
                   </Button>
                 </Link>
                 <Link to="/blog">
-                  <Button className="w-full md:w-auto bg-primary hover:bg-primary/90 text-sm">
+                  <Button className="w-full md:w-auto bg-white text-black hover:bg-white/90 text-sm">
                     Participate in Events
                   </Button>
                 </Link>
@@ -448,7 +448,7 @@ const Dashboard = () => {
 
           {/* Space Coins Card */}
           <Link to="/rewards">
-            <Card className="p-4 md:p-6 bg-gradient-to-br from-yellow-500/10 via-card to-orange-500/10 backdrop-blur-xl border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
+            <Card className="p-4 md:p-6 bg-[#0a0a0a] border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 md:gap-4">
                   <div className="p-2 md:p-3 rounded-full bg-yellow-500/20">
@@ -456,7 +456,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <h3 className="text-xl md:text-2xl font-bold text-yellow-500">{coinBalance}</h3>
-                    <p className="text-xs md:text-sm text-muted-foreground">Space Coins</p>
+                    <p className="text-xs md:text-sm text-white/50">Space Coins</p>
                   </div>
                 </div>
                 <Button variant="outline" className="w-full sm:w-auto border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-sm">
@@ -468,48 +468,48 @@ const Dashboard = () => {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <Calendar className="w-6 h-6 md:w-8 md:h-8 text-primary mx-auto mb-2" />
-              <p className="text-xl md:text-2xl font-bold text-foreground">{totalParticipations}</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Events Participated</p>
+            <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06] text-center">
+              <Calendar className="w-6 h-6 md:w-8 md:h-8 text-white/60 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-white">{totalParticipations}</p>
+              <p className="text-xs md:text-sm text-white/50">Events Participated</p>
             </Card>
-            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
+            <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06] text-center">
               <Trophy className="w-6 h-6 md:w-8 md:h-8 text-yellow-500 mx-auto mb-2" />
-              <p className="text-xl md:text-2xl font-bold text-foreground">{totalWins}</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Events Won</p>
+              <p className="text-xl md:text-2xl font-bold text-white">{totalWins}</p>
+              <p className="text-xs md:text-sm text-white/50">Events Won</p>
             </Card>
-            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <FileText className="w-6 h-6 md:w-8 md:h-8 text-blue-500 mx-auto mb-2" />
-              <p className="text-xl md:text-2xl font-bold text-foreground">{blogSubmissions.length}</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Blogs Written</p>
+            <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06] text-center">
+              <FileText className="w-6 h-6 md:w-8 md:h-8 text-white/60 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-white">{blogSubmissions.length}</p>
+              <p className="text-xs md:text-sm text-white/50">Blogs Written</p>
             </Card>
-            <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50 text-center">
-              <Film className="w-6 h-6 md:w-8 md:h-8 text-purple-500 mx-auto mb-2" />
-              <p className="text-xl md:text-2xl font-bold text-foreground">{reelSubmissions.length}</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Reels Submitted</p>
+            <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06] text-center">
+              <Film className="w-6 h-6 md:w-8 md:h-8 text-white/60 mx-auto mb-2" />
+              <p className="text-xl md:text-2xl font-bold text-white">{reelSubmissions.length}</p>
+              <p className="text-xs md:text-sm text-white/50">Reels Submitted</p>
             </Card>
           </div>
 
           {/* Submissions Section */}
-          <Card className="p-4 md:p-6 bg-card/50 backdrop-blur-xl border-border/50">
-            <h3 className="text-lg md:text-xl font-bold text-foreground mb-4">My Submissions</h3>
+          <Card className="p-4 md:p-6 bg-[#0a0a0a] border-white/[0.06]">
+            <h3 className="text-lg md:text-xl font-bold text-white mb-4">My Submissions</h3>
             
             <Tabs defaultValue="blogs" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="blogs" className="text-sm">Blogs ({blogSubmissions.length})</TabsTrigger>
-                <TabsTrigger value="reels" className="text-sm relative" disabled>
+              <TabsList className="grid w-full grid-cols-2 mb-4 bg-white/[0.04]">
+                <TabsTrigger value="blogs" className="text-sm text-white/60 data-[state=active]:bg-white/[0.08] data-[state=active]:text-white">Blogs ({blogSubmissions.length})</TabsTrigger>
+                <TabsTrigger value="reels" className="text-sm relative text-white/60 data-[state=active]:bg-white/[0.08] data-[state=active]:text-white" disabled>
                   Reels
-                  <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-yellow-500/20 text-yellow-400 rounded-full">Soon</span>
+                  <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-white/[0.08] text-white/50 rounded-full">Soon</span>
                 </TabsTrigger>
               </TabsList>
               
               <TabsContent value="blogs">
                 {blogSubmissions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-white/50">
                     <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>No blog submissions yet</p>
                     <Link to="/blog">
-                      <Button variant="outline" className="mt-4">
+                      <Button variant="outline" className="mt-4 border-white/[0.1] text-white hover:bg-white/[0.05]">
                         Participate Now
                       </Button>
                     </Link>
@@ -519,14 +519,14 @@ const Dashboard = () => {
                     {blogSubmissions.map((submission) => (
                       <div
                         key={submission.id}
-                        className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-background/50 border border-border/30"
+                        className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]"
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-foreground">
+                          <h4 className="font-semibold text-white">
                             {submission.blog_title || 'Untitled Blog'}
                           </h4>
-                          <p className="text-sm text-muted-foreground">{submission.event_title}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <p className="text-sm text-white/50">{submission.event_title}</p>
+                          <p className="text-xs text-white/40 flex items-center gap-1 mt-1">
                             <Clock className="w-3 h-3" />
                             {new Date(submission.submitted_at).toLocaleDateString()}
                           </p>
@@ -538,7 +538,7 @@ const Dashboard = () => {
                               {getPositionBadge(submission.position || 1)}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/[0.06] text-white/50 text-sm">
                               <Clock className="w-4 h-4" />
                               Results Awaiting
                             </span>
