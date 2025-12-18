@@ -105,13 +105,6 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Disclaimer */}
-        <div className="mt-8 pt-6 border-t border-white/5">
-          <h4 className="text-xs font-medium text-white/30 mb-2 uppercase tracking-wider">Disclaimer</h4>
-          <p className="text-xs text-white/30 leading-relaxed">
-            PropScholar is a government-registered business under the MSME (Udyam) initiative. All Test/Evaluation accounts provided by PropScholar are simulated and do not involve real financial transactions or live market exposure. We are strictly an educational platform, and our programs are designed to assess trading skills in a simulated environment. Our evaluation process is entirely skill-based, and successful participants may be eligible for a scholarship award. PropScholar does not act as or offer services as a broker, custodian, or financial advisor. Participation in our programs is voluntary, and program fees are not to be considered deposits or investments of any kind.
-          </p>
-        </div>
       </div>
     </footer>
   );

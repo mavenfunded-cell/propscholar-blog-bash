@@ -827,29 +827,41 @@ export default function Rewards() {
                   })}
 
                   {/* 20% Discount for 100 coins */}
-                  <Card className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] hover:border-white/[0.1] transition-colors">
-                    <div className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 rounded-full bg-white/[0.06] text-white/70">
-                          <Percent className="w-6 h-6" />
+                  {(() => {
+                    const discountCost = 100;
+                    const hasEnoughCoinsFor20 = (userCoins?.balance || 0) >= discountCost;
+                    return (
+                      <Card className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] hover:border-white/[0.1] transition-colors">
+                        <div className="p-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 rounded-full bg-yellow-500/[0.08] text-yellow-500/80">
+                              <Percent className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-white">20% Discount</h3>
+                              <p className="text-xs text-white/40">Expires in 14 days</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-white/40 mb-4">Get 20% off on your next PropScholar challenge purchase</p>
+                          <p className="text-xs text-yellow-500/80 mb-4">
+                            ⚡ You will receive your coupon code instantly after claiming
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Coins className="w-5 h-5 text-yellow-500" />
+                              <span className="font-semibold text-yellow-500">{discountCost}</span>
+                            </div>
+                            <Button
+                              disabled={!hasEnoughCoinsFor20}
+                              className={hasEnoughCoinsFor20 ? 'bg-white text-black hover:bg-white/90' : 'bg-white/[0.08] text-white/60 hover:bg-white/[0.08] cursor-not-allowed'}
+                            >
+                              {hasEnoughCoinsFor20 ? 'Claim' : 'Not Enough Coins'}
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-white">20% Discount</h3>
-                          <p className="text-xs text-white/40">Expires in 14 days</p>
-                        </div>
-                      </div>
-                      <p className="text-sm text-white/40 mb-4">Get 20% off on your next PropScholar challenge purchase</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Coins className="w-5 h-5 text-yellow-500" />
-                          <span className="font-semibold text-yellow-500">100</span>
-                        </div>
-                        <Button className="bg-white text-black hover:bg-white/90">
-                          Claim
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
+                      </Card>
+                    );
+                  })()}
                   
                   {/* Merchandise Coming Soon Card */}
                   <Card className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] relative">
