@@ -37,6 +37,7 @@ export default function BlogCompetitions() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchEvents();
@@ -52,6 +53,23 @@ export default function BlogCompetitions() {
 
       if (error) throw error;
       setEvents(data || []);
+      
+      // Fetch participant counts for active events
+      if (data) {
+        const activeEventIds = data
+          .filter(e => e.status === 'active' && new Date(e.end_date) > new Date())
+          .map(e => e.id);
+        
+        if (activeEventIds.length > 0) {
+          const counts: Record<string, number> = {};
+          await Promise.all(activeEventIds.map(async (eventId) => {
+            const { data: submissions } = await supabase
+              .rpc('get_live_event_submissions', { _event_id: eventId });
+            counts[eventId] = submissions?.length || 0;
+          }));
+          setParticipantCounts(counts);
+        }
+      }
     } catch (err) {
       console.error('Error fetching events:', err);
     } finally {
@@ -167,6 +185,11 @@ export default function BlogCompetitions() {
                       <CardHeader className={event.featured_image_url ? 'pt-4' : ''}>
                         <div className="flex items-center gap-2 mb-2">
                           <Badge className="bg-white/10 text-white border-white/20">Active</Badge>
+                          {participantCounts[event.id] > 0 && (
+                            <Badge variant="outline" className="border-white/20 text-white/70">
+                              {participantCounts[event.id]} {participantCounts[event.id] === 1 ? 'entry' : 'entries'}
+                            </Badge>
+                          )}
                         </div>
                         <CardTitle className="text-white group-hover:text-white/80 transition-colors">{event.title}</CardTitle>
                         <CardDescription className="text-white/50 line-clamp-2">{event.description}</CardDescription>
