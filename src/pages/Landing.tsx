@@ -148,7 +148,7 @@ export default function Landing() {
               </h1>
         
               {/* Sub text - Stagger 200ms with blur */}
-              <p className="hero-fade-in-blur delay-200 text-sm md:text-base text-white/55 max-w-lg mx-auto leading-relaxed font-light mb-10">
+              <p className="hero-fade-in-blur delay-200 text-xs md:text-sm text-white/50 max-w-md mx-auto leading-relaxed tracking-wide font-light mb-10">
                 PropScholar, the leading trading scholarship platform's Giveaway Hub
                 where participants compete and win exciting rewards.
               </p>
