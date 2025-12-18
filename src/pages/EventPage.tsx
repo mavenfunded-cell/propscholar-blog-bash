@@ -465,7 +465,7 @@ export default function EventPage() {
           </div>
         )}
 
-        <main className="container mx-auto px-4 py-8">
+        <main className={`container mx-auto px-4 py-8 ${!event.featured_image_url ? 'pt-24' : ''}`}>
           <div className="flex items-center justify-between mb-6">
             <Link 
               to="/blog" 
