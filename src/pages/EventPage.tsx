@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award } from 'lucide-react';
+import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
@@ -35,6 +35,12 @@ interface Winner {
   };
 }
 
+interface Submission {
+  id: string;
+  name: string;
+  blog_title: string | null;
+}
+
 const submissionSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Please enter a valid Gmail address').refine(
@@ -52,6 +58,7 @@ export default function EventPage() {
   
   const [event, setEvent] = useState<Event | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -90,6 +97,9 @@ export default function EventPage() {
 
       setEvent(data);
 
+      // Check if event has ended
+      const eventEnded = new Date(data.end_date) < new Date();
+
       // Fetch winners using public function (works for all users)
       const { data: winnersData, error: winnersError } = await supabase
         .rpc('get_event_winners', { _event_id: data.id });
@@ -103,6 +113,20 @@ export default function EventPage() {
           }
         }));
         setWinners(formattedWinners);
+      }
+
+      // Fetch all submissions if event has ended
+      if (eventEnded) {
+        const { data: submissionsData, error: submissionsError } = await supabase
+          .rpc('get_event_submissions', { _event_id: data.id });
+
+        if (!submissionsError && submissionsData) {
+          setSubmissions(submissionsData.map((s: { submission_id: string; submission_name: string; submission_title: string | null }) => ({
+            id: s.submission_id,
+            name: s.submission_name,
+            blog_title: s.submission_title
+          })));
+        }
       }
     } catch (err) {
       console.error('Error fetching event:', err);
@@ -497,15 +521,57 @@ export default function EventPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="animate-fade-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
-                <CardContent className="p-8 text-center">
-                  <XCircle className="w-12 h-12 text-white/30 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">Contest Closed</h3>
-                  <p className="text-white/50">
-                    This contest is no longer accepting submissions.
-                  </p>
-                </CardContent>
-              </Card>
+              <>
+                <Card className="animate-fade-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
+                  <CardContent className="p-8 text-center">
+                    <XCircle className="w-12 h-12 text-white/30 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">Contest Closed</h3>
+                    <p className="text-white/50">
+                      This contest is no longer accepting submissions.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* All Participants Gallery */}
+                {submissions.length > 0 && (
+                  <Card className="mt-8 animate-fade-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-white">
+                        <Users className="w-5 h-5 text-white" />
+                        All Participants ({submissions.length})
+                      </CardTitle>
+                      <CardDescription className="text-white/50">
+                        Everyone who participated in this contest
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {submissions.map((submission) => (
+                          <div 
+                            key={submission.id}
+                            className="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                          >
+                            {/* Avatar with initials */}
+                            <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                              <span className="text-lg font-semibold text-white">
+                                {submission.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </span>
+                            </div>
+                            <p className="font-medium text-white text-center text-sm truncate w-full">
+                              {submission.name}
+                            </p>
+                            {submission.blog_title && (
+                              <p className="text-xs text-white/40 text-center truncate w-full mt-1">
+                                {submission.blog_title}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         </main>

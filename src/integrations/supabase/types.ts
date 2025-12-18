@@ -764,6 +764,14 @@ export type Database = {
       }
       current_user_email: { Args: never; Returns: string }
       generate_slug: { Args: { title: string }; Returns: string }
+      get_event_submissions: {
+        Args: { _event_id: string }
+        Returns: {
+          submission_id: string
+          submission_name: string
+          submission_title: string
+        }[]
+      }
       get_event_winners: {
         Args: { _event_id: string }
         Returns: {
