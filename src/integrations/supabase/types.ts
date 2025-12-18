@@ -133,6 +133,7 @@ export type Database = {
           featured_image_url: string | null
           id: string
           min_words: number
+          prizes: Json | null
           rewards: string | null
           slug: string
           start_date: string
@@ -148,6 +149,7 @@ export type Database = {
           featured_image_url?: string | null
           id?: string
           min_words?: number
+          prizes?: Json | null
           rewards?: string | null
           slug: string
           start_date: string
@@ -163,6 +165,7 @@ export type Database = {
           featured_image_url?: string | null
           id?: string
           min_words?: number
+          prizes?: Json | null
           rewards?: string | null
           slug?: string
           start_date?: string

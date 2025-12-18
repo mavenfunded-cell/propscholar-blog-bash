@@ -15,6 +15,12 @@ import { Calendar, Video, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Uploa
 import { format } from 'date-fns';
 import { z } from 'zod';
 
+interface Prize {
+  position: number;
+  title: string;
+  prize: string;
+}
+
 interface Event {
   id: string;
   title: string;
@@ -25,6 +31,7 @@ interface Event {
   end_date: string;
   status: string;
   rewards: string | null;
+  prizes: Prize[] | null;
 }
 
 interface Winner {
@@ -91,7 +98,10 @@ export default function ReelEventPage() {
         return;
       }
 
-      setEvent(data);
+      setEvent({
+        ...data,
+        prizes: data.prizes as unknown as Prize[] | null
+      });
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
@@ -341,22 +351,48 @@ export default function ReelEventPage() {
               </div>
             </div>
 
-            {/* Rewards Card */}
-            {event.rewards && (
+            {/* Prizes Card */}
+            {(event.prizes && event.prizes.length > 0) || event.rewards ? (
               <Card className="mb-8 border-white/10 bg-[#111]/80 backdrop-blur-xl animate-fade-in">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                      <Trophy className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="w-6 h-6 text-purple-400" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-2">Contest Rewards</h3>
-                      <p className="text-white/60 whitespace-pre-wrap">{event.rewards}</p>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-white mb-4">Contest Prizes</h3>
+                      
+                      {/* Structured Prizes */}
+                      {event.prizes && event.prizes.length > 0 && (
+                        <div className="space-y-3 mb-4">
+                          {event.prizes.map((prize, index) => (
+                            <div 
+                              key={index}
+                              className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
+                            >
+                              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                                {prize.position === 1 ? <Crown className="w-5 h-5" /> : 
+                                 prize.position === 2 ? <Medal className="w-5 h-5" /> : 
+                                 prize.position === 3 ? <Award className="w-5 h-5" /> : prize.position}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-white">{prize.title}</p>
+                                <p className="text-sm text-white/60">{prize.prize}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Legacy rewards text */}
+                      {event.rewards && (
+                        <p className="text-white/60 whitespace-pre-wrap text-sm">{event.rewards}</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
             {/* Submission Form or Closed Message */}
             {isEventActive ? (
