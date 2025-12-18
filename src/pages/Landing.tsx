@@ -192,6 +192,106 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ===== PROPSCHOLAR CONNECTION ===== */}
+        <section className="py-24 md:py-32 relative">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              {/* Section Header */}
+              <div className="text-center mb-16">
+                <p className="scroll-reveal text-[11px] tracking-[0.32em] uppercase text-white/30 mb-4 font-medium">
+                  The Ecosystem
+                </p>
+                <h2 className="scroll-reveal text-2xl md:text-3xl lg:text-4xl font-light tracking-tight" style={{ transitionDelay: '80ms' }}>
+                  How PropScholar <span className="font-semibold">Connects</span>
+                </h2>
+              </div>
+
+              {/* Connection Flow */}
+              <div className="scroll-reveal relative" style={{ transitionDelay: '150ms' }}>
+                {/* Vertical connector line */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent hidden md:block" />
+                
+                {/* Step 1 - PropScholar.com */}
+                <div className="relative mb-16 md:mb-24">
+                  <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
+                    <div className="md:text-right mb-6 md:mb-0">
+                      <div className="inline-block mb-4">
+                        <span className="px-3 py-1 text-[10px] tracking-wider uppercase bg-white/[0.04] text-white/50 rounded-full border border-white/[0.08]">
+                          propscholar.com
+                        </span>
+                      </div>
+                      <h3 className="text-lg md:text-xl font-medium text-white/90 mb-3">
+                        Begin Your Trading Journey
+                      </h3>
+                      <p className="text-sm text-white/40 leading-relaxed">
+                        Take evaluations, prove your trading skills, and access funded accounts through PropScholar's scholarship model.
+                      </p>
+                    </div>
+                    <div className="hidden md:flex justify-start">
+                      <div className="w-3 h-3 rounded-full bg-white/20 border border-white/30 relative">
+                        <div className="absolute inset-0 rounded-full bg-white/10 animate-ping" style={{ animationDuration: '2s' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 - Connection */}
+                <div className="relative mb-16 md:mb-24">
+                  <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
+                    <div className="hidden md:flex justify-end">
+                      <div className="w-3 h-3 rounded-full bg-white/30 border border-white/40 relative">
+                        <div className="absolute inset-0 rounded-full bg-white/15 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                      </div>
+                    </div>
+                    <div className="mb-6 md:mb-0">
+                      <div className="inline-block mb-4">
+                        <span className="px-3 py-1 text-[10px] tracking-wider uppercase bg-white/[0.04] text-white/50 rounded-full border border-white/[0.08]">
+                          Seamless Integration
+                        </span>
+                      </div>
+                      <h3 className="text-lg md:text-xl font-medium text-white/90 mb-3">
+                        Unified Ecosystem
+                      </h3>
+                      <p className="text-sm text-white/40 leading-relaxed">
+                        Your progress, rewards, and achievements flow between platforms. One account, complete access.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 - PropScholar Space */}
+                <div className="relative">
+                  <div className="md:grid md:grid-cols-2 md:gap-16 items-center">
+                    <div className="md:text-right mb-6 md:mb-0">
+                      <div className="inline-block mb-4">
+                        <span className="px-3 py-1 text-[10px] tracking-wider uppercase bg-white/[0.06] text-white/60 rounded-full border border-white/[0.12]">
+                          propscholar.space
+                        </span>
+                      </div>
+                      <h3 className="text-lg md:text-xl font-medium text-white/90 mb-3">
+                        Grow & Engage
+                      </h3>
+                      <p className="text-sm text-white/40 leading-relaxed">
+                        Compete in events, earn Space Coins, learn from the community, and unlock exclusive rewards.
+                      </p>
+                    </div>
+                    <div className="hidden md:flex justify-start">
+                      <div className="w-3 h-3 rounded-full bg-white/40 border border-white/50 relative">
+                        <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" style={{ animationDuration: '2s', animationDelay: '1s' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <p className="scroll-reveal text-center text-white/30 text-xs mt-16 max-w-md mx-auto tracking-wide" style={{ transitionDelay: '250ms' }}>
+                Two platforms. One mission. Empowering traders to succeed.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* ===== COMPETITIONS ===== */}
         <section id="choose-your-arena" className="py-28 md:py-36">
           <div className="container mx-auto px-4">

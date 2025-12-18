@@ -62,23 +62,22 @@ export default function About() {
   }, [setupScrollReveal]);
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#050507] text-white">
-      {/* Premium Space Background */}
+    <div className="min-h-screen relative overflow-hidden bg-[#030303] text-white">
+      {/* Premium Dark Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050507] via-[#080810] to-[#0a0a12]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-[#050505] to-[#080808]" />
         
-        {/* Animated gradient orbs */}
-        <div className="absolute top-[10%] left-[15%] w-[600px] h-[600px] rounded-full bg-purple-900/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute top-[50%] right-[10%] w-[500px] h-[500px] rounded-full bg-blue-900/10 blur-[100px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-        <div className="absolute bottom-[20%] left-[30%] w-[400px] h-[400px] rounded-full bg-indigo-900/8 blur-[80px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+        {/* Subtle ambient glow - monochrome */}
+        <div className="absolute top-[10%] left-[15%] w-[600px] h-[600px] rounded-full bg-white/[0.015] blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-[50%] right-[10%] w-[500px] h-[500px] rounded-full bg-white/[0.01] blur-[100px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
         
-        {/* Star field effect */}
-        <div className="absolute inset-0 opacity-40" style={{
+        {/* Star field effect - more subtle */}
+        <div className="absolute inset-0 opacity-25" style={{
           backgroundImage: `radial-gradient(1px 1px at 20px 30px, white, transparent),
-                           radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.8), transparent),
-                           radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.6), transparent),
+                           radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.6), transparent),
+                           radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.4), transparent),
                            radial-gradient(1px 1px at 90px 40px, white, transparent),
-                           radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.7), transparent),
+                           radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.5), transparent),
                            radial-gradient(1px 1px at 160px 120px, white, transparent)`,
           backgroundSize: '200px 200px'
         }} />
@@ -96,10 +95,10 @@ export default function About() {
             <img 
               src={spaceHero} 
               alt="Space background" 
-              className="w-full h-full object-cover opacity-30"
+              className="w-full h-full object-cover opacity-20 grayscale"
               loading="eager"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#050507]/60 via-[#050507]/80 to-[#050507]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#030303]/70 via-[#030303]/85 to-[#030303]" />
           </div>
 
           <div className="container mx-auto px-4 py-20 relative z-10">
@@ -128,13 +127,13 @@ export default function About() {
               {/* CTA buttons */}
               <div className="hero-fade-in delay-300 flex flex-wrap justify-center gap-4">
                 <Link to="/blog">
-                  <Button className="btn-premium h-12 px-8 rounded-full bg-white/90 text-black hover:bg-white border-0 text-sm font-medium">
+                  <Button className="btn-premium h-12 px-8 rounded-full bg-white text-black hover:bg-white/90 border-0 text-sm font-medium">
                     Explore Events
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
                 <a href="https://propscholar.com" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="btn-premium h-12 px-8 rounded-full border-white/10 bg-white/[0.03] text-white/90 hover:bg-white/[0.06] hover:border-white/20 text-sm">
+                  <Button variant="outline" className="btn-premium h-12 px-8 rounded-full border-white/10 bg-transparent text-white hover:bg-white/5 hover:border-white/20 text-sm">
                     Visit PropScholar
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
