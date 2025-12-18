@@ -6,35 +6,32 @@ interface RocketLoaderProps {
   minDuration?: number;
 }
 
-export function RocketLoader({ onComplete, minDuration = 1500 }: RocketLoaderProps) {
+export function RocketLoader({ onComplete, minDuration = 2000 }: RocketLoaderProps) {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<'loading' | 'launching' | 'complete'>('loading');
 
   useEffect(() => {
     const startTime = Date.now();
-    const targetProgress = 100;
     const duration = minDuration;
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
-      const rawProgress = Math.min((elapsed / duration) * 100, targetProgress);
+      const linearProgress = Math.min((elapsed / duration) * 100, 100);
       
-      // Eased progress using cubic-bezier approximation
-      const t = rawProgress / 100;
-      const easedProgress = t < 0.5 
-        ? 4 * t * t * t 
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      // Smooth ease-out progress
+      const t = linearProgress / 100;
+      const easedProgress = 1 - Math.pow(1 - t, 3);
       
       setProgress(Math.round(easedProgress * 100));
 
-      if (rawProgress < targetProgress) {
+      if (linearProgress < 100) {
         requestAnimationFrame(animate);
       } else {
         setPhase('launching');
         setTimeout(() => {
           setPhase('complete');
           onComplete?.();
-        }, 600);
+        }, 800);
       }
     };
 
@@ -45,55 +42,74 @@ export function RocketLoader({ onComplete, minDuration = 1500 }: RocketLoaderPro
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]">
       {/* Ambient glow */}
       <div 
-        className="absolute w-[400px] h-[400px] rounded-full opacity-20"
+        className="absolute w-[500px] h-[500px] rounded-full opacity-15"
         style={{
-          background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)',
-          transform: `scale(${0.8 + progress * 0.004})`,
-          transition: 'transform 0.3s ease-out',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)',
+          transform: `scale(${0.8 + progress * 0.003})`,
+          transition: 'transform 0.5s ease-out',
         }}
       />
 
-      <div className="relative flex flex-col items-center gap-8">
+      <div className="relative flex flex-col items-center gap-10">
         {/* Rocket container */}
         <div 
-          className={`relative transition-all duration-500 ease-out ${
-            phase === 'launching' ? '-translate-y-32 opacity-0 scale-75' : ''
-          }`}
+          className="relative transition-all duration-[800ms] ease-out"
+          style={{
+            transform: phase === 'launching' 
+              ? 'translateY(-120px) scale(0.8)' 
+              : 'translateY(0) scale(1)',
+            opacity: phase === 'launching' ? 0 : 1,
+          }}
         >
           {/* Rocket glow */}
           <div 
-            className="absolute inset-0 blur-2xl transition-opacity duration-300"
+            className="absolute inset-0 blur-3xl transition-opacity duration-500"
             style={{
-              background: `radial-gradient(circle, rgba(255,200,100,${progress * 0.003}) 0%, transparent 70%)`,
-              transform: 'scale(2)',
+              background: `radial-gradient(circle, rgba(255,180,80,${progress * 0.004}) 0%, transparent 60%)`,
+              transform: 'scale(3)',
             }}
           />
           
           {/* Rocket icon */}
           <div className="relative">
             <Rocket 
-              className={`w-16 h-16 text-white/90 transition-transform duration-300 ${
-                phase === 'loading' ? 'animate-rocket-float' : ''
-              }`}
+              className="w-14 h-14 text-white/85"
               style={{
-                filter: `drop-shadow(0 0 ${10 + progress * 0.2}px rgba(255,200,100,${0.2 + progress * 0.005}))`,
+                transform: 'rotate(-45deg)',
+                filter: `drop-shadow(0 0 ${8 + progress * 0.15}px rgba(255,200,100,${0.15 + progress * 0.004}))`,
+                transition: 'filter 0.3s ease-out',
               }}
             />
             
-            {/* Exhaust flames */}
-            {progress > 30 && (
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-0.5">
+            {/* Exhaust flames - only show after 20% */}
+            {progress > 20 && (
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex gap-0.5">
                 <div 
-                  className="w-1.5 rounded-full bg-gradient-to-b from-yellow-400 via-orange-500 to-transparent animate-flame"
-                  style={{ height: `${8 + progress * 0.15}px`, animationDelay: '0ms' }}
+                  className="w-1 rounded-full bg-gradient-to-b from-amber-300/80 via-orange-500/60 to-transparent"
+                  style={{ 
+                    height: `${6 + progress * 0.12}px`,
+                    opacity: 0.7 + (progress * 0.003),
+                    animation: 'flame 0.12s ease-in-out infinite',
+                    animationDelay: '0ms'
+                  }}
                 />
                 <div 
-                  className="w-2 rounded-full bg-gradient-to-b from-yellow-300 via-orange-400 to-transparent animate-flame"
-                  style={{ height: `${12 + progress * 0.2}px`, animationDelay: '50ms' }}
+                  className="w-1.5 rounded-full bg-gradient-to-b from-yellow-200/90 via-orange-400/70 to-transparent"
+                  style={{ 
+                    height: `${10 + progress * 0.18}px`,
+                    opacity: 0.8 + (progress * 0.002),
+                    animation: 'flame 0.12s ease-in-out infinite',
+                    animationDelay: '40ms'
+                  }}
                 />
                 <div 
-                  className="w-1.5 rounded-full bg-gradient-to-b from-yellow-400 via-orange-500 to-transparent animate-flame"
-                  style={{ height: `${8 + progress * 0.15}px`, animationDelay: '100ms' }}
+                  className="w-1 rounded-full bg-gradient-to-b from-amber-300/80 via-orange-500/60 to-transparent"
+                  style={{ 
+                    height: `${6 + progress * 0.12}px`,
+                    opacity: 0.7 + (progress * 0.003),
+                    animation: 'flame 0.12s ease-in-out infinite',
+                    animationDelay: '80ms'
+                  }}
                 />
               </div>
             )}
@@ -102,68 +118,52 @@ export function RocketLoader({ onComplete, minDuration = 1500 }: RocketLoaderPro
 
         {/* Progress section */}
         <div 
-          className={`flex flex-col items-center gap-4 transition-all duration-500 ${
-            phase === 'launching' ? 'opacity-0 translate-y-4' : ''
-          }`}
+          className="flex flex-col items-center gap-5 transition-all duration-500"
+          style={{
+            opacity: phase === 'launching' ? 0 : 1,
+            transform: phase === 'launching' ? 'translateY(10px)' : 'translateY(0)',
+          }}
         >
           {/* Progress bar */}
-          <div className="relative w-48 h-1 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="relative w-52 h-[3px] bg-white/[0.04] rounded-full overflow-hidden">
             <div 
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-white/60 to-white/90 rounded-full transition-all duration-150"
-              style={{ width: `${progress}%` }}
-            />
-            {/* Shimmer effect */}
-            <div 
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
-              style={{ transform: 'translateX(-100%)' }}
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-white/50 via-white/70 to-white/80 rounded-full"
+              style={{ 
+                width: `${progress}%`,
+                transition: 'width 0.15s ease-out',
+              }}
             />
           </div>
 
           {/* Progress text */}
           <div className="flex items-baseline gap-1">
             <span 
-              className="text-3xl font-light text-white/90 tabular-nums tracking-tight transition-all duration-150"
+              className="text-4xl font-extralight text-white/85 tabular-nums tracking-tight"
               style={{ 
-                textShadow: progress > 80 ? '0 0 20px rgba(255,255,255,0.3)' : 'none' 
+                textShadow: progress > 80 ? '0 0 30px rgba(255,255,255,0.2)' : 'none',
+                transition: 'text-shadow 0.3s ease-out',
               }}
             >
               {progress}
             </span>
-            <span className="text-sm text-white/40">%</span>
+            <span className="text-sm text-white/30 font-light">%</span>
           </div>
 
           {/* Status text */}
-          <p className="text-xs tracking-[0.2em] uppercase text-white/30 font-medium">
-            {progress < 30 && 'Initializing'}
-            {progress >= 30 && progress < 60 && 'Loading'}
-            {progress >= 60 && progress < 90 && 'Almost Ready'}
-            {progress >= 90 && 'Launching'}
+          <p className="text-[10px] tracking-[0.25em] uppercase text-white/25 font-medium">
+            {progress < 25 && 'Initializing'}
+            {progress >= 25 && progress < 50 && 'Loading'}
+            {progress >= 50 && progress < 80 && 'Almost Ready'}
+            {progress >= 80 && 'Launching'}
           </p>
         </div>
       </div>
 
-      {/* CSS for animations */}
+      {/* CSS for flame animation */}
       <style>{`
-        @keyframes rocket-float {
-          0%, 100% { transform: translateY(0) rotate(-45deg); }
-          50% { transform: translateY(-4px) rotate(-45deg); }
-        }
         @keyframes flame {
-          0%, 100% { opacity: 0.9; transform: scaleY(1); }
-          50% { opacity: 1; transform: scaleY(1.15); }
-        }
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-        .animate-rocket-float {
-          animation: rocket-float 2s ease-in-out infinite;
-        }
-        .animate-flame {
-          animation: flame 0.15s ease-in-out infinite;
-        }
-        .animate-shimmer {
-          animation: shimmer 1.5s ease-in-out infinite;
+          0%, 100% { opacity: 0.85; transform: scaleY(1); }
+          50% { opacity: 1; transform: scaleY(1.1); }
         }
       `}</style>
     </div>

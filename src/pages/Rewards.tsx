@@ -42,7 +42,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PropAccountClaimDialog } from '@/components/PropAccountClaimDialog';
-import { RocketLoader } from '@/components/RocketLoader';
+import { RewardsSkeleton } from '@/components/RewardsSkeleton';
 import { useCoinSound } from '@/hooks/useCoinSound';
 import { useSEO } from '@/hooks/useSEO';
 
@@ -135,7 +135,6 @@ export default function Rewards() {
   const [socialFollows, setSocialFollows] = useState<SocialFollow[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showLoader, setShowLoader] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [claimingSocial, setClaimingSocial] = useState<string | null>(null);
   const [claimingSignup, setClaimingSignup] = useState(false);
@@ -552,28 +551,8 @@ export default function Rewards() {
   // Apply SEO
   useSEO();
 
-  const [loaderComplete, setLoaderComplete] = useState(false);
-
-  // Hide loader only when both data is ready and loader animation is complete
-  useEffect(() => {
-    if (loaderComplete && !authLoading && !loading) {
-      setShowLoader(false);
-    }
-  }, [loaderComplete, authLoading, loading]);
-
-  if (showLoader) {
-    return (
-      <>
-        <RocketLoader 
-          minDuration={1800}
-          onComplete={() => setLoaderComplete(true)}
-        />
-        {/* Preload navbar in background */}
-        <div className="opacity-0 pointer-events-none">
-          <Navbar />
-        </div>
-      </>
-    );
+  if (authLoading || loading) {
+    return <RewardsSkeleton />;
   }
 
   if (!user) return null;
