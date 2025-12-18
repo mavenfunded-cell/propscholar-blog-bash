@@ -101,13 +101,24 @@ export default function Landing() {
     // Only setup scroll reveal after loader is complete and content is rendered
     if (!loaderComplete) return;
     
-    // Small delay to ensure DOM is ready
+    // Use requestAnimationFrame + setTimeout to ensure DOM is painted
+    let rafId: number;
     const timer = setTimeout(() => {
-      setupScrollReveal();
-    }, 50);
+      rafId = requestAnimationFrame(() => {
+        setupScrollReveal();
+        
+        // Fallback: reveal all elements after 500ms if they haven't been revealed
+        setTimeout(() => {
+          document.querySelectorAll('.scroll-reveal:not(.revealed), .scroll-reveal-blur:not(.revealed)').forEach(el => {
+            el.classList.add('revealed');
+          });
+        }, 500);
+      });
+    }, 150);
     
     return () => {
       clearTimeout(timer);
+      cancelAnimationFrame(rafId);
       observerRef.current?.disconnect();
     };
   }, [loaderComplete, setupScrollReveal]);
