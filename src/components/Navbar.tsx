@@ -1,8 +1,9 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, PenTool, Gift, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const navLinks = [
   { name: 'Home', href: '/', external: false, icon: Home },
@@ -14,6 +15,7 @@ const navLinks = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +27,28 @@ export function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Fetch coin balance when user is logged in
+  useEffect(() => {
+    if (user) {
+      fetchCoinBalance();
+    } else {
+      setCoinBalance(null);
+    }
+  }, [user]);
+
+  const fetchCoinBalance = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('user_coins')
+      .select('balance')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (data) {
+      setCoinBalance(data.balance);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -88,6 +112,18 @@ export function Navbar() {
             {/* Auth Button */}
             {user ? (
               <div className="flex items-center gap-2 ml-2">
+                {/* Coin Balance Indicator */}
+                <Link 
+                  to="/rewards"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors group"
+                >
+                  <Coins className="w-4 h-4 text-yellow-500" />
+                  <span className="text-sm font-semibold text-yellow-500">
+                    {coinBalance !== null ? coinBalance : '—'}
+                  </span>
+                  <Plus className="w-3.5 h-3.5 text-yellow-500 group-hover:scale-110 transition-transform" />
+                </Link>
+                
                 <Link 
                   to="/dashboard" 
                   className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5"
@@ -174,6 +210,16 @@ export function Navbar() {
               {/* Mobile Auth Button */}
               {user ? (
                 <div className="flex flex-col gap-1">
+                  {/* Mobile Coin Balance */}
+                  <Link
+                    to="/rewards"
+                    className="px-4 py-3 text-sm font-medium transition-colors rounded-md flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Coins className="w-4 h-4 text-yellow-500" />
+                    <span className="text-yellow-500 font-semibold">{coinBalance !== null ? coinBalance : '—'} Coins</span>
+                    <Plus className="w-4 h-4 text-yellow-500 ml-auto" />
+                  </Link>
                   <Link
                     to="/dashboard"
                     className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
