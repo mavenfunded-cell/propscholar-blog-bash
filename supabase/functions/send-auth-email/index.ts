@@ -36,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Magic link URL:", magicLinkUrl);
 
     // Send email via Render backend
-    const emailResponse = await fetch(`${RENDER_BACKEND_URL}/api/send-email`, {
+    const emailResponse = await fetch(RENDER_BACKEND_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
