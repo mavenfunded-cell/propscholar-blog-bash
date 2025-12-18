@@ -10,7 +10,7 @@ app.use(express.json());
 // EMAIL ENDPOINT (Lovable calls this)
 app.post("/", async (req, res) => {
   try {
-    const { to, subject, html } = req.body;
+    const { to, subject, html, from } = req.body;
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -22,8 +22,11 @@ app.post("/", async (req, res) => {
       },
     });
 
+    // Use provided from field, or default to PropScholar with display name
+    const senderFrom = from || "PropScholar <noreply@propscholar.space>";
+
     await transporter.sendMail({
-      from: process.env.MAIL_FROM,
+      from: senderFrom,
       to,
       subject,
       html,
