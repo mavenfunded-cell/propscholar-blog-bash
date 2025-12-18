@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { z } from 'zod';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import ReactMarkdown from 'react-markdown';
+import { useCoinSound } from '@/hooks/useCoinSound';
 
 interface Event {
   id: string;
@@ -62,11 +63,6 @@ interface Vote {
 }
 
 const submissionSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Please enter a valid Gmail address').refine(
-    (email) => email.toLowerCase().endsWith('@gmail.com'),
-    'Please use a Gmail address'
-  ),
   phone: z.string().min(10, 'Phone number must be at least 10 digits').max(15),
   blogTitle: z.string().min(5, 'Blog title must be at least 5 characters').max(200),
   blog: z.string(),
@@ -76,6 +72,7 @@ export default function EventPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { playSubmission } = useCoinSound();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -94,8 +91,6 @@ export default function EventPage() {
   const [userProfile, setUserProfile] = useState<{ full_name: string | null } | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [blogTitle, setBlogTitle] = useState('');
   const [blog, setBlog] = useState('');
@@ -336,9 +331,20 @@ export default function EventPage() {
     
     if (!event) return;
 
+    // Require login
+    if (!user) {
+      toast.error('Please login to submit your entry');
+      navigate('/auth');
+      return;
+    }
+
+    // Get user name and email from auth/profile
+    const userName = userProfile?.full_name || user.email?.split('@')[0] || 'Anonymous';
+    const userEmail = user.email || '';
+
     // Validate form
     try {
-      submissionSchema.parse({ name, email, phone, blogTitle, blog });
+      submissionSchema.parse({ phone, blogTitle, blog });
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
@@ -361,12 +367,12 @@ export default function EventPage() {
     setSubmitting(true);
 
     try {
-      const submissionEmail = email.toLowerCase();
+      const submissionEmail = userEmail.toLowerCase();
       const { error } = await supabase
         .from('submissions')
         .insert([{
           event_id: event.id,
-          name,
+          name: userName,
           email: submissionEmail,
           phone,
           blog_title: blogTitle,
@@ -377,11 +383,14 @@ export default function EventPage() {
 
       if (error) {
         if (error.code === '23505') {
-          toast.error('You have already submitted an entry for this contest with this email.');
+          toast.error('You have already submitted an entry for this contest.');
           return;
         }
         throw error;
       }
+
+      // Play submission sound
+      playSubmission();
 
       // Grant participation coins (if user is registered)
       try {
@@ -393,7 +402,7 @@ export default function EventPage() {
         console.log('Participation coins not granted:', coinErr);
       }
 
-      navigate(`/blog/${slug}/success`, { state: { name } });
+      navigate(`/blog/${slug}/success`, { state: { name: userName } });
     } catch (err: any) {
       console.error('Error submitting:', err);
       if (err?.message?.includes('Rate limit exceeded')) {
@@ -589,94 +598,87 @@ export default function EventPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-white/80">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Your full name"
-                        required
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
-                      />
+                  {!user ? (
+                    <div className="text-center py-8">
+                      <p className="text-white/60 mb-4">Please login to submit your entry</p>
+                      <Button 
+                        onClick={() => navigate('/auth')}
+                        className="bg-white text-black hover:bg-white/90"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Login to Submit
+                      </Button>
                     </div>
-
-                    {/* Email */}
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-white/80">Gmail Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="your.email@gmail.com"
-                        required
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
-                      />
-                    </div>
-
-                    {/* Phone */}
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-white/80">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Your phone number"
-                        required
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
-                      />
-                    </div>
-
-                    {/* Article Title */}
-                    <div className="space-y-2">
-                      <Label htmlFor="blogTitle" className="text-white/80">
-                        Article Title <span className="text-white/50">*</span>
-                      </Label>
-                      <Input
-                        id="blogTitle"
-                        value={blogTitle}
-                        onChange={(e) => setBlogTitle(e.target.value)}
-                        placeholder="e.g., How to Start Trading with PropScholar"
-                        required
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
-                      />
-                    </div>
-
-                    {/* Blog */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-white/80">Article Content <span className="text-white/50">*</span></Label>
-                        <span className={`text-sm ${wordCount >= event.min_words ? 'text-white' : 'text-white/50'}`}>
-                          {wordCount} / {event.min_words} words
-                        </span>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* User Info Display */}
+                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                        <p className="text-sm text-white/50 mb-1">Submitting as</p>
+                        <p className="font-medium text-white">{userProfile?.full_name || user.email?.split('@')[0]}</p>
+                        <p className="text-sm text-white/60">{user.email}</p>
                       </div>
-                      <MarkdownEditor
-                        value={blog}
-                        onChange={setBlog}
-                        onPaste={handleBlogPaste}
-                        placeholder="Write your article content in Markdown..."
-                        minHeight="350px"
-                        rows={14}
-                      />
-                      <p className="text-xs text-white/40">
-                        Copy and paste is disabled. You must type your entry directly.
-                      </p>
-                    </div>
 
-                    {/* Submit */}
-                    <Button 
-                      type="submit" 
-                      size="lg"
-                      className="w-full bg-white text-black hover:bg-white/90 transition-all"
-                      disabled={submitting || wordCount < event.min_words}
-                    >
-                      {submitting ? 'Submitting...' : 'Submit Entry'}
-                    </Button>
-                  </form>
+                      {/* Phone */}
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-white/80">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="Your phone number"
+                          required
+                          className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
+                        />
+                      </div>
+
+                      {/* Article Title */}
+                      <div className="space-y-2">
+                        <Label htmlFor="blogTitle" className="text-white/80">
+                          Article Title <span className="text-white/50">*</span>
+                        </Label>
+                        <Input
+                          id="blogTitle"
+                          value={blogTitle}
+                          onChange={(e) => setBlogTitle(e.target.value)}
+                          placeholder="e.g., How to Start Trading with PropScholar"
+                          required
+                          className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
+                        />
+                      </div>
+
+                      {/* Blog */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-white/80">Article Content <span className="text-white/50">*</span></Label>
+                          <span className={`text-sm ${wordCount >= event.min_words ? 'text-white' : 'text-white/50'}`}>
+                            {wordCount} / {event.min_words} words
+                          </span>
+                        </div>
+                        <MarkdownEditor
+                          value={blog}
+                          onChange={setBlog}
+                          onPaste={handleBlogPaste}
+                          placeholder="Write your article content in Markdown..."
+                          minHeight="350px"
+                          rows={14}
+                        />
+                        <p className="text-xs text-white/40">
+                          Copy and paste is disabled. You must type your entry directly.
+                        </p>
+                      </div>
+
+                      {/* Submit */}
+                      <Button 
+                        type="submit" 
+                        size="lg"
+                        className="w-full bg-white text-black hover:bg-white/90 transition-all"
+                        disabled={submitting || wordCount < event.min_words}
+                      >
+                        {submitting ? 'Submitting...' : 'Submit Entry'}
+                      </Button>
+                    </form>
+                  )}
                 </CardContent>
               </Card>
 
