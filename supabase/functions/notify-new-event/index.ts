@@ -33,7 +33,6 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`notify-new-event: Processing event ${event_id} - ${event_title}`);
 
-    // Validate inputs
     if (!event_id || !event_title) {
       console.error("notify-new-event: Missing required fields");
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -42,7 +41,6 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Fetch all registered users' emails from user_coins table
     const { data: users, error: usersError } = await supabase
       .from("user_coins")
       .select("email")
@@ -65,6 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`notify-new-event: Sending notifications to ${emails.length} users`);
 
     const eventTypeLabel = event_type === "reel" ? "Reel Competition" : "Blog Competition";
+    const eventEmoji = event_type === "reel" ? "🎬" : "📝";
     const startDateFormatted = new Date(start_date).toLocaleDateString("en-US", { 
       weekday: "long", year: "numeric", month: "long", day: "numeric" 
     });
@@ -79,25 +78,25 @@ const handler = async (req: Request): Promise<Response> => {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="margin: 0; padding: 0; background-color: #080808; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #080808; padding: 40px 20px;">
+      <body style="margin: 0; padding: 0; background-color: #030014; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #030014; padding: 40px 20px;">
           <tr>
             <td align="center">
               <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width: 600px;">
                 <!-- Logo -->
                 <tr>
                   <td align="center" style="padding-bottom: 30px;">
-                    <img src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962713/Untitled_design_3_nkt1ky.png" alt="PropScholar" width="60" style="display: block;">
+                    <img src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962713/Untitled_design_3_nkt1ky.png" alt="PropScholar Space" width="80" style="display: block;">
                   </td>
                 </tr>
                 
                 <!-- Main Content -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border-radius: 16px; padding: 40px; border: 1px solid rgba(255,255,255,0.1);">
+                  <td style="background: linear-gradient(180deg, #0f0a2e 0%, #1a0a3e 50%, #0a0a1a 100%); border-radius: 16px; padding: 40px; border: 1px solid rgba(139, 92, 246, 0.3);">
                     <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; text-align: center;">
-                      🎉 New ${eventTypeLabel}!
+                      ${eventEmoji} New ${eventTypeLabel}
                     </h1>
-                    <h2 style="color: #fbbf24; font-size: 22px; margin: 0 0 20px 0; text-align: center;">
+                    <h2 style="color: #a78bfa; font-size: 22px; margin: 0 0 20px 0; text-align: center;">
                       ${event_title}
                     </h2>
                     
@@ -105,8 +104,8 @@ const handler = async (req: Request): Promise<Response> => {
                       ${event_description.slice(0, 200)}${event_description.length > 200 ? '...' : ''}
                     </p>
                     
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                      <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin: 0 0 8px 0;">📅 Competition Period</p>
+                    <div style="background: rgba(139, 92, 246, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                      <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin: 0 0 8px 0;">Competition Period</p>
                       <p style="color: #ffffff; font-size: 16px; margin: 0;">
                         ${startDateFormatted} - ${endDateFormatted}
                       </p>
@@ -116,8 +115,8 @@ const handler = async (req: Request): Promise<Response> => {
                       <tr>
                         <td align="center">
                           <a href="https://propscholar.space/${event_type === 'reel' ? 'reels' : 'events'}" 
-                             style="display: inline-block; background-color: #ffffff; color: #000000; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px;">
-                            View Competition →
+                             style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: #ffffff; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px;">
+                            View Competition
                           </a>
                         </td>
                       </tr>
@@ -129,10 +128,10 @@ const handler = async (req: Request): Promise<Response> => {
                 <tr>
                   <td style="padding-top: 30px; text-align: center;">
                     <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin: 0;">
-                      Don't miss out! Participate and earn Space Coins.
+                      Participate and earn Space Coins at PropScholar Space
                     </p>
                     <p style="color: rgba(255,255,255,0.3); font-size: 11px; margin: 10px 0 0 0;">
-                      © ${new Date().getFullYear()} PropScholar. All rights reserved.
+                      PropScholar Space - Where Traders Become Scholars
                     </p>
                   </td>
                 </tr>
@@ -144,7 +143,6 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send emails in batches to avoid rate limits
     const batchSize = 50;
     let successCount = 0;
     let errorCount = 0;
@@ -153,7 +151,6 @@ const handler = async (req: Request): Promise<Response> => {
       const batch = emails.slice(i, i + batchSize);
       
       try {
-        // Send email via Render backend
         const emailResponse = await fetch(RENDER_BACKEND_URL, {
           method: "POST",
           headers: {
@@ -161,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
           },
           body: JSON.stringify({
             to: batch,
-            subject: `🎉 New ${eventTypeLabel}: ${event_title}`,
+            subject: `New ${eventTypeLabel} - ${event_title}`,
             html: htmlContent,
           }),
         });
