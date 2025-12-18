@@ -397,10 +397,10 @@ export default function Landing() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
               {/* $10K Account */}
               <div className="scroll-reveal" style={{ transitionDelay: '200ms' }}>
-                <Card className="h-full bg-[#0f0f0f]/90 border border-white/[0.06] hover:border-yellow-500/20 transition-all duration-300 hover:-translate-y-0.5">
+                <Card className="h-full bg-[#0f0f0f]/90 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 hover:-translate-y-0.5">
                   <CardContent className="p-6 flex flex-col h-full">
-                    <div className="w-12 h-12 rounded-2xl bg-yellow-500/[0.08] border border-yellow-500/15 flex items-center justify-center mb-4">
-                      <Award className="w-6 h-6 text-yellow-500/80" />
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4">
+                      <Award className="w-6 h-6 text-white/60" />
                     </div>
                     <h3 className="text-lg font-medium text-white/90 mb-2">$10K Account</h3>
                     <p className="text-white/45 text-sm mb-4 flex-grow">Get a $10,000 funded trading account</p>
