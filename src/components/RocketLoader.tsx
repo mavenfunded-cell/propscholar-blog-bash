@@ -55,10 +55,10 @@ export function RocketLoader({ onComplete, minDuration = 2000 }: RocketLoaderPro
         <div 
           className="relative transition-all duration-[800ms] ease-out"
           style={{
-            transform: phase === 'launching' 
-              ? 'translateY(-120px) scale(0.8)' 
-              : 'translateY(0) scale(1)',
-            opacity: phase === 'launching' ? 0 : 1,
+            transform: phase === 'loading' 
+              ? 'translateY(0) scale(1)' 
+              : 'translateY(-120px) scale(0.8)',
+            opacity: phase === 'loading' ? 1 : 0,
           }}
         >
           {/* Rocket glow */}
