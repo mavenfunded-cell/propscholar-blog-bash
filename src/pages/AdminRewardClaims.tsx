@@ -64,19 +64,30 @@ export default function AdminRewardClaims() {
 
   const fetchClaims = async () => {
     try {
-      const { data } = await supabase
+      // Fetch claims with rewards
+      const { data: claimsData, error: claimsError } = await supabase
         .from('reward_claims')
         .select(`
           *,
-          reward:rewards(id, name, reward_type),
-          user_coins!inner(email)
+          reward:rewards(id, name, reward_type)
         `)
         .order('created_at', { ascending: false });
 
-      setClaims((data || []).map((c: any) => ({
+      if (claimsError) throw claimsError;
+
+      // Fetch user emails separately since there's no FK relationship
+      const userIds = [...new Set((claimsData || []).map(c => c.user_id))];
+      const { data: userCoinsData } = await supabase
+        .from('user_coins')
+        .select('user_id, email')
+        .in('user_id', userIds);
+
+      const emailMap = new Map((userCoinsData || []).map(u => [u.user_id, u.email]));
+
+      setClaims((claimsData || []).map((c: any) => ({
         ...c,
         reward: c.reward,
-        user_coins: c.user_coins
+        user_coins: { email: emailMap.get(c.user_id) || 'Unknown' }
       })));
     } catch (error) {
       console.error('Error fetching claims:', error);
@@ -173,7 +184,7 @@ export default function AdminRewardClaims() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>$10K Accounts</CardDescription>
+              <CardDescription>Prop Accounts & Journals</CardDescription>
               <CardTitle className="text-2xl text-purple-400">{propAccountClaims.length}</CardTitle>
             </CardHeader>
           </Card>
@@ -188,7 +199,7 @@ export default function AdminRewardClaims() {
         <Tabs defaultValue="pending" className="space-y-4">
           <TabsList>
             <TabsTrigger value="pending">Pending ({pendingClaims.length})</TabsTrigger>
-            <TabsTrigger value="prop_account">$10K Accounts ({propAccountClaims.length})</TabsTrigger>
+            <TabsTrigger value="prop_account">Prop Accounts ({propAccountClaims.length})</TabsTrigger>
             <TabsTrigger value="all">All Claims ({claims.length})</TabsTrigger>
           </TabsList>
 
@@ -212,9 +223,9 @@ export default function AdminRewardClaims() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Award className="w-5 h-5 text-purple-400" />
-                  PropScholar $10K Account Claims
+                  Prop Account & Journal Claims
                 </CardTitle>
-                <CardDescription>Manual fulfillment required</CardDescription>
+                <CardDescription>$5K, $10K Accounts & Trading Journals - Manual fulfillment required</CardDescription>
               </CardHeader>
               <CardContent>
                 {renderClaimList(propAccountClaims, true)}
