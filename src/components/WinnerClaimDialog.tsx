@@ -14,6 +14,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { playWinnerSound, playDialogOpenSound } from '@/hooks/useCoinSound';
 
+interface Prize {
+  position: number;
+  title: string;
+  prize: string;
+}
+
 interface WinnerClaim {
   id: string;
   winner_type: string;
@@ -35,13 +41,32 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [prizeInfo, setPrizeInfo] = useState<Prize | null>(null);
 
-  // Play winner celebration sound when dialog opens
+  // Fetch prize info when dialog opens
   useEffect(() => {
     if (open && claim) {
       playDialogOpenSound();
-      // Slight delay for the fanfare
       setTimeout(() => playWinnerSound(), 200);
+      
+      // Fetch event to get prize info
+      const fetchPrize = async () => {
+        const { data: event } = await supabase
+          .from('events')
+          .select('prizes')
+          .eq('id', claim.event_id)
+          .maybeSingle();
+        
+        if (event?.prizes && Array.isArray(event.prizes)) {
+          const matchingPrize = (event.prizes as unknown as Prize[]).find(
+            p => p.position === claim.position
+          );
+          setPrizeInfo(matchingPrize || null);
+        }
+      };
+      fetchPrize();
+    } else {
+      setPrizeInfo(null);
     }
   }, [open, claim]);
 
@@ -162,9 +187,17 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
               <> in <span className="text-foreground/90">{claim.event_title}</span></>
             )}
           </DialogDescription>
+          
+          {/* Prize Info */}
+          {prizeInfo && prizeInfo.prize && (
+            <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 text-center">
+              <p className="text-sm text-muted-foreground mb-1">Your Prize</p>
+              <p className="text-lg font-semibold text-foreground">{prizeInfo.prize}</p>
+            </div>
+          )}
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 mt-6">
+        <form onSubmit={handleSubmit} className="space-y-5 mt-4">
           <div className="space-y-2">
             <Label htmlFor="claim-name" className="text-sm font-medium text-foreground/80">Full Name</Label>
             <Input

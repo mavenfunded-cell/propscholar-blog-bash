@@ -10,7 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, X, Image as ImageIcon, PenTool, Video } from 'lucide-react';
+import { ArrowLeft, X, Image as ImageIcon, PenTool, Video, Plus, Trash2, Trophy } from 'lucide-react';
+
+interface Prize {
+  position: number;
+  title: string;
+  prize: string;
+}
 
 export default function EventForm() {
   const { id } = useParams();
@@ -26,6 +32,11 @@ export default function EventForm() {
   const [endDate, setEndDate] = useState('');
   const [minWords, setMinWords] = useState(250);
   const [rewards, setRewards] = useState('');
+  const [prizes, setPrizes] = useState<Prize[]>([
+    { position: 1, title: '1st Place', prize: '' },
+    { position: 2, title: '2nd Place', prize: '' },
+    { position: 3, title: '3rd Place', prize: '' },
+  ]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
@@ -75,6 +86,11 @@ export default function EventForm() {
       setMinWords(data.min_words);
       setRewards(data.rewards || '');
       setExistingImageUrl(data.featured_image_url);
+      
+      // Load prizes if they exist
+      if (data.prizes && Array.isArray(data.prizes) && data.prizes.length > 0) {
+        setPrizes(data.prizes as unknown as Prize[]);
+      }
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
@@ -148,6 +164,9 @@ export default function EventForm() {
         imageUrl = await uploadImage();
       }
 
+      // Filter out prizes with empty prize text
+      const validPrizes = prizes.filter(p => p.prize.trim() !== '');
+
       const eventData = {
         title,
         description,
@@ -156,6 +175,7 @@ export default function EventForm() {
         end_date: new Date(endDate).toISOString(),
         min_words: competitionType === 'blog' ? minWords : 0,
         rewards: rewards || null,
+        prizes: validPrizes as unknown as null,
         featured_image_url: imageUrl,
         competition_type: competitionType,
       };
@@ -393,19 +413,90 @@ export default function EventForm() {
                 </div>
               )}
 
-              {/* Rewards */}
+              {/* Prizes Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-yellow-500" />
+                    Winner Prizes
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPrizes([...prizes, { 
+                      position: prizes.length + 1, 
+                      title: `${prizes.length + 1}${prizes.length === 0 ? 'st' : prizes.length === 1 ? 'nd' : prizes.length === 2 ? 'rd' : 'th'} Place`,
+                      prize: '' 
+                    }])}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Prize
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {prizes.map((prize, index) => (
+                    <div key={index} className="flex gap-3 items-start p-3 rounded-lg bg-secondary/30 border border-border/50">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 font-bold">
+                        {prize.position}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          value={prize.title}
+                          onChange={(e) => {
+                            const newPrizes = [...prizes];
+                            newPrizes[index].title = e.target.value;
+                            setPrizes(newPrizes);
+                          }}
+                          placeholder="e.g., 1st Place"
+                          className="bg-background/50"
+                        />
+                        <Input
+                          value={prize.prize}
+                          onChange={(e) => {
+                            const newPrizes = [...prizes];
+                            newPrizes[index].prize = e.target.value;
+                            setPrizes(newPrizes);
+                          }}
+                          placeholder="e.g., $500 Scholarship + Certificate"
+                          className="bg-background/50"
+                        />
+                      </div>
+                      {prizes.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newPrizes = prizes.filter((_, i) => i !== index);
+                            // Re-number positions
+                            newPrizes.forEach((p, i) => p.position = i + 1);
+                            setPrizes(newPrizes);
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Define the prizes for each winning position. These will be shown to participants.
+                </p>
+              </div>
+
+              {/* Legacy Rewards Text (Optional) */}
               <div className="space-y-2">
-                <Label htmlFor="rewards">Contest Rewards (Optional)</Label>
+                <Label htmlFor="rewards">Additional Rewards Info (Optional)</Label>
                 <Textarea
                   id="rewards"
                   value={rewards}
                   onChange={(e) => setRewards(e.target.value)}
-                  placeholder="e.g., 1st Place: $500 scholarship, 2nd Place: $250 scholarship..."
-                  rows={3}
+                  placeholder="Any additional reward details or terms..."
+                  rows={2}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Describe the prizes/rewards for winners. This will be shown to participants.
-                </p>
               </div>
 
               {/* Submit */}
