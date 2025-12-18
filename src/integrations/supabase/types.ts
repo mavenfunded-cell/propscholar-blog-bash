@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           submission_id: string
+          user_id: string | null
           voter_email: string | null
           voter_name: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           id?: string
           submission_id: string
+          user_id?: string | null
           voter_email?: string | null
           voter_name: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           created_at?: string
           id?: string
           submission_id?: string
+          user_id?: string | null
           voter_email?: string | null
           voter_name?: string
         }
