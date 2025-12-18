@@ -60,7 +60,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const emails = users.map(u => u.email).filter(Boolean);
-    console.log(`notify-new-event: Sending notifications to ${emails.length} users`);
+    console.log(`notify-new-event: Sending individual notifications to ${emails.length} users`);
 
     const eventTypeLabel = event_type === "reel" ? "Reel Competition" : "Blog Competition";
     const eventEmoji = event_type === "reel" ? "🎬" : "📝";
@@ -143,13 +143,13 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    const batchSize = 50;
     let successCount = 0;
     let errorCount = 0;
+    const subject = `New ${eventTypeLabel} - ${event_title}`;
 
-    for (let i = 0; i < emails.length; i += batchSize) {
-      const batch = emails.slice(i, i + batchSize);
-      
+    // Send individual emails to each user to protect privacy
+    // Each user only sees their own email address
+    const sendPromises = emails.map(async (email) => {
       try {
         const emailResponse = await fetch(RENDER_BACKEND_URL, {
           method: "POST",
@@ -157,18 +157,41 @@ const handler = async (req: Request): Promise<Response> => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            to: batch,
-            subject: `New ${eventTypeLabel} - ${event_title}`,
+            to: email, // Single recipient - no email exposure
+            subject,
             html: htmlContent,
           }),
         });
         
-        const emailResult = await emailResponse.json();
-        console.log(`notify-new-event: Batch ${i / batchSize + 1} sent:`, emailResult);
-        successCount += batch.length;
-      } catch (batchError) {
-        console.error(`notify-new-event: Batch ${i / batchSize + 1} failed:`, batchError);
-        errorCount += batch.length;
+        if (emailResponse.ok) {
+          return { success: true };
+        } else {
+          console.error(`notify-new-event: Failed to send to ${email}`);
+          return { success: false };
+        }
+      } catch (err) {
+        console.error(`notify-new-event: Error sending to ${email}:`, err);
+        return { success: false };
+      }
+    });
+
+    // Process in batches of 10 concurrent requests to avoid overwhelming the server
+    const batchSize = 10;
+    for (let i = 0; i < sendPromises.length; i += batchSize) {
+      const batch = sendPromises.slice(i, i + batchSize);
+      const results = await Promise.all(batch);
+      
+      results.forEach(result => {
+        if (result.success) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      });
+      
+      // Small delay between batches to prevent rate limiting
+      if (i + batchSize < sendPromises.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
