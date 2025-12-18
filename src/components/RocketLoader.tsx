@@ -120,8 +120,8 @@ export function RocketLoader({ onComplete, minDuration = 2000 }: RocketLoaderPro
         <div 
           className="flex flex-col items-center gap-5 transition-all duration-500"
           style={{
-            opacity: phase === 'launching' ? 0 : 1,
-            transform: phase === 'launching' ? 'translateY(10px)' : 'translateY(0)',
+            opacity: phase === 'loading' ? 1 : 0,
+            transform: phase === 'loading' ? 'translateY(0)' : 'translateY(10px)',
           }}
         >
           {/* Progress bar */}
