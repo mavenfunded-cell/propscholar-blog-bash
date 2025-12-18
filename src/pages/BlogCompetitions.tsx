@@ -5,7 +5,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ArrowLeft, XCircle, PenTool } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSEO } from '@/hooks/useSEO';
 
@@ -138,10 +138,16 @@ export default function BlogCompetitions() {
                         <CardDescription className="text-white/50 line-clamp-2">{event.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex items-center gap-4 text-sm text-white/50">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>Ends {format(new Date(event.end_date), 'MMM d')}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-sm text-white/50">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              <span>Ends {format(new Date(event.end_date), 'MMM d')}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30">
+                            <Trophy className="w-4 h-4 text-yellow-500" />
+                            <span className="text-xs font-bold text-yellow-500">Leaderboard</span>
                           </div>
                         </div>
                       </CardContent>

@@ -563,11 +563,11 @@ export default function EventPage() {
               </Card>
             )}
 
-            {/* Floating Leaderboard Button */}
+            {/* Floating Leaderboard Button - Top Right */}
             {isEventActive && liveSubmissions.length > 0 && (
               <button
                 onClick={() => setShowLeaderboard(true)}
-                className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 backdrop-blur-xl hover:from-yellow-500/30 hover:to-amber-600/30 transition-all shadow-lg group"
+                className="fixed right-4 top-20 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 backdrop-blur-xl hover:from-yellow-500/30 hover:to-amber-600/30 transition-all shadow-lg group"
               >
                 <Trophy className="w-5 h-5 text-yellow-500" />
                 <span className="text-sm font-bold text-white hidden sm:inline">Leaderboard</span>
