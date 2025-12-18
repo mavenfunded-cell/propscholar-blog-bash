@@ -42,12 +42,17 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [prizeInfo, setPrizeInfo] = useState<Prize | null>(null);
+  const [hasPlayedSound, setHasPlayedSound] = useState(false);
 
-  // Fetch prize info when dialog opens
+  // Fetch prize info when dialog opens - play sound only once
   useEffect(() => {
     if (open && claim) {
-      playDialogOpenSound();
-      setTimeout(() => playWinnerSound(), 200);
+      // Play sounds only once per claim
+      if (!hasPlayedSound) {
+        playDialogOpenSound();
+        setTimeout(() => playWinnerSound(), 200);
+        setHasPlayedSound(true);
+      }
       
       // Fetch event to get prize info
       const fetchPrize = async () => {
@@ -68,7 +73,7 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
     } else {
       setPrizeInfo(null);
     }
-  }, [open, claim]);
+  }, [open, claim, hasPlayedSound]);
 
   const getPositionText = (position: number) => {
     switch (position) {

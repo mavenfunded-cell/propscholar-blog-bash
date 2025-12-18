@@ -65,6 +65,7 @@ const Dashboard = () => {
   const [winnerClaims, setWinnerClaims] = useState<WinnerClaim[]>([]);
   const [unclaimedWin, setUnclaimedWin] = useState<WinnerClaim | null>(null);
   const [showWinnerDialog, setShowWinnerDialog] = useState(false);
+  const [hasShownWinnerPopup, setHasShownWinnerPopup] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -205,11 +206,12 @@ const Dashboard = () => {
 
         setWinnerClaims(enrichedClaims);
 
-        // Check for unclaimed wins and show popup
+        // Check for unclaimed wins and show popup - only once per session
         const unclaimed = enrichedClaims.find(c => c.status === 'unclaimed');
-        if (unclaimed) {
+        if (unclaimed && !hasShownWinnerPopup) {
           setUnclaimedWin(unclaimed);
           setShowWinnerDialog(true);
+          setHasShownWinnerPopup(true);
         }
       }
     } catch (error) {
