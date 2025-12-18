@@ -92,6 +92,7 @@ export default function EventPage() {
   const [voters, setVoters] = useState<Vote[]>([]);
   const [userVotedSubmissions, setUserVotedSubmissions] = useState<string[]>([]);
   const [userProfile, setUserProfile] = useState<{ full_name: string | null } | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -562,84 +563,16 @@ export default function EventPage() {
               </Card>
             )}
 
-            {/* Live Leaderboard (shown during active competitions) */}
+            {/* Floating Leaderboard Button */}
             {isEventActive && liveSubmissions.length > 0 && (
-              <Card className="mb-8 border-white/10 bg-[#111]/80 backdrop-blur-xl animate-fade-in">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Trophy className="w-5 h-5 text-white" />
-                    Live Leaderboard
-                  </CardTitle>
-                  <CardDescription className="text-white/50">
-                    Current standings based on votes • {liveSubmissions.reduce((sum, s) => sum + s.vote_count, 0)} total votes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {[...liveSubmissions]
-                      .sort((a, b) => b.vote_count - a.vote_count)
-                      .map((submission, index) => {
-                        const rank = index + 1;
-                        return (
-                          <div 
-                            key={submission.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                              rank === 1 
-                                ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' 
-                                : rank === 2 
-                                  ? 'bg-gradient-to-r from-gray-400/10 to-transparent border-gray-400/30'
-                                  : rank === 3
-                                    ? 'bg-gradient-to-r from-amber-600/10 to-transparent border-amber-600/30'
-                                    : 'bg-white/5 border-white/10'
-                            }`}
-                          >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              rank === 1 
-                                ? 'bg-yellow-500/20' 
-                                : rank === 2 
-                                  ? 'bg-gray-400/20'
-                                  : rank === 3
-                                    ? 'bg-amber-600/20'
-                                    : 'bg-white/10'
-                            }`}>
-                              {rank <= 3 ? (
-                                rank === 1 ? <Crown className="w-4 h-4 text-yellow-500" /> :
-                                rank === 2 ? <Medal className="w-4 h-4 text-gray-400" /> :
-                                <Medal className="w-4 h-4 text-amber-600" />
-                              ) : (
-                                <span className="text-sm font-bold text-white/60">#{rank}</span>
-                              )}
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                              <span className="text-sm font-semibold text-white">
-                                {submission.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-white truncate">{submission.name}</p>
-                              {submission.blog_title && (
-                                <p className="text-sm text-white/50 truncate">{submission.blog_title}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => setSelectedLiveSubmission(submission)}
-                                className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                                title="View Blog"
-                              >
-                                <Eye className="w-4 h-4 text-white/60" />
-                              </button>
-                              <div className="flex items-center gap-1">
-                                <ThumbsUp className="w-4 h-4 text-white/40" />
-                                <span className="font-bold text-white">{submission.vote_count}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </CardContent>
-              </Card>
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 backdrop-blur-xl hover:from-yellow-500/30 hover:to-amber-600/30 transition-all shadow-lg group"
+              >
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                <span className="text-sm font-bold text-white hidden sm:inline">Leaderboard</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500/20 text-xs font-bold text-yellow-500">{liveSubmissions.length}</span>
+              </button>
             )}
 
             {/* Submission Form or Closed Message */}
@@ -950,6 +883,93 @@ export default function EventPage() {
           <ScrollArea className="max-h-[60vh] p-6">
             <div className="prose prose-invert prose-sm max-w-none">
               <ReactMarkdown>{selectedLiveSubmission?.blog || ''}</ReactMarkdown>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leaderboard Modal */}
+      <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
+        <DialogContent className="max-w-lg max-h-[85vh] bg-[#111] border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-white/10">
+            <DialogTitle className="text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500/20 to-amber-600/20 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+              </div>
+              <div>
+                <span className="block">Live Leaderboard</span>
+                <span className="text-sm font-normal text-white/50">
+                  {liveSubmissions.length} participants • {liveSubmissions.reduce((sum, s) => sum + s.vote_count, 0)} votes
+                </span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-4 space-y-2">
+              {[...liveSubmissions]
+                .sort((a, b) => b.vote_count - a.vote_count)
+                .map((submission, index) => {
+                  const rank = index + 1;
+                  return (
+                    <div 
+                      key={submission.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        rank === 1 
+                          ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' 
+                          : rank === 2 
+                            ? 'bg-gradient-to-r from-gray-400/10 to-transparent border-gray-400/30'
+                            : rank === 3
+                              ? 'bg-gradient-to-r from-amber-600/10 to-transparent border-amber-600/30'
+                              : 'bg-white/5 border-white/10'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        rank === 1 
+                          ? 'bg-yellow-500/20' 
+                          : rank === 2 
+                            ? 'bg-gray-400/20'
+                            : rank === 3
+                              ? 'bg-amber-600/20'
+                              : 'bg-white/10'
+                      }`}>
+                        {rank <= 3 ? (
+                          rank === 1 ? <Crown className="w-4 h-4 text-yellow-500" /> :
+                          rank === 2 ? <Medal className="w-4 h-4 text-gray-400" /> :
+                          <Medal className="w-4 h-4 text-amber-600" />
+                        ) : (
+                          <span className="text-sm font-bold text-white/60">#{rank}</span>
+                        )}
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-semibold text-white">
+                          {submission.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-white truncate">{submission.name}</p>
+                        {submission.blog_title && (
+                          <p className="text-sm text-white/50 truncate">{submission.blog_title}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedLiveSubmission(submission);
+                            setShowLeaderboard(false);
+                          }}
+                          className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                          title="View Blog"
+                        >
+                          <Eye className="w-4 h-4 text-white/60" />
+                        </button>
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/5">
+                          <ThumbsUp className="w-3 h-3 text-white/40" />
+                          <span className="text-sm font-bold text-white">{submission.vote_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </ScrollArea>
         </DialogContent>
