@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Trophy, PartyPopper, Loader2 } from 'lucide-react';
+import { Trophy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,9 +37,9 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
 
   const getPositionText = (position: number) => {
     switch (position) {
-      case 1: return '🥇 1st Place';
-      case 2: return '🥈 2nd Place';
-      case 3: return '🥉 3rd Place';
+      case 1: return '1st Place';
+      case 2: return '2nd Place';
+      case 3: return '3rd Place';
       default: return `${position}th Place`;
     }
   };
@@ -116,7 +116,7 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
         if (error) throw error;
       }
 
-      toast.success('Reward claim submitted! You will receive it within 48 hours.');
+      toast.success('Reward claim submitted successfully');
       setName('');
       setEmail('');
       onOpenChange(false);
@@ -133,57 +133,59 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl">
         <DialogHeader>
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-4 rounded-full bg-yellow-500/20 animate-pulse">
-              <Trophy className="w-12 h-12 text-yellow-500" />
+          <div className="flex items-center justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+              <div className="relative p-5 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+                <Trophy className="w-10 h-10 text-primary" />
+              </div>
             </div>
           </div>
-          <DialogTitle className="text-center text-2xl flex items-center justify-center gap-2">
-            <PartyPopper className="w-6 h-6 text-yellow-500" />
-            Congratulations!
-            <PartyPopper className="w-6 h-6 text-yellow-500" />
+          <DialogTitle className="text-center text-2xl font-light tracking-wide">
+            Congratulations
           </DialogTitle>
-          <DialogDescription className="text-center">
-            You won <span className="text-yellow-500 font-semibold">{getPositionText(claim.position)}</span>
+          <DialogDescription className="text-center text-muted-foreground mt-2">
+            You won <span className="text-primary font-medium">{getPositionText(claim.position)}</span>
             {claim.event_title && (
-              <> in <span className="text-foreground font-medium">{claim.event_title}</span></>
+              <> in <span className="text-foreground/90">{claim.event_title}</span></>
             )}
-            ! Claim your reward below.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-5 mt-6">
           <div className="space-y-2">
-            <Label htmlFor="claim-name">Full Name</Label>
+            <Label htmlFor="claim-name" className="text-sm font-medium text-foreground/80">Full Name</Label>
             <Input
               id="claim-name"
               placeholder="Enter your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="bg-background/50 border-border/50 focus:border-primary/50 transition-colors"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="claim-email">Email Address</Label>
+            <Label htmlFor="claim-email" className="text-sm font-medium text-foreground/80">Email Address</Label>
             <Input
               id="claim-email"
               type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="bg-background/50 border-border/50 focus:border-primary/50 transition-colors"
               required
             />
           </div>
 
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground/70 text-center py-2">
             Your reward will be issued within 48 hours. You'll receive an email confirmation.
           </p>
 
           <Button 
             type="submit" 
-            className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-300"
             disabled={submitting}
           >
             {submitting ? (
@@ -194,7 +196,7 @@ export function WinnerClaimDialog({ claim, open, onOpenChange, onClaimed }: Winn
             ) : (
               <>
                 <Trophy className="w-4 h-4 mr-2" />
-                Claim My Reward
+                Claim Reward
               </>
             )}
           </Button>
