@@ -466,13 +466,27 @@ export default function EventPage() {
         )}
 
         <main className="container mx-auto px-4 py-8">
-          <Link 
-            to="/blog" 
-            className="inline-flex items-center gap-2 text-white/50 hover:text-white mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to contests
-          </Link>
+          <div className="flex items-center justify-between mb-6">
+            <Link 
+              to="/blog" 
+              className="inline-flex items-center gap-2 text-white/50 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to contests
+            </Link>
+            
+            {/* Leaderboard Button - Top Right */}
+            {isEventActive && liveSubmissions.length > 0 && (
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 hover:from-yellow-500/30 hover:to-amber-600/30 transition-all"
+              >
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                <span className="text-sm font-bold text-white">Leaderboard</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500/20 text-xs font-bold text-yellow-500">{liveSubmissions.length}</span>
+              </button>
+            )}
+          </div>
 
           <div className="max-w-3xl mx-auto">
             {/* Event Info */}
@@ -563,17 +577,6 @@ export default function EventPage() {
               </Card>
             )}
 
-            {/* Floating Leaderboard Button - Top Right */}
-            {isEventActive && liveSubmissions.length > 0 && (
-              <button
-                onClick={() => setShowLeaderboard(true)}
-                className="fixed right-4 top-20 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border border-yellow-500/30 backdrop-blur-xl hover:from-yellow-500/30 hover:to-amber-600/30 transition-all shadow-lg group"
-              >
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                <span className="text-sm font-bold text-white hidden sm:inline">Leaderboard</span>
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500/20 text-xs font-bold text-yellow-500">{liveSubmissions.length}</span>
-              </button>
-            )}
 
             {/* Submission Form or Closed Message */}
             {isEventActive ? (
