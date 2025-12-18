@@ -224,9 +224,9 @@ export default function About() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
               {/* Card 1 */}
               <div className="scroll-reveal group" style={{ transitionDelay: '100ms' }}>
-                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-purple-500/20 transition-all duration-500 hover:-translate-y-1">
-                  <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <BookOpen className="w-7 h-7 text-purple-400" />
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-white/[0.12] transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <BookOpen className="w-7 h-7 text-white/60" />
                   </div>
                   <h3 className="text-lg font-semibold text-white/90 mb-3">Learning First</h3>
                   <p className="text-sm text-white/45 leading-relaxed">
@@ -237,9 +237,9 @@ export default function About() {
 
               {/* Card 2 */}
               <div className="scroll-reveal group" style={{ transitionDelay: '200ms' }}>
-                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-blue-500/20 transition-all duration-500 hover:-translate-y-1">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <Trophy className="w-7 h-7 text-blue-400" />
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-white/[0.12] transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Trophy className="w-7 h-7 text-white/60" />
                   </div>
                   <h3 className="text-lg font-semibold text-white/90 mb-3">Real Competitions</h3>
                   <p className="text-sm text-white/45 leading-relaxed">
@@ -250,9 +250,9 @@ export default function About() {
 
               {/* Card 3 */}
               <div className="scroll-reveal group" style={{ transitionDelay: '300ms' }}>
-                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-yellow-500/20 transition-all duration-500 hover:-translate-y-1">
-                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <Gift className="w-7 h-7 text-yellow-400" />
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-white/[0.12] transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Gift className="w-7 h-7 text-white/60" />
                   </div>
                   <h3 className="text-lg font-semibold text-white/90 mb-3">Rewards That Matter</h3>
                   <p className="text-sm text-white/45 leading-relaxed">
@@ -263,9 +263,9 @@ export default function About() {
 
               {/* Card 4 */}
               <div className="scroll-reveal group" style={{ transitionDelay: '400ms' }}>
-                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-green-500/20 transition-all duration-500 hover:-translate-y-1">
-                  <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <Users className="w-7 h-7 text-green-400" />
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-white/[0.12] transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Users className="w-7 h-7 text-white/60" />
                   </div>
                   <h3 className="text-lg font-semibold text-white/90 mb-3">Community Powered</h3>
                   <p className="text-sm text-white/45 leading-relaxed">
