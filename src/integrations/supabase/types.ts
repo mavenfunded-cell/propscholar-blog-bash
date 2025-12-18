@@ -767,6 +767,7 @@ export type Database = {
       get_event_submissions: {
         Args: { _event_id: string }
         Returns: {
+          submission_blog: string
           submission_id: string
           submission_name: string
           submission_title: string
