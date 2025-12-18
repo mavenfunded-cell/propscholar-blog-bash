@@ -1,153 +1,424 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useSEO } from '@/hooks/useSEO';
-import { ArrowRight, TrendingUp, Users, Clock, Zap } from 'lucide-react';
+import { 
+  ArrowRight, 
+  BookOpen, 
+  Trophy, 
+  Gift, 
+  Users, 
+  Shield, 
+  Calendar, 
+  Eye, 
+  Heart,
+  ExternalLink,
+  Sparkles,
+  Rocket
+} from 'lucide-react';
+import spaceHero from '@/assets/space-hero.jpg';
+import spaceGalaxy from '@/assets/space-galaxy.jpg';
 
 export default function About() {
   useSEO();
 
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const setupScrollReveal = useCallback(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    if (prefersReducedMotion) {
+      document.querySelectorAll('.scroll-reveal, .scroll-reveal-blur').forEach(el => {
+        el.classList.add('revealed');
+      });
+      return;
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            observerRef.current?.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -5% 0px' }
+    );
+
+    document.querySelectorAll('.scroll-reveal, .scroll-reveal-blur').forEach((el) => {
+      observerRef.current?.observe(el);
+    });
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setupScrollReveal(), 100);
+    return () => {
+      clearTimeout(timer);
+      observerRef.current?.disconnect();
+    };
+  }, [setupScrollReveal]);
+
   return (
-    <div className="min-h-screen relative bg-[#0a0a0a] text-white">
-      {/* Background */}
+    <div className="min-h-screen relative overflow-hidden bg-[#050507] text-white">
+      {/* Premium Space Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0c0c0c] to-[#101010]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050507] via-[#080810] to-[#0a0a12]" />
+        
+        {/* Animated gradient orbs */}
+        <div className="absolute top-[10%] left-[15%] w-[600px] h-[600px] rounded-full bg-purple-900/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-[50%] right-[10%] w-[500px] h-[500px] rounded-full bg-blue-900/10 blur-[100px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+        <div className="absolute bottom-[20%] left-[30%] w-[400px] h-[400px] rounded-full bg-indigo-900/8 blur-[80px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+        
+        {/* Star field effect */}
+        <div className="absolute inset-0 opacity-40" style={{
+          backgroundImage: `radial-gradient(1px 1px at 20px 30px, white, transparent),
+                           radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                           radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.6), transparent),
+                           radial-gradient(1px 1px at 90px 40px, white, transparent),
+                           radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.7), transparent),
+                           radial-gradient(1px 1px at 160px 120px, white, transparent)`,
+          backgroundSize: '200px 200px'
+        }} />
+        
+        <div className="grain-overlay" />
       </div>
 
       <div className="relative z-10">
         <Navbar />
 
-        <main className="container mx-auto px-4 py-20 md:py-28">
-          <div className="max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-16">
-              <p className="text-xs tracking-[0.35em] uppercase text-white/50 mb-6 font-medium">
-                PropScholar Space
-              </p>
-              <h1 className="text-4xl md:text-5xl font-light tracking-tight mb-6">
-                About <span className="font-semibold">Us</span>
+        {/* ===== HERO SECTION ===== */}
+        <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+          {/* Hero background image with overlay */}
+          <div className="absolute inset-0">
+            <img 
+              src={spaceHero} 
+              alt="Space background" 
+              className="w-full h-full object-cover opacity-30"
+              loading="eager"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#050507]/60 via-[#050507]/80 to-[#050507]" />
+          </div>
+
+          <div className="container mx-auto px-4 py-20 relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              {/* Animated badge */}
+              <div className="hero-fade-in delay-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] mb-8">
+                <Rocket className="w-4 h-4 text-purple-400" />
+                <span className="text-sm text-white/60 tracking-wide">PropScholar Space</span>
+              </div>
+
+              {/* Main headline */}
+              <h1 className="hero-fade-in delay-100 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight mb-8 leading-[1.1]">
+                The Space Where Traders
+                <br />
+                <span className="font-semibold bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent">
+                  Grow Beyond Limits
+                </span>
               </h1>
-              <p className="text-white/60 text-base leading-relaxed">
-                Learn more about PropScholar and our mission.
+
+              {/* Subheading */}
+              <p className="hero-fade-in-blur delay-200 text-base md:text-lg text-white/50 max-w-2xl mx-auto leading-relaxed mb-12">
+                PropScholar Space is where learning, competition, rewards, and community come together. 
+                Built to empower traders beyond challenges and accounts.
               </p>
-            </div>
 
-            {/* Content */}
-            <div className="space-y-12 text-white/70 leading-relaxed">
-              <section>
-                <h2 className="text-xl font-semibold text-white/90 mb-4">Who We Are</h2>
-                <p>
-                  PropScholar is a government-registered business under the MSME (Udyam) initiative in India. 
-                  We are an educational platform designed to assess and develop trading skills in a simulated environment.
-                </p>
-              </section>
-
-              <section>
-                <h2 className="text-xl font-semibold text-white/90 mb-4">Our Mission</h2>
-                <p>
-                  Our mission is to identify and nurture trading talent through skill-based evaluations. 
-                  We believe that consistent performance and disciplined trading deserve recognition and reward.
-                </p>
-              </section>
-
-              <section>
-                <h2 className="text-xl font-semibold text-white/90 mb-4">What We Do</h2>
-                <p className="mb-4">
-                  PropScholar Space is our premium competition platform where traders can showcase their abilities 
-                  through various formats including blog writing contests, reel competitions, and quiz challenges.
-                </p>
-                <p>
-                  We provide a space for traders and analysts to share insights, demonstrate knowledge, 
-                  and compete for recognition and rewards based purely on merit and skill.
-                </p>
-              </section>
-
-              <section>
-                <h2 className="text-xl font-semibold text-white/90 mb-4">Our Evaluation Programs</h2>
-                <p className="mb-4">
-                  All Test/Evaluation accounts provided by PropScholar are simulated and do not involve 
-                  real financial transactions or live market exposure. Our evaluation process is entirely 
-                  skill-based, and successful participants may be eligible for scholarship awards.
-                </p>
-                <p>
-                  PropScholar does not act as or offer services as a broker, custodian, or financial advisor.
-                </p>
-              </section>
-
-              <section>
-                <h2 className="text-xl font-semibold text-white/90 mb-4">Contact Us</h2>
-                <p>
-                  For any inquiries or support, please reach out to us at{' '}
-                  <a 
-                    href="mailto:support@propscholar.shop" 
-                    className="text-white hover:text-white/80 underline underline-offset-4"
-                  >
-                    support@propscholar.shop
-                  </a>
-                </p>
-              </section>
+              {/* CTA buttons */}
+              <div className="hero-fade-in delay-300 flex flex-wrap justify-center gap-4">
+                <Link to="/blog">
+                  <Button className="btn-premium h-12 px-8 rounded-full bg-white/90 text-black hover:bg-white border-0 text-sm font-medium">
+                    Explore Events
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+                <a href="https://propscholar.com" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="btn-premium h-12 px-8 rounded-full border-white/10 bg-white/[0.03] text-white/90 hover:bg-white/[0.06] hover:border-white/20 text-sm">
+                    Visit PropScholar
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                </a>
+              </div>
             </div>
           </div>
 
-          {/* PropScholar CTA Section */}
-          <div className="max-w-4xl mx-auto mt-24">
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] p-10 md:p-14">
-              {/* Subtle glow effect */}
-              <div className="absolute top-0 right-0 w-72 h-72 bg-white/[0.02] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              
-              <div className="relative">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-                  {/* Left Content */}
-                  <div className="flex-1">
-                    <p className="text-[10px] tracking-[0.3em] uppercase text-white/35 mb-3">
-                      Begin Your Trading Journey
-                    </p>
-                    <h3 className="text-2xl md:text-3xl font-light mb-3">
-                      Your Skills, <span className="font-semibold">Our Platform</span>
-                    </h3>
-                    <p className="text-white/50 text-sm leading-relaxed max-w-md">
-                      Join thousands of traders who trust PropScholar's scholarship model to turn their trading expertise into real opportunity.
-                    </p>
-                  </div>
+          {/* Scroll indicator */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <div className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-2">
+              <div className="w-1 h-2 bg-white/40 rounded-full animate-pulse" />
+            </div>
+          </div>
+        </section>
 
-                  {/* Right CTA */}
-                  <div className="flex-shrink-0">
-                    <a
-                      href="https://propscholar.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button className="h-11 px-8 rounded-full bg-white/90 text-black hover:bg-white transition-all shadow-lg shadow-black/20 border-0 text-sm font-medium">
-                        Start Trading
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </a>
+        {/* ===== WHAT IS PROPSCHOLAR SPACE ===== */}
+        <section className="py-24 md:py-32">
+          <div className="container mx-auto px-4">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-6xl mx-auto">
+              {/* Text content */}
+              <div className="scroll-reveal">
+                <p className="text-[11px] tracking-[0.3em] uppercase text-purple-400/70 mb-4">
+                  About The Platform
+                </p>
+                <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-6">
+                  What Is <span className="font-semibold">PropScholar Space</span>
+                </h2>
+                <div className="space-y-4 text-white/55 leading-relaxed">
+                  <p>
+                    PropScholar Space is an extension of the PropScholar ecosystem. While propscholar.com 
+                    focuses on evaluations and trading opportunities, PropScholar Space is designed for 
+                    growth, engagement, and long-term trader development.
+                  </p>
+                  <p>
+                    It is the platform where traders learn, compete, earn rewards, and participate in 
+                    exclusive events. Everything here is created to support serious traders who want 
+                    more than just access to capital.
+                  </p>
+                </div>
+              </div>
+
+              {/* Image */}
+              <div className="scroll-reveal relative" style={{ transitionDelay: '150ms' }}>
+                <div className="relative rounded-3xl overflow-hidden">
+                  <img 
+                    src={spaceGalaxy} 
+                    alt="Galaxy visualization" 
+                    className="w-full h-[400px] object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/40 via-transparent to-blue-900/30" />
+                  
+                  {/* Floating elements */}
+                  <div className="absolute top-6 right-6 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10">
+                    <span className="text-sm text-white/80">🚀 Launch Your Journey</span>
                   </div>
                 </div>
+                
+                {/* Glow effect */}
+                <div className="absolute -inset-4 bg-purple-500/10 rounded-3xl blur-2xl -z-10" />
+              </div>
+            </div>
+          </div>
+        </section>
 
-                {/* Feature Pills */}
-                <div className="flex flex-wrap gap-3 mt-8 pt-8 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
-                    <TrendingUp className="w-3.5 h-3.5 text-white/40" />
-                    <span className="text-xs text-white/50">Start from $5</span>
+        {/* ===== WHY PROPSCHOLAR SPACE EXISTS ===== */}
+        <section className="py-24 md:py-32 relative">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-blue-400/70 mb-4">
+                Our Purpose
+              </p>
+              <h2 className="scroll-reveal text-3xl md:text-4xl font-light tracking-tight" style={{ transitionDelay: '80ms' }}>
+                Why PropScholar Space <span className="font-semibold">Exists</span>
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+              {/* Card 1 */}
+              <div className="scroll-reveal group" style={{ transitionDelay: '100ms' }}>
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-purple-500/20 transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <BookOpen className="w-7 h-7 text-purple-400" />
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
-                    <Users className="w-3.5 h-3.5 text-white/40" />
-                    <span className="text-xs text-white/50">3000+ Traders</span>
+                  <h3 className="text-lg font-semibold text-white/90 mb-3">Learning First</h3>
+                  <p className="text-sm text-white/45 leading-relaxed">
+                    Structured blogs, educational content, and community driven knowledge designed to improve trader mindset and skill.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2 */}
+              <div className="scroll-reveal group" style={{ transitionDelay: '200ms' }}>
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-blue-500/20 transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Trophy className="w-7 h-7 text-blue-400" />
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
-                    <Clock className="w-3.5 h-3.5 text-white/40" />
-                    <span className="text-xs text-white/50">4 Hr Payouts</span>
+                  <h3 className="text-lg font-semibold text-white/90 mb-3">Real Competitions</h3>
+                  <p className="text-sm text-white/45 leading-relaxed">
+                    Regular trading and content competitions where performance, effort, and creativity are rewarded transparently.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 3 */}
+              <div className="scroll-reveal group" style={{ transitionDelay: '300ms' }}>
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-yellow-500/20 transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Gift className="w-7 h-7 text-yellow-400" />
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06]">
-                    <Zap className="w-3.5 h-3.5 text-white/40" />
-                    <span className="text-xs text-white/50">Scholarship Model</span>
+                  <h3 className="text-lg font-semibold text-white/90 mb-3">Rewards That Matter</h3>
+                  <p className="text-sm text-white/45 leading-relaxed">
+                    Earn coins, unlock rewards, and access benefits that directly support your trading journey.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 4 */}
+              <div className="scroll-reveal group" style={{ transitionDelay: '400ms' }}>
+                <div className="h-full p-8 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.06] hover:border-green-500/20 transition-all duration-500 hover:-translate-y-1">
+                  <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <Users className="w-7 h-7 text-green-400" />
                   </div>
+                  <h3 className="text-lg font-semibold text-white/90 mb-3">Community Powered</h3>
+                  <p className="text-sm text-white/45 leading-relaxed">
+                    Connected directly with our Discord and ecosystem, ensuring real people, real feedback, and real engagement.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </main>
+        </section>
+
+        {/* ===== HOW SPACE CONNECTS TO PROPSCHOLAR ===== */}
+        <section className="py-24 md:py-32 relative">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-16">
+                <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-indigo-400/70 mb-4">
+                  The Connection
+                </p>
+                <h2 className="scroll-reveal text-3xl md:text-4xl font-light tracking-tight mb-6" style={{ transitionDelay: '80ms' }}>
+                  How Space Connects to <span className="font-semibold">PropScholar</span>
+                </h2>
+              </div>
+
+              {/* Timeline/Flow */}
+              <div className="scroll-reveal relative" style={{ transitionDelay: '150ms' }}>
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* PropScholar.com */}
+                  <div className="relative p-8 rounded-2xl bg-gradient-to-br from-blue-950/40 to-blue-900/10 border border-blue-500/15">
+                    <div className="absolute -top-3 left-8">
+                      <span className="px-3 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30">
+                        propscholar.com
+                      </span>
+                    </div>
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold text-white/90 mb-3">Challenges & Evaluations</h3>
+                      <p className="text-sm text-white/50 leading-relaxed">
+                        Where your trading journey begins. Take evaluations, prove your skills, and access funded accounts.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* PropScholar Space */}
+                  <div className="relative p-8 rounded-2xl bg-gradient-to-br from-purple-950/40 to-purple-900/10 border border-purple-500/15">
+                    <div className="absolute -top-3 left-8">
+                      <span className="px-3 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
+                        propscholar.space
+                      </span>
+                    </div>
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold text-white/90 mb-3">Learning & Community</h3>
+                      <p className="text-sm text-white/50 leading-relaxed">
+                        Where growth happens. Learn, compete, earn rewards, and connect with fellow traders.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connector line */}
+                <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[2px] bg-gradient-to-r from-blue-500/50 via-white/20 to-purple-500/50" />
+                <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-8 h-8 rounded-full bg-[#0a0a12] border border-white/20 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white/60" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary text */}
+              <p className="scroll-reveal text-center text-white/45 text-sm mt-12 max-w-xl mx-auto leading-relaxed" style={{ transitionDelay: '250ms' }}>
+                This separation ensures focus, clarity, and a better experience for traders at every stage of their journey.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== TRUST & TRANSPARENCY ===== */}
+        <section className="py-24 md:py-32">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <p className="scroll-reveal text-[11px] tracking-[0.3em] uppercase text-emerald-400/70 mb-4">
+                Our Foundation
+              </p>
+              <h2 className="scroll-reveal text-3xl md:text-4xl font-light tracking-tight" style={{ transitionDelay: '80ms' }}>
+                Trust & <span className="font-semibold">Transparency</span>
+              </h2>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+              <div className="scroll-reveal text-center p-6" style={{ transitionDelay: '100ms' }}>
+                <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-5 h-5 text-white/60" />
+                </div>
+                <p className="text-sm text-white/70 font-medium mb-1">Built by PropScholar</p>
+                <p className="text-xs text-white/40">Official team development</p>
+              </div>
+
+              <div className="scroll-reveal text-center p-6" style={{ transitionDelay: '200ms' }}>
+                <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-5 h-5 text-white/60" />
+                </div>
+                <p className="text-sm text-white/70 font-medium mb-1">Active Since 2024</p>
+                <p className="text-xs text-white/40">Established presence</p>
+              </div>
+
+              <div className="scroll-reveal text-center p-6" style={{ transitionDelay: '300ms' }}>
+                <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto mb-4">
+                  <Eye className="w-5 h-5 text-white/60" />
+                </div>
+                <p className="text-sm text-white/70 font-medium mb-1">Transparent Rules</p>
+                <p className="text-xs text-white/40">Clear systems & policies</p>
+              </div>
+
+              <div className="scroll-reveal text-center p-6" style={{ transitionDelay: '400ms' }}>
+                <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto mb-4">
+                  <Heart className="w-5 h-5 text-white/60" />
+                </div>
+                <p className="text-sm text-white/70 font-medium mb-1">Community Driven</p>
+                <p className="text-xs text-white/40">Growth through engagement</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== FINAL CTA SECTION ===== */}
+        <section className="py-24 md:py-32 relative">
+          <div className="container mx-auto px-4">
+            <div className="scroll-reveal max-w-3xl mx-auto text-center relative">
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 blur-3xl rounded-full -z-10" />
+              
+              <p className="text-[11px] tracking-[0.3em] uppercase text-white/40 mb-6">
+                Ready to Begin?
+              </p>
+              
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight mb-6">
+                Enter the Space.
+                <br />
+                <span className="font-semibold">Grow With PropScholar.</span>
+              </h2>
+              
+              <p className="text-white/45 text-base mb-10 max-w-lg mx-auto">
+                Join a community of traders who are learning, competing, and earning together.
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link to="/blog">
+                  <Button className="btn-premium h-12 px-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:opacity-90 border-0 text-sm font-medium shadow-lg shadow-purple-500/20">
+                    Explore Events
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+                <a href="https://propscholar.com" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="btn-premium h-12 px-10 rounded-full border-white/15 bg-white/[0.03] text-white/90 hover:bg-white/[0.06] hover:border-white/25 text-sm">
+                    Visit PropScholar.com
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <Footer />
       </div>
