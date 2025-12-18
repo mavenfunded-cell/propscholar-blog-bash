@@ -775,7 +775,7 @@ export default function Rewards() {
                 </Card>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {rewards.map(reward => {
+                  {[...rewards].sort((a, b) => a.coin_cost - b.coin_cost).map(reward => {
                     const userClaimCount = claims.filter(c => c.reward.id === reward.id).length;
                     const canClaim = userClaimCount < (reward.max_claims_per_user || 1);
                     const hasEnoughCoins = (userCoins?.balance || 0) >= reward.coin_cost;
@@ -785,28 +785,30 @@ export default function Rewards() {
                     return (
                       <Card key={reward.id} className="overflow-hidden bg-[#0a0a0a] border-white/[0.06] hover:border-white/[0.1] transition-colors">
                         <div className="p-6">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 rounded-full bg-white/[0.06] text-white/70">
-                              {getRewardIcon(reward.reward_type, reward.name)}
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-3 rounded-full bg-white/[0.06] text-white/70">
+                                {getRewardIcon(reward.reward_type, reward.name)}
+                              </div>
+                              <div>
+                                <h3 className="font-medium text-white">{reward.name}</h3>
+                                <p className="text-xs text-white/40">
+                                  {isPropAccount ? 'Delivered within 24 hours' : `Expires in ${reward.expiry_days} days`}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <h3 className="font-medium text-white">{reward.name}</h3>
-                              <p className="text-xs text-white/40">
-                                {isPropAccount ? 'Delivered within 24 hours' : `Expires in ${reward.expiry_days} days`}
-                              </p>
-                            </div>
+                            {(isPropAccount || isDiscount) && (
+                              <div className="relative group">
+                                <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center cursor-help">
+                                  <span className="text-white/40 text-xs font-medium">i</span>
+                                </div>
+                                <div className="absolute right-0 top-8 w-48 p-2 rounded-lg bg-[#1a1a1a] border border-white/[0.1] text-xs text-white/60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                  {isPropAccount ? 'You will receive your account within 24 hours after claiming' : 'You will receive your coupon code instantly after claiming'}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <p className="text-sm text-white/40 mb-4">{reward.description}</p>
-                          {isPropAccount && (
-                            <p className="text-xs text-white/50 mb-4">
-                              ⚡ You will receive your account within 24 hours after claiming
-                            </p>
-                          )}
-                          {isDiscount && (
-                            <p className="text-xs text-white/50 mb-4">
-                              ⚡ You will receive your coupon code instantly after claiming
-                            </p>
-                          )}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <Coins className="w-5 h-5 text-yellow-500" />
@@ -815,7 +817,7 @@ export default function Rewards() {
                             <Button
                               onClick={() => claimReward(reward)}
                               disabled={!canClaim || !hasEnoughCoins || claiming === reward.id}
-                              className={!canClaim || !hasEnoughCoins ? 'bg-white/[0.06] text-white/40' : 'bg-white text-black hover:bg-white/90'}
+                              className={`min-w-[120px] ${!canClaim || !hasEnoughCoins ? 'bg-white/[0.06] text-white/40 hover:bg-white/[0.06]' : 'bg-white text-black hover:bg-white/90'}`}
                             >
                               {claiming === reward.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
