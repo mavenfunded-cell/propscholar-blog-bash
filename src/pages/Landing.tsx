@@ -335,6 +335,63 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ===== PROPSCHOLAR INVITATION ===== */}
+        <section className="py-24 md:py-32 relative">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              {/* Main Content */}
+              <div className="reveal-on-scroll text-center mb-16 opacity-0 blur-sm translate-y-4 transition-all duration-700">
+                <p className="text-[11px] tracking-[0.32em] uppercase text-white/40 mb-6 font-medium">
+                  Industry Leading Scholarship Model
+                </p>
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight mb-6">
+                  Turn Skill Into <span className="font-semibold">Opportunity</span>
+                </h2>
+                <p className="text-white/55 text-base font-light max-w-xl mx-auto leading-relaxed">
+                  PropScholar's trading scholarship model empowers talented traders to access funded accounts and build their careers.
+                </p>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="reveal-on-scroll grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-100">
+                <div className="text-center p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-2xl md:text-3xl font-semibold text-white/90 mb-1">$5</p>
+                  <p className="text-xs text-white/40 uppercase tracking-wider">Start With</p>
+                </div>
+                <div className="text-center p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-2xl md:text-3xl font-semibold text-white/90 mb-1">3000+</p>
+                  <p className="text-xs text-white/40 uppercase tracking-wider">Traders</p>
+                </div>
+                <div className="text-center p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-2xl md:text-3xl font-semibold text-white/90 mb-1">4 Hrs</p>
+                  <p className="text-xs text-white/40 uppercase tracking-wider">Payout Time</p>
+                </div>
+                <div className="text-center p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-2xl md:text-3xl font-semibold text-white/90 mb-1">#1</p>
+                  <p className="text-xs text-white/40 uppercase tracking-wider">Scholarship Model</p>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="reveal-on-scroll text-center opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
+                <a
+                  href="https://propscholar.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button className="h-12 px-10 rounded-full bg-white/90 text-black hover:bg-white transition-all backdrop-blur-md shadow-lg shadow-black/30 border-0 text-sm font-medium">
+                    Join PropScholar
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </a>
+                <p className="mt-6 text-xs text-white/30">
+                  Leading Trading Scholarship Platform
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ===== CTA ===== */}
         <section ref={ctaRef} className="py-32 md:py-40">
           <div className="container mx-auto px-4">
