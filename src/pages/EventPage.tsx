@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User, X } from 'lucide-react';
+import { Calendar, FileText, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Users, User, X, ThumbsUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
@@ -45,6 +45,20 @@ interface Submission {
   blog: string;
 }
 
+interface LiveSubmission {
+  id: string;
+  name: string;
+  blog_title: string | null;
+  vote_count: number;
+}
+
+interface Vote {
+  id: string;
+  voter_name: string;
+  voter_email: string | null;
+  created_at: string;
+}
+
 const submissionSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Please enter a valid Gmail address').refine(
@@ -63,9 +77,18 @@ export default function EventPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [liveSubmissions, setLiveSubmissions] = useState<LiveSubmission[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Voting state
+  const [votingSubmissionId, setVotingSubmissionId] = useState<string | null>(null);
+  const [voterName, setVoterName] = useState('');
+  const [voterEmail, setVoterEmail] = useState('');
+  const [voting, setVoting] = useState(false);
+  const [showVoters, setShowVoters] = useState<string | null>(null);
+  const [voters, setVoters] = useState<Vote[]>([]);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -133,12 +156,81 @@ export default function EventPage() {
             blog: s.submission_blog
           })));
         }
+      } else if (data.status === 'active') {
+        // Fetch live submissions for voting
+        await fetchLiveSubmissions(data.id);
       }
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLiveSubmissions = async (eventId: string) => {
+    const { data, error } = await supabase
+      .rpc('get_live_event_submissions', { _event_id: eventId });
+    
+    if (!error && data) {
+      setLiveSubmissions(data.map((s: { submission_id: string; submission_name: string; submission_title: string | null; vote_count: number }) => ({
+        id: s.submission_id,
+        name: s.submission_name,
+        blog_title: s.submission_title,
+        vote_count: s.vote_count
+      })));
+    }
+  };
+
+  const fetchVoters = async (submissionId: string) => {
+    const { data, error } = await supabase
+      .from('blog_votes')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setVoters(data);
+    }
+    setShowVoters(submissionId);
+  };
+
+  const handleVote = async () => {
+    if (!votingSubmissionId || !voterName.trim()) {
+      toast.error('Please enter your name');
+      return;
+    }
+
+    setVoting(true);
+    try {
+      const { error } = await supabase
+        .from('blog_votes')
+        .insert({
+          submission_id: votingSubmissionId,
+          voter_name: voterName.trim(),
+          voter_email: voterEmail.trim() || null
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('You have already voted for this submission');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Vote submitted successfully!');
+        setVotingSubmissionId(null);
+        setVoterName('');
+        setVoterEmail('');
+        if (event) {
+          fetchLiveSubmissions(event.id);
+        }
+      }
+    } catch (err) {
+      console.error('Error voting:', err);
+      toast.error('Failed to submit vote');
+    } finally {
+      setVoting(false);
     }
   };
 
@@ -428,6 +520,7 @@ export default function EventPage() {
 
             {/* Submission Form or Closed Message */}
             {isEventActive ? (
+              <>
               <Card className="animate-slide-up border-white/10 bg-[#111]/80 backdrop-blur-xl">
                 <CardHeader>
                   <CardTitle className="text-white">Submit Your Entry</CardTitle>
@@ -526,6 +619,61 @@ export default function EventPage() {
                   </form>
                 </CardContent>
               </Card>
+
+              {/* Live Submissions with Voting */}
+              {liveSubmissions.length > 0 && (
+                <Card className="mt-8 animate-fade-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <ThumbsUp className="w-5 h-5 text-white" />
+                      Vote for Your Favorite ({liveSubmissions.length} entries)
+                    </CardTitle>
+                    <CardDescription className="text-white/50">
+                      Support participants by voting for their submissions
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {liveSubmissions.map((submission) => (
+                        <div 
+                          key={submission.id}
+                          className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-base font-semibold text-white">
+                              {submission.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-white truncate">{submission.name}</p>
+                            {submission.blog_title && (
+                              <p className="text-sm text-white/50 truncate">{submission.blog_title}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => fetchVoters(submission.id)}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                            >
+                              <Users className="w-4 h-4 text-white/60" />
+                              <span className="text-white font-medium">{submission.vote_count}</span>
+                            </button>
+                            <Button
+                              size="sm"
+                              onClick={() => setVotingSubmissionId(submission.id)}
+                              className="bg-white text-black hover:bg-white/90"
+                            >
+                              <ThumbsUp className="w-4 h-4 mr-1" />
+                              Vote
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              </>
             ) : (
               <>
                 <Card className="animate-fade-in border-white/10 bg-[#111]/80 backdrop-blur-xl">
@@ -608,6 +756,80 @@ export default function EventPage() {
             <div className="prose prose-invert prose-sm max-w-none">
               <ReactMarkdown>{selectedSubmission?.blog || ''}</ReactMarkdown>
             </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vote Modal */}
+      <Dialog open={!!votingSubmissionId} onOpenChange={() => setVotingSubmissionId(null)}>
+        <DialogContent className="max-w-md bg-[#111] border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">Cast Your Vote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="voterName" className="text-white/80">Your Name *</Label>
+              <Input
+                id="voterName"
+                value={voterName}
+                onChange={(e) => setVoterName(e.target.value)}
+                placeholder="Enter your name"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="voterEmail" className="text-white/80">Email (optional, for preventing duplicate votes)</Label>
+              <Input
+                id="voterEmail"
+                type="email"
+                value={voterEmail}
+                onChange={(e) => setVoterEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+              />
+            </div>
+            <Button
+              onClick={handleVote}
+              disabled={voting || !voterName.trim()}
+              className="w-full bg-white text-black hover:bg-white/90"
+            >
+              {voting ? 'Submitting...' : 'Submit Vote'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Voters List Modal */}
+      <Dialog open={!!showVoters} onOpenChange={() => setShowVoters(null)}>
+        <DialogContent className="max-w-md bg-[#111] border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Voters ({voters.length})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {voters.length === 0 ? (
+              <p className="text-white/50 text-center py-8">No votes yet</p>
+            ) : (
+              <div className="space-y-2">
+                {voters.map((vote) => (
+                  <div key={vote.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">
+                        {vote.voter_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white text-sm font-medium">{vote.voter_name}</p>
+                      <p className="text-white/40 text-xs">
+                        {format(new Date(vote.created_at), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </DialogContent>
       </Dialog>

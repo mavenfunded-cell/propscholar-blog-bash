@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_votes: {
+        Row: {
+          created_at: string
+          id: string
+          submission_id: string
+          voter_email: string | null
+          voter_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          submission_id: string
+          voter_email?: string | null
+          voter_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          submission_id?: string
+          voter_email?: string | null
+          voter_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_votes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coin_transactions: {
         Row: {
           amount: number
@@ -779,6 +811,15 @@ export type Database = {
           submission_name: string
           winner_id: string
           winner_position: number
+        }[]
+      }
+      get_live_event_submissions: {
+        Args: { _event_id: string }
+        Returns: {
+          submission_id: string
+          submission_name: string
+          submission_title: string
+          vote_count: number
         }[]
       }
       grant_participation_coins: {
