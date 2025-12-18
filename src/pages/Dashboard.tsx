@@ -440,11 +440,19 @@ const Dashboard = () => {
                   )}
                 </div>
               </div>
-              <Link to="/blog">
-                <Button className="w-full md:w-auto bg-primary hover:bg-primary/90 text-sm">
-                  Participate in Events
-                </Button>
-              </Link>
+              <div className="flex gap-2">
+                <Link to="/rewards">
+                  <Button variant="outline" className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-sm">
+                    <Coins className="w-4 h-4 mr-1" />
+                    Rewards
+                  </Button>
+                </Link>
+                <Link to="/blog">
+                  <Button className="w-full md:w-auto bg-primary hover:bg-primary/90 text-sm">
+                    Participate in Events
+                  </Button>
+                </Link>
+              </div>
             </div>
           </Card>
 

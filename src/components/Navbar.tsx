@@ -1,16 +1,14 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User, Coins } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, PenTool, Gift, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 
 const navLinks = [
-  { name: 'Space', href: '/', external: false },
-  { name: 'Rewards', href: '/rewards', external: false },
-  { name: 'About', href: 'https://propscholar.com/about', external: true },
-  { name: 'Terms', href: '/terms', external: false },
-  { name: 'Shop', href: 'https://propscholar.com/shop', external: true },
-  { name: 'Home', href: 'https://propscholar.com', external: true },
+  { name: 'Home', href: '/', external: false, icon: Home },
+  { name: 'Events', href: '/blog', external: false, icon: Calendar },
+  { name: 'Rewards', href: '/rewards', external: false, icon: Gift },
+  { name: 'Shop', href: 'https://propscholar.com/shop', external: true, icon: null },
 ];
 
 export function Navbar() {
@@ -18,6 +16,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,8 +53,14 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              link.external ? (
+            {navLinks.map((link) => {
+              const isActive = !link.external && (
+                link.href === '/' 
+                  ? location.pathname === '/' 
+                  : location.pathname.startsWith(link.href)
+              );
+              
+              return link.external ? (
                 <a
                   key={link.name}
                   href={link.href}
@@ -69,12 +74,16 @@ export function Navbar() {
                 <Link
                   key={link.name}
                   to={link.href}
-                  className="px-4 py-2 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
+                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-md ${
+                    isActive 
+                      ? 'text-white bg-white/10' 
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}
                 >
                   {link.name}
                 </Link>
-              )
-            ))}
+              );
+            })}
             
             {/* Auth Button */}
             {user ? (
@@ -126,14 +135,21 @@ export function Navbar() {
         {isOpen && (
           <nav className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col gap-1">
-              {navLinks.map((link) => (
-                link.external ? (
+              {navLinks.map((link) => {
+                const isActive = !link.external && (
+                  link.href === '/' 
+                    ? location.pathname === '/' 
+                    : location.pathname.startsWith(link.href)
+                );
+                const IconComponent = link.icon;
+                
+                return link.external ? (
                   <a
                     key={link.name}
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
+                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"
                     onClick={() => setIsOpen(false)}
                   >
                     {link.name}
@@ -142,13 +158,18 @@ export function Navbar() {
                   <Link
                     key={link.name}
                     to={link.href}
-                    className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5"
+                    className={`px-4 py-3 text-sm font-medium transition-colors rounded-md flex items-center gap-2 ${
+                      isActive 
+                        ? 'text-white bg-white/10' 
+                        : 'text-white/50 hover:text-white hover:bg-white/5'
+                    }`}
                     onClick={() => setIsOpen(false)}
                   >
+                    {IconComponent && <IconComponent className="w-4 h-4" />}
                     {link.name}
                   </Link>
-                )
-              ))}
+                );
+              })}
               
               {/* Mobile Auth Button */}
               {user ? (
