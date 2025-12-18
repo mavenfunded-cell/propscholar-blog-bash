@@ -22,38 +22,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const referralAppliedRef = useRef(false);
 
   // Apply referral code after authentication - ONLY for new users
-  const applyReferralCode = async (userId: string, userEmail: string) => {
+  const applyReferralCode = async (userId: string, userEmail: string, isNewSignup: boolean) => {
     if (referralAppliedRef.current) return;
     
     const referralCode = localStorage.getItem('referral_code');
     if (!referralCode) return;
     
+    // Only apply referral for new signups, not existing user logins
+    if (!isNewSignup) {
+      console.log('Skipping referral - not a new signup');
+      return;
+    }
+    
     referralAppliedRef.current = true;
     
     try {
-      // Wait for user_coins record to be created by trigger
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait longer for user_coins record to be created by trigger
+      let retries = 0;
+      let existingCoins = null;
       
-      // Check if user_coins record exists
-      const { data: existingCoins } = await supabase
-        .from('user_coins')
-        .select('id, referred_by, created_at')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      // Check if this is a new user (created within last 2 minutes)
-      const isNewUser = !existingCoins || 
-        (existingCoins.created_at && 
-         new Date().getTime() - new Date(existingCoins.created_at).getTime() < 2 * 60 * 1000);
-      
-      // If not a new user, don't apply referral
-      if (!isNewUser) {
-        localStorage.removeItem('referral_code');
-        return;
+      while (retries < 5) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { data } = await supabase
+          .from('user_coins')
+          .select('id, referred_by, created_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (data) {
+          existingCoins = data;
+          break;
+        }
+        retries++;
       }
       
-      // If no record exists, create it first
+      // If still no record, create it
       if (!existingCoins) {
+        console.log('Creating user_coins record for new user');
         await supabase.from('user_coins').insert({
           user_id: userId,
           email: userEmail || ''
@@ -61,12 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 500));
       } else if (existingCoins.referred_by) {
         // Already referred, skip
+        console.log('User already has a referrer');
         localStorage.removeItem('referral_code');
         return;
       }
       
-      // Apply referral code only for new users
-      const { data } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
+      // Apply referral code
+      console.log('Applying referral code:', referralCode);
+      const { data, error } = await supabase.rpc('apply_referral_code', { _referral_code: referralCode });
+      
+      if (error) {
+        console.error('Referral RPC error:', error);
+      }
+      
       const result = data as any;
       
       if (result?.success) {
@@ -90,9 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setTimeout(() => {
             checkAdminRole(session.user.id);
-            // Apply referral code on sign in - will check if user is new
+            // Apply referral code only on new signup (not regular login)
             if (event === 'SIGNED_IN') {
-              applyReferralCode(session.user.id, session.user.email || '');
+              // Check if user was just created (within last 30 seconds)
+              const createdAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
+              const isNewSignup = Date.now() - createdAt < 30000;
+              applyReferralCode(session.user.id, session.user.email || '', isNewSignup);
             }
           }, 0);
         } else {
@@ -108,8 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.user) {
         checkAdminRole(session.user.id);
-        // Try to apply referral on initial load - will check if user is new
-        applyReferralCode(session.user.id, session.user.email || '');
+        // On initial load, check if user was just created (within last 30 seconds)
+        const createdAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
+        const isNewSignup = Date.now() - createdAt < 30000;
+        applyReferralCode(session.user.id, session.user.email || '', isNewSignup);
       }
       setLoading(false);
     });
