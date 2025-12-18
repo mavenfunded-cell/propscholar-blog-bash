@@ -85,43 +85,41 @@ export default function Landing() {
 
         {/* ===== HERO ===== */}
         {/* ===== HERO ===== */}
-        <section ref={heroRef} className="relative py-28 md:py-36">
+        <section ref={heroRef} className="relative py-24 md:py-32">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-4xl mx-auto text-center">
         
               {/* Top label */}
-              <p className="reveal-on-scroll text-[11px] tracking-[0.32em] uppercase text-white/45 mb-8 font-medium opacity-0 blur-sm translate-y-4 transition-all duration-700">
+              <p className="reveal-on-scroll text-[11px] tracking-[0.32em] uppercase text-white/45 mb-7 font-medium opacity-0 blur-sm translate-y-4 transition-all duration-700">
                 PropScholar Space
               </p>
         
-              {/* Heading – OPTICALLY CENTERED */}
-              <div className="flex justify-center">
-                <h1
-                  className="
-                    reveal-on-scroll
-                    text-4xl md:text-6xl lg:text-7xl
-                    font-light tracking-tight
-                    text-center
-                    max-w-2xl
-                    mb-8
-                  "
-                >
-                  You Compete.{" "}
-                  <span className="font-semibold">We Reward.</span>
-                </h1>
-              </div>
+              {/* Single-line Heading */}
+              <h1
+                className="
+                  reveal-on-scroll
+                  text-3xl md:text-5xl lg:text-6xl
+                  font-light tracking-tight
+                  text-center
+                  whitespace-nowrap
+                  mb-7
+                "
+              >
+                You Compete.{" "}
+                <span className="font-semibold">We Reward.</span>
+              </h1>
         
               {/* Sub text */}
-              <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-lg mx-auto leading-relaxed font-light mb-12 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
+              <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-lg mx-auto leading-relaxed font-light mb-10 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
                 PropScholar, the leading trading scholarship platform’s Giveaway Hub
                 where participants compete and win exciting rewards.
               </p>
         
               {/* CTAs */}
-              <div className="reveal-on-scroll flex flex-wrap justify-center gap-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-300">
+              <div className="reveal-on-scroll flex justify-center gap-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-300">
                 <Button
                   onClick={scrollToArena}
-                  className="h-12 px-10 rounded-full bg-white/90 text-black hover:bg-white transition-all backdrop-blur-md shadow-lg shadow-black/30 border-0 text-sm"
+                  className="h-11 px-9 rounded-full bg-white/90 text-black hover:bg-white transition-all backdrop-blur-md shadow-lg shadow-black/30 border-0 text-sm"
                 >
                   Explore Competitions
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -134,7 +132,7 @@ export default function Landing() {
                 >
                   <Button
                     variant="outline"
-                    className="h-12 px-10 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 backdrop-blur-md transition-all text-sm"
+                    className="h-11 px-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 backdrop-blur-md transition-all text-sm"
                   >
                     Visit PropScholar
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -145,8 +143,7 @@ export default function Landing() {
             </div>
           </div>
         </section>
-
-
+        
 
         {/* ===== COMPETITIONS ===== */}
         <section ref={competitionsRef} id="choose-your-arena" className="py-28 md:py-36">
