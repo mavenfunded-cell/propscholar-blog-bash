@@ -85,10 +85,10 @@ export default function EventPage() {
   // Voting state
   const [votingSubmissionId, setVotingSubmissionId] = useState<string | null>(null);
   const [voterName, setVoterName] = useState('');
-  const [voterEmail, setVoterEmail] = useState('');
   const [voting, setVoting] = useState(false);
   const [showVoters, setShowVoters] = useState<string | null>(null);
   const [voters, setVoters] = useState<Vote[]>([]);
+  const [hasVoted, setHasVoted] = useState<Record<string, boolean>>({});
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -195,9 +195,24 @@ export default function EventPage() {
     setShowVoters(submissionId);
   };
 
+  // Check localStorage for existing votes on mount
+  useEffect(() => {
+    if (event) {
+      const votedSubmissions = JSON.parse(localStorage.getItem(`votes_${event.id}`) || '{}');
+      setHasVoted(votedSubmissions);
+    }
+  }, [event]);
+
   const handleVote = async () => {
     if (!votingSubmissionId || !voterName.trim()) {
       toast.error('Please enter your name');
+      return;
+    }
+
+    // Check if already voted for this submission
+    if (hasVoted[votingSubmissionId]) {
+      toast.error('You have already voted for this submission');
+      setVotingSubmissionId(null);
       return;
     }
 
@@ -207,21 +222,22 @@ export default function EventPage() {
         .from('blog_votes')
         .insert({
           submission_id: votingSubmissionId,
-          voter_name: voterName.trim(),
-          voter_email: voterEmail.trim() || null
+          voter_name: voterName.trim()
         });
 
       if (error) {
-        if (error.code === '23505') {
-          toast.error('You have already voted for this submission');
-        } else {
-          throw error;
-        }
+        throw error;
       } else {
+        // Mark as voted in localStorage
+        const newVoted = { ...hasVoted, [votingSubmissionId]: true };
+        setHasVoted(newVoted);
+        if (event) {
+          localStorage.setItem(`votes_${event.id}`, JSON.stringify(newVoted));
+        }
+        
         toast.success('Vote submitted successfully!');
         setVotingSubmissionId(null);
         setVoterName('');
-        setVoterEmail('');
         if (event) {
           fetchLiveSubmissions(event.id);
         }
@@ -661,10 +677,13 @@ export default function EventPage() {
                             <Button
                               size="sm"
                               onClick={() => setVotingSubmissionId(submission.id)}
-                              className="bg-white text-black hover:bg-white/90"
+                              disabled={hasVoted[submission.id]}
+                              className={hasVoted[submission.id] 
+                                ? "bg-white/20 text-white/60 cursor-not-allowed" 
+                                : "bg-white text-black hover:bg-white/90"}
                             >
                               <ThumbsUp className="w-4 h-4 mr-1" />
-                              Vote
+                              {hasVoted[submission.id] ? 'Voted' : 'Vote'}
                             </Button>
                           </div>
                         </div>
@@ -777,17 +796,6 @@ export default function EventPage() {
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="voterEmail" className="text-white/80">Email (optional, for preventing duplicate votes)</Label>
-              <Input
-                id="voterEmail"
-                type="email"
-                value={voterEmail}
-                onChange={(e) => setVoterEmail(e.target.value)}
-                placeholder="your.email@example.com"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-              />
-            </div>
             <Button
               onClick={handleVote}
               disabled={voting || !voterName.trim()}
@@ -823,7 +831,7 @@ export default function EventPage() {
                     <div className="flex-1">
                       <p className="text-white text-sm font-medium">{vote.voter_name}</p>
                       <p className="text-white/40 text-xs">
-                        {format(new Date(vote.created_at), 'MMM d, yyyy')}
+                        {format(new Date(vote.created_at), 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
                   </div>

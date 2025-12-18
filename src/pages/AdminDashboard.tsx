@@ -28,7 +28,8 @@ import {
   Ticket,
   Share2,
   Trophy,
-  Search
+  Search,
+  ThumbsUp
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -388,6 +389,16 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <Share2 className="w-4 h-4 text-blue-400" />
                     Social Screenshots
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/admin/votes">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-pink-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <ThumbsUp className="w-4 h-4 text-pink-400" />
+                    Blog Votes
                   </CardDescription>
                 </CardHeader>
               </Card>
