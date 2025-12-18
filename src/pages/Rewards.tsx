@@ -42,7 +42,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PropAccountClaimDialog } from '@/components/PropAccountClaimDialog';
-import { RewardsSkeleton } from '@/components/RewardsSkeleton';
+import { RocketLoader } from '@/components/RocketLoader';
+import { useCoinSound } from '@/hooks/useCoinSound';
 import { useSEO } from '@/hooks/useSEO';
 
 interface UserCoins {
@@ -125,6 +126,7 @@ const REFERRAL_DOMAIN = 'https://propscholar.space';
 export default function Rewards() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { playCredit, playDebit, playSuccess } = useCoinSound();
   const [userCoins, setUserCoins] = useState<UserCoins | null>(null);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -133,6 +135,7 @@ export default function Rewards() {
   const [socialFollows, setSocialFollows] = useState<SocialFollow[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [claimingSocial, setClaimingSocial] = useState<string | null>(null);
   const [claimingSignup, setClaimingSignup] = useState(false);
@@ -303,6 +306,7 @@ export default function Rewards() {
       
       const result = data as any;
       if (result?.success) {
+        playCredit(); // Play coin credit sound
         toast.success(`Welcome! You earned ${result.coins} Space Coins!`);
         fetchData();
       } else {
@@ -378,6 +382,7 @@ export default function Rewards() {
       
       const result = data as any;
       if (result?.success) {
+        playCredit(); // Play coin credit sound
         toast.success(`Screenshot submitted for ${socialDialog.platform}! Coins will be added after admin approval.`);
         setSocialDialog({ open: false, platform: null });
         setScreenshotFile(null);
@@ -430,6 +435,9 @@ export default function Rewards() {
         return;
       }
 
+      // Play debit sound on successful coin spend
+      playDebit();
+
       // Handle coupon-based rewards
       let couponCode = null;
       let couponId = null;
@@ -455,6 +463,7 @@ export default function Rewards() {
             _source: 'refund',
             _description: 'Refund - No coupon available'
           });
+          playCredit(); // Play credit sound for refund
           return;
         }
 
@@ -485,7 +494,9 @@ export default function Rewards() {
         notes: claimNotes
       });
 
-      // Show success dialog for coupon rewards, toast for prop_account type rewards
+      // Play success sound and show dialog/toast
+      playSuccess();
+      
       if (reward.reward_type === 'prop_account') {
         toast.success(`Your ${reward.name} request has been submitted! You will receive it within 24 hours.`);
       } else {
@@ -541,17 +552,27 @@ export default function Rewards() {
   // Apply SEO
   useSEO();
 
-  if (authLoading || loading) {
+  const [loaderComplete, setLoaderComplete] = useState(false);
+
+  // Hide loader only when both data is ready and loader animation is complete
+  useEffect(() => {
+    if (loaderComplete && !authLoading && !loading) {
+      setShowLoader(false);
+    }
+  }, [loaderComplete, authLoading, loading]);
+
+  if (showLoader) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="pt-24 pb-16 px-4">
-          <div className="max-w-6xl mx-auto">
-            <RewardsSkeleton />
-          </div>
-        </main>
-        <Footer />
-      </div>
+      <>
+        <RocketLoader 
+          minDuration={1800}
+          onComplete={() => setLoaderComplete(true)}
+        />
+        {/* Preload navbar in background */}
+        <div className="opacity-0 pointer-events-none">
+          <Navbar />
+        </div>
+      </>
     );
   }
 

@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Trophy, FileText, Film, Calendar, Clock, User, Phone, Mail, Instagram, Twitter, ExternalLink, Award, Loader2, Coins, CheckCircle, Pencil, Check, X, Camera } from 'lucide-react';
 import { WinnerClaimDialog } from '@/components/WinnerClaimDialog';
-import { DashboardSkeleton } from '@/components/DashboardSkeleton';
+import { RocketLoader } from '@/components/RocketLoader';
 import { useSEO } from '@/hooks/useSEO';
 import { toast } from 'sonner';
 
@@ -329,17 +329,28 @@ const Dashboard = () => {
   // Apply SEO
   useSEO();
 
-  if (authLoading || loading) {
+  const [showLoader, setShowLoader] = useState(true);
+  const [loaderComplete, setLoaderComplete] = useState(false);
+
+  // Hide loader only when both data is ready and loader animation is complete
+  useEffect(() => {
+    if (loaderComplete && !authLoading && !loading) {
+      setShowLoader(false);
+    }
+  }, [loaderComplete, authLoading, loading]);
+
+  if (showLoader) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="pt-24 pb-16 px-4">
-          <div className="max-w-6xl mx-auto">
-            <DashboardSkeleton />
-          </div>
-        </main>
-        <Footer />
-      </div>
+      <>
+        <RocketLoader 
+          minDuration={1800}
+          onComplete={() => setLoaderComplete(true)}
+        />
+        {/* Preload navbar in background */}
+        <div className="opacity-0 pointer-events-none">
+          <Navbar />
+        </div>
+      </>
     );
   }
 
