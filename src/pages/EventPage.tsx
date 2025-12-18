@@ -226,7 +226,7 @@ export default function EventPage() {
         console.log('Participation coins not granted:', coinErr);
       }
 
-      navigate(`/blog/${slug}/success`);
+      navigate(`/blog/${slug}/success`, { state: { name } });
     } catch (err: any) {
       console.error('Error submitting:', err);
       if (err?.message?.includes('Rate limit exceeded')) {
