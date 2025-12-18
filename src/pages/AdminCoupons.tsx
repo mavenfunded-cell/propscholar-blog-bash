@@ -142,6 +142,13 @@ export default function AdminCoupons() {
 
   const deleteCoupon = async (couponId: string) => {
     try {
+      // First, nullify the coupon_id reference in reward_claims to avoid FK constraint
+      await supabase
+        .from('reward_claims')
+        .update({ coupon_id: null })
+        .eq('coupon_id', couponId);
+
+      // Now delete the coupon
       const { error } = await supabase
         .from('coupon_pools')
         .delete()
@@ -149,7 +156,7 @@ export default function AdminCoupons() {
 
       if (error) throw error;
 
-      toast.success('Coupon deleted');
+      toast.success('Coupon deleted permanently');
       fetchCoupons();
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete coupon');
