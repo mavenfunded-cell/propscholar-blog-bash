@@ -98,9 +98,19 @@ export default function Landing() {
   }, []);
 
   useEffect(() => {
-    setupScrollReveal();
-    return () => observerRef.current?.disconnect();
-  }, [setupScrollReveal]);
+    // Only setup scroll reveal after loader is complete and content is rendered
+    if (!loaderComplete) return;
+    
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setupScrollReveal();
+    }, 50);
+    
+    return () => {
+      clearTimeout(timer);
+      observerRef.current?.disconnect();
+    };
+  }, [loaderComplete, setupScrollReveal]);
 
   // Show loader on first visit
   if (showLoader) {
