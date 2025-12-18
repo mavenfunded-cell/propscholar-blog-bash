@@ -5,7 +5,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, PenTool, Video, Sparkles, ExternalLink } from 'lucide-react';
+import { ArrowRight, PenTool, Video, Sparkles, ExternalLink, Coins, Gift, Award, BookOpen, ShoppingBag } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
 
 const competitions = [
@@ -229,6 +229,108 @@ export default function Landing() {
                   </Link>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== SPACE COINS REWARDS ===== */}
+        <section className="py-24 md:py-32">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <div className="reveal-on-scroll inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/20 mb-6 opacity-0 blur-sm translate-y-4 transition-all duration-700">
+                <Coins className="w-4 h-4 text-yellow-500" />
+                <span className="text-yellow-500 text-sm font-medium">Space Coins Rewards</span>
+              </div>
+              <h2 className="reveal-on-scroll text-3xl md:text-4xl font-semibold tracking-tight mb-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-100">
+                Get Rewards Through Space Coins
+              </h2>
+              <p className="reveal-on-scroll text-white/60 text-sm font-light max-w-lg mx-auto opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
+                Earn coins by participating in competitions and redeem them for exclusive rewards
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+              {/* $10K Account */}
+              <div className="reveal-on-scroll opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-[300ms]">
+                <Card className="h-full bg-[#111]/80 backdrop-blur-xl border border-white/10 hover:border-yellow-500/30 transition-all duration-500 hover:-translate-y-1">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mb-4">
+                      <Award className="w-6 h-6 text-yellow-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white/90 mb-2">$10K Account</h3>
+                    <p className="text-white/50 text-sm mb-4 flex-grow">Get a $10,000 funded trading account</p>
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-yellow-500" />
+                      <span className="font-bold text-yellow-500">200 coins</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* $5K Account */}
+              <div className="reveal-on-scroll opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-[400ms]">
+                <Card className="h-full bg-[#111]/80 backdrop-blur-xl border border-white/10 hover:border-green-500/30 transition-all duration-500 hover:-translate-y-1">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-4">
+                      <Gift className="w-6 h-6 text-green-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white/90 mb-2">$5K Account</h3>
+                    <p className="text-white/50 text-sm mb-4 flex-grow">Get a $5,000 funded trading account</p>
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-yellow-500" />
+                      <span className="font-bold text-yellow-500">150 coins</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Journal */}
+              <div className="reveal-on-scroll opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-[500ms]">
+                <Card className="h-full bg-[#111]/80 backdrop-blur-xl border border-white/10 hover:border-blue-500/30 transition-all duration-500 hover:-translate-y-1">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
+                      <BookOpen className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white/90 mb-2">Trading Journal</h3>
+                    <p className="text-white/50 text-sm mb-4 flex-grow">Premium journal to track your trades</p>
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-yellow-500" />
+                      <span className="font-bold text-yellow-500">170 coins</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Merchandise Coming Soon */}
+              <div className="reveal-on-scroll opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-[600ms]">
+                <Card className="h-full bg-[#111]/80 backdrop-blur-xl border border-white/10 relative overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]/90 backdrop-blur-sm z-10">
+                    <Badge className="px-4 py-2 bg-white/10 text-white/80 border border-white/20 backdrop-blur-md tracking-widest text-xs uppercase">
+                      Coming Soon
+                    </Badge>
+                  </div>
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
+                      <ShoppingBag className="w-6 h-6 text-purple-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white/90 mb-2">Merchandise</h3>
+                    <p className="text-white/50 text-sm mb-4 flex-grow">PropScholar branded merchandise</p>
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-white/30" />
+                      <span className="font-bold text-white/30">TBD</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            <div className="text-center mt-12">
+              <Link to="/rewards">
+                <Button className="h-11 px-9 rounded-full bg-yellow-500/90 text-black hover:bg-yellow-500 transition-all backdrop-blur-md shadow-lg shadow-black/30 border-0 text-sm">
+                  Go to Rewards
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
