@@ -235,7 +235,7 @@ export default function Landing() {
                       </div>
                       <div className="flex flex-col items-center text-center pt-4">
                         <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                          <span className="text-lg">🎯</span>
+                          <Award className="w-5 h-5 text-white/60" />
                         </div>
                         <h3 className="text-base font-medium text-white/90 mb-2">Challenges</h3>
                         <p className="text-xs text-white/40 leading-relaxed">
@@ -291,7 +291,7 @@ export default function Landing() {
                       </div>
                       <div className="flex flex-col items-center text-center pt-4">
                         <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                          <span className="text-lg">🚀</span>
+                          <Gift className="w-5 h-5 text-white/60" />
                         </div>
                         <h3 className="text-base font-medium text-white/90 mb-2">Community</h3>
                         <p className="text-xs text-white/40 leading-relaxed">
