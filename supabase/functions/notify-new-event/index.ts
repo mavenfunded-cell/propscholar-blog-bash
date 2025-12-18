@@ -50,6 +50,19 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Fetch the event slug from database
+    const { data: eventData, error: eventError } = await supabase
+      .from("events")
+      .select("slug")
+      .eq("id", event_id)
+      .single();
+
+    if (eventError) {
+      console.error("notify-new-event: Error fetching event slug:", eventError);
+    }
+
+    const eventSlug = eventData?.slug || event_id;
+
     const { data: users, error: usersError } = await supabase
       .from("user_coins")
       .select("email")
@@ -125,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center">
-                          <a href="https://propscholar.space/${event_type === 'reel' ? 'reels' : 'events'}" 
+                          <a href="https://propscholar.space/${event_type === 'reel' ? 'reels' : 'events'}/${eventSlug}" 
                              style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: #ffffff; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px;">
                             View Competition
                           </a>
