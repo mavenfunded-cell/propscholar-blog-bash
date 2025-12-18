@@ -87,36 +87,65 @@ export default function Landing() {
         {/* ===== HERO ===== */}
         <section ref={heroRef} className="relative py-24 md:py-32">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
+            <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
         
-              {/* Top label */}
-              <p className="reveal-on-scroll text-[11px] tracking-[0.32em] uppercase text-white/45 mb-7 font-medium opacity-0 blur-sm translate-y-4 transition-all duration-700">
-                PropScholar Space
-              </p>
+              {/* PropScholar Space Badge */}
+              <motion.div
+                variants={badgeParentVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover="hover"
+                className="
+                  relative mb-6 inline-flex items-center gap-2
+                  rounded-full border border-white/10
+                  bg-white/5 backdrop-blur-md
+                  px-3 py-1.5
+                  text-sm font-medium text-white/80
+                  group overflow-hidden
+                "
+                style={{ transform: "translateZ(60px)" }}
+              >
+                {/* Shine */}
+                <div className="absolute inset-0 -translate-x-full transition-transform duration-700 group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         
-              {/* Single-line Heading */}
+                {/* Icon */}
+                <motion.div
+                  variants={iconPulseVariants}
+                  initial="rest"
+                  className="relative z-10"
+                >
+                  <Zap className="h-4 w-4 text-blue-300" />
+                </motion.div>
+        
+                {/* Text */}
+                <span className="relative z-10 text-[11px] tracking-[0.32em] uppercase text-white/70">
+                  PropScholar Space
+                </span>
+              </motion.div>
+        
+              {/* Heading */}
               <h1
                 className="
                   reveal-on-scroll
-                  text-3xl md:text-5xl lg:text-6xl
+                  text-3xl sm:text-4xl md:text-5xl lg:text-6xl
                   font-light tracking-tight
                   text-center
-                  whitespace-nowrap
-                  mb-7
+                  whitespace-normal md:whitespace-nowrap
+                  mb-6
                 "
               >
                 You Compete.{" "}
                 <span className="font-semibold">We Reward.</span>
               </h1>
         
-              {/* Sub text */}
+              {/* Subtext */}
               <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-lg mx-auto leading-relaxed font-light mb-10 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
                 PropScholar, the leading trading scholarship platform’s Giveaway Hub
                 where participants compete and win exciting rewards.
               </p>
         
               {/* CTAs */}
-              <div className="reveal-on-scroll flex justify-center gap-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-300">
+              <div className="reveal-on-scroll flex flex-wrap justify-center gap-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-300">
                 <Button
                   onClick={scrollToArena}
                   className="h-11 px-9 rounded-full bg-white/90 text-black hover:bg-white transition-all backdrop-blur-md shadow-lg shadow-black/30 border-0 text-sm"
@@ -143,6 +172,7 @@ export default function Landing() {
             </div>
           </div>
         </section>
+
         
 
         {/* ===== COMPETITIONS ===== */}
