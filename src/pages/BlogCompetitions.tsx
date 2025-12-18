@@ -12,6 +12,12 @@ import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, Thu
 import { format } from 'date-fns';
 import { useSEO } from '@/hooks/useSEO';
 
+interface Prize {
+  position: number;
+  title: string;
+  prize: string;
+}
+
 interface Event {
   id: string;
   title: string;
@@ -22,6 +28,7 @@ interface Event {
   end_date: string;
   status: string;
   competition_type: string;
+  prizes: Prize[] | null;
 }
 
 interface LeaderboardEntry {
@@ -55,7 +62,10 @@ export default function BlogCompetitions() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEvents(data || []);
+      setEvents((data || []).map(e => ({
+        ...e,
+        prizes: (e.prizes as unknown) as Prize[] | null
+      })));
       
       // Fetch participant counts for active events
       if (data) {
@@ -460,18 +470,24 @@ export default function BlogCompetitions() {
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Crown className="w-4 h-4 text-yellow-500" />
-                  <span className="text-white/70">1st Place - PropScholar Account + Bonus Coins</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Medal className="w-4 h-4 text-gray-400" />
-                  <span className="text-white/70">2nd Place - Exclusive Coupon + Coins</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Medal className="w-4 h-4 text-amber-600" />
-                  <span className="text-white/70">3rd Place - Special Discount + Coins</span>
-                </div>
+                {selectedRewardEvent?.prizes && selectedRewardEvent.prizes.length > 0 ? (
+                  selectedRewardEvent.prizes.map((prize, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      {prize.position === 1 ? (
+                        <Crown className="w-4 h-4 text-yellow-500" />
+                      ) : prize.position === 2 ? (
+                        <Medal className="w-4 h-4 text-gray-400" />
+                      ) : prize.position === 3 ? (
+                        <Medal className="w-4 h-4 text-amber-600" />
+                      ) : (
+                        <Award className="w-4 h-4 text-white/50" />
+                      )}
+                      <span className="text-white/70">{prize.title} - {prize.prize}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-white/50">Prize details coming soon</p>
+                )}
               </div>
             </div>
 
