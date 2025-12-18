@@ -17,6 +17,15 @@ interface EventNotificationRequest {
   end_date: string;
 }
 
+interface EmailLog {
+  recipient_email: string;
+  subject: string;
+  email_type: string;
+  status: string;
+  error_message?: string;
+  event_id?: string;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("notify-new-event: Function invoked");
   
@@ -70,6 +79,8 @@ const handler = async (req: Request): Promise<Response> => {
     const endDateFormatted = new Date(end_date).toLocaleDateString("en-US", { 
       weekday: "long", year: "numeric", month: "long", day: "numeric" 
     });
+
+    const subject = `New ${eventTypeLabel} - ${event_title}`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -145,11 +156,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     let successCount = 0;
     let errorCount = 0;
-    const subject = `New ${eventTypeLabel} - ${event_title}`;
+    const emailLogs: EmailLog[] = [];
 
     // Send individual emails to each user to protect privacy
-    // Each user only sees their own email address
-    const sendPromises = emails.map(async (email) => {
+    const sendEmail = async (email: string): Promise<{ success: boolean; error?: string }> => {
       try {
         const emailResponse = await fetch(RENDER_BACKEND_URL, {
           method: "POST",
@@ -157,7 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            to: email, // Single recipient - no email exposure
+            to: email,
             subject,
             html: htmlContent,
           }),
@@ -166,32 +176,62 @@ const handler = async (req: Request): Promise<Response> => {
         if (emailResponse.ok) {
           return { success: true };
         } else {
-          console.error(`notify-new-event: Failed to send to ${email}`);
-          return { success: false };
+          const errorText = await emailResponse.text();
+          return { success: false, error: errorText };
         }
       } catch (err) {
-        console.error(`notify-new-event: Error sending to ${email}:`, err);
-        return { success: false };
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
       }
-    });
+    };
 
-    // Process in batches of 10 concurrent requests to avoid overwhelming the server
+    // Process in batches of 10 concurrent requests
     const batchSize = 10;
-    for (let i = 0; i < sendPromises.length; i += batchSize) {
-      const batch = sendPromises.slice(i, i + batchSize);
-      const results = await Promise.all(batch);
+    for (let i = 0; i < emails.length; i += batchSize) {
+      const batch = emails.slice(i, i + batchSize);
+      const results = await Promise.all(batch.map(async (email) => {
+        const result = await sendEmail(email);
+        return { email, ...result };
+      }));
       
       results.forEach(result => {
         if (result.success) {
           successCount++;
+          emailLogs.push({
+            recipient_email: result.email,
+            subject,
+            email_type: 'announcement',
+            status: 'sent',
+            event_id,
+          });
         } else {
           errorCount++;
+          emailLogs.push({
+            recipient_email: result.email,
+            subject,
+            email_type: 'announcement',
+            status: 'failed',
+            error_message: result.error,
+            event_id,
+          });
         }
       });
       
-      // Small delay between batches to prevent rate limiting
-      if (i + batchSize < sendPromises.length) {
+      // Small delay between batches
+      if (i + batchSize < emails.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // Log all email sends to database
+    if (emailLogs.length > 0) {
+      const { error: logError } = await supabase
+        .from('email_logs')
+        .insert(emailLogs);
+      
+      if (logError) {
+        console.error('notify-new-event: Failed to log emails:', logError);
+      } else {
+        console.log(`notify-new-event: Logged ${emailLogs.length} email records`);
       }
     }
 
