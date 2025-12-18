@@ -27,7 +27,9 @@ import {
   Award,
   Upload,
   Image as ImageIcon,
-  PartyPopper
+  PartyPopper,
+  ShoppingBag,
+  BookOpen
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -483,9 +485,9 @@ export default function Rewards() {
         notes: claimNotes
       });
 
-      // Show success dialog for coupon rewards, toast for $10K
+      // Show success dialog for coupon rewards, toast for prop_account type rewards
       if (reward.reward_type === 'prop_account') {
-        toast.success('Your PropScholar $10K Account request has been submitted! You will receive it within 24 hours.');
+        toast.success(`Your ${reward.name} request has been submitted! You will receive it within 24 hours.`);
       } else {
         setSuccessDialog({ open: true, reward, couponCode });
       }
@@ -520,7 +522,11 @@ export default function Rewards() {
     }
   };
 
-  const getRewardIcon = (type: string) => {
+  const getRewardIcon = (type: string, name?: string) => {
+    // Check name for specific rewards
+    if (name?.toLowerCase().includes('journal')) {
+      return <BookOpen className="w-6 h-6" />;
+    }
     switch (type) {
       case 'discount_30':
       case 'discount_50':
@@ -779,7 +785,7 @@ export default function Rewards() {
                         <div className="p-6">
                           <div className="flex items-center gap-3 mb-4">
                             <div className="p-3 rounded-full bg-primary/10 text-primary">
-                              {getRewardIcon(reward.reward_type)}
+                              {getRewardIcon(reward.reward_type, reward.name)}
                             </div>
                             <div>
                               <h3 className="font-semibold text-foreground">{reward.name}</h3>
@@ -819,6 +825,31 @@ export default function Rewards() {
                       </Card>
                     );
                   })}
+                  
+                  {/* Merchandise Coming Soon Card */}
+                  <Card className="overflow-hidden bg-card/50 backdrop-blur-xl border-border/50 relative">
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-sm z-10">
+                      <span className="px-4 py-2 rounded-full bg-primary/10 text-primary text-xs font-medium uppercase tracking-widest">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <div className="p-6 opacity-50">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-3 rounded-full bg-purple-500/10 text-purple-400">
+                          <ShoppingBag className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">PropScholar Merchandise</h3>
+                          <p className="text-xs text-muted-foreground">Exclusive branded items</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">Get exclusive PropScholar branded merchandise including t-shirts, hoodies, and more</p>
+                      <div className="flex items-center gap-1">
+                        <Coins className="w-5 h-5 text-muted-foreground" />
+                        <span className="font-bold text-muted-foreground">TBD</span>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
               )}
             </TabsContent>
@@ -837,7 +868,7 @@ export default function Rewards() {
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-full bg-primary/10 text-primary">
-                            {getRewardIcon(claim.reward?.reward_type)}
+                            {getRewardIcon(claim.reward?.reward_type, claim.reward?.name)}
                           </div>
                           <div>
                             <h4 className="font-semibold text-foreground">{claim.reward?.name}</h4>

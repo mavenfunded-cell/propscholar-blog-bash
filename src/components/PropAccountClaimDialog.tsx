@@ -46,6 +46,9 @@ export function PropAccountClaimDialog({ reward, open, onOpenChange, onSubmit }:
 
   if (!reward) return null;
 
+  const isJournal = reward.name.toLowerCase().includes('journal');
+  const rewardLabel = isJournal ? 'Trading Journal' : reward.name;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -56,10 +59,10 @@ export function PropAccountClaimDialog({ reward, open, onOpenChange, onSubmit }:
             </div>
           </div>
           <DialogTitle className="text-center text-xl">
-            Claim Your $10K Account
+            Claim Your {rewardLabel}
           </DialogTitle>
           <DialogDescription className="text-center">
-            Please provide your details to receive your PropScholar $10K funded account.
+            Please provide your details to receive your {rewardLabel}.
             This will cost <span className="text-yellow-500 font-semibold">{reward.coin_cost} Space Coins</span>.
           </DialogDescription>
         </DialogHeader>
@@ -88,7 +91,10 @@ export function PropAccountClaimDialog({ reward, open, onOpenChange, onSubmit }:
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            Your account will be issued within 24 hours. You'll receive an email with login details.
+            {isJournal 
+              ? "You'll receive your journal access within 24 hours via email."
+              : "Your account will be issued within 24 hours. You'll receive an email with login details."
+            }
           </p>
 
           <Button 
