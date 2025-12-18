@@ -1,120 +1,67 @@
-"use client";
-
-import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
-import {
-  ArrowRight,
-  PenTool,
-  Video,
-  Sparkles,
-  ExternalLink,
-  Zap,
-} from "lucide-react";
-
-import { useSEO } from "@/hooks/useSEO";
-
-/* =======================
-   Motion Variants
-======================= */
-
-const badgeParentVariants = {
-  hidden: { opacity: 0, y: 10, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.45, ease: "easeOut" },
-  },
-  hover: { scale: 1.04 },
-};
-
-const iconPulseVariants = {
-  rest: { scale: 1 },
-  hover: {
-    scale: 1.15,
-    transition: {
-      duration: 0.4,
-      ease: "easeInOut",
-      repeat: Infinity,
-      repeatType: "reverse",
-    },
-  },
-};
-
-/* =======================
-   Data
-======================= */
+import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, PenTool, Video, Sparkles, ExternalLink } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
 
 const competitions = [
   {
-    title: "Blog Competition",
+    title: 'Blog Competition',
     description:
-      "Publish original insights on trading, psychology, and market structure. Quality is rewarded.",
+      'Publish original insights on trading, psychology, and market structure. Quality is rewarded.',
     icon: PenTool,
-    href: "/blog",
-    status: "active",
+    href: '/blog',
+    status: 'active',
   },
   {
-    title: "Reel Competition",
+    title: 'Reel Competition',
     description:
-      "Create short-form educational content that simplifies trading for the community.",
+      'Create short-form educational content that simplifies trading for the community.',
     icon: Video,
-    href: "/reels",
-    status: "coming-soon",
+    href: '/reels',
+    status: 'coming-soon',
   },
   {
-    title: "Quiz Challenge",
+    title: 'Quiz Challenge',
     description:
-      "Compete through structured trading knowledge challenges and rankings.",
+      'Compete through structured trading knowledge challenges and rankings.',
     icon: Sparkles,
-    href: "#",
-    status: "coming-soon",
+    href: '#',
+    status: 'coming-soon',
   },
 ];
 
-/* =======================
-   Helpers
-======================= */
-
 const scrollToArena = () => {
-  const el = document.getElementById("choose-your-arena");
-  el?.scrollIntoView({ behavior: "smooth" });
+  const element = document.getElementById('choose-your-arena');
+  element?.scrollIntoView({ behavior: 'smooth' });
 };
-
-/* =======================
-   Component
-======================= */
 
 export default function Landing() {
   useSEO();
-
   const heroRef = useRef<HTMLDivElement>(null);
   const competitionsRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("reveal-visible");
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: "0px 0px -50px 0px" }
-    );
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px',
+    };
 
-    document
-      .querySelectorAll(".reveal-on-scroll")
-      .forEach((el) => observer.observe(el));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal-visible');
+        }
+      });
+    }, observerOptions);
+
+    const elements = document.querySelectorAll('.reveal-on-scroll');
+    elements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
   }, []);
@@ -137,55 +84,47 @@ export default function Landing() {
         <Navbar />
 
         {/* ===== HERO ===== */}
+        {/* ===== HERO ===== */}
         <section ref={heroRef} className="relative py-24 md:py-32">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
-              {/* Badge */}
-              <motion.div
-                variants={badgeParentVariants}
-                initial="hidden"
-                animate="visible"
-                whileHover="hover"
-                className="relative mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md px-3 py-1.5 text-sm font-medium text-white/80 group overflow-hidden"
-              >
-                <div className="absolute inset-0 -translate-x-full transition-transform duration-700 group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-
-                <motion.div
-                  variants={iconPulseVariants}
-                  initial="rest"
-                  animate="rest"
-                  whileHover="hover"
-                  className="relative z-10"
-                >
-                  <Zap className="h-4 w-4 text-blue-300" />
-                </motion.div>
-
-                <span className="relative z-10 text-[11px] tracking-[0.32em] uppercase text-white/70">
-                  PropScholar Space
-                </span>
-              </motion.div>
-
-              {/* Heading */}
-              <h1 className="reveal-on-scroll text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight mb-6">
-                You Compete. <span className="font-semibold">We Reward.</span>
-              </h1>
-
-              {/* Subtext */}
-              <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-lg mx-auto leading-relaxed font-light mb-10">
-                PropScholar’s giveaway hub where participants compete and win
-                real rewards.
+            <div className="max-w-4xl mx-auto text-center">
+        
+              {/* Top label */}
+              <p className="reveal-on-scroll text-[11px] tracking-[0.32em] uppercase text-white/45 mb-6 font-medium opacity-0 blur-sm translate-y-4 transition-all duration-700">
+                PropScholar Space
               </p>
-
+        
+              {/* Heading */}
+              <h1
+                className="
+                  reveal-on-scroll
+                  text-3xl sm:text-4xl md:text-5xl lg:text-6xl
+                  font-light tracking-tight
+                  text-center
+                  whitespace-normal md:whitespace-nowrap
+                  mb-6
+                "
+              >
+                You Compete.{" "}
+                <span className="font-semibold">We Reward.</span>
+              </h1>
+        
+              {/* Sub text */}
+              <p className="reveal-on-scroll text-sm md:text-base text-white/60 max-w-lg mx-auto leading-relaxed font-light mb-10 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-200">
+                PropScholar, the leading trading scholarship platform’s Giveaway Hub
+                where participants compete and win exciting rewards.
+              </p>
+        
               {/* CTAs */}
-              <div className="reveal-on-scroll flex flex-wrap justify-center gap-4">
+              <div className="reveal-on-scroll flex flex-wrap justify-center gap-4 opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-300">
                 <Button
                   onClick={scrollToArena}
-                  className="h-11 px-9 rounded-full bg-white/90 text-black hover:bg-white"
+                  className="h-11 px-9 rounded-full bg-white/90 text-black hover:bg-white transition-all backdrop-blur-md shadow-lg shadow-black/30 border-0 text-sm"
                 >
                   Explore Competitions
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-
+        
                 <a
                   href="https://propscholar.com"
                   target="_blank"
@@ -193,67 +132,97 @@ export default function Landing() {
                 >
                   <Button
                     variant="outline"
-                    className="h-11 px-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                    className="h-11 px-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 backdrop-blur-md transition-all text-sm"
                   >
                     Visit PropScholar
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
                 </a>
               </div>
+        
             </div>
           </div>
         </section>
 
+
+        
+
         {/* ===== COMPETITIONS ===== */}
-        <section
-          ref={competitionsRef}
-          id="choose-your-arena"
-          className="py-28 md:py-36"
-        >
+        <section ref={competitionsRef} id="choose-your-arena" className="py-28 md:py-36">
           <div className="container mx-auto px-4">
             <div className="text-center mb-24">
-              <h2 className="reveal-on-scroll text-3xl md:text-4xl font-semibold mb-4">
+              <h2 className="reveal-on-scroll text-3xl md:text-4xl font-semibold tracking-tight mb-4 opacity-0 blur-sm translate-y-4 transition-all duration-700">
                 Choose Your Arena
               </h2>
-              <p className="reveal-on-scroll text-white/60 text-sm">
+              <p className="reveal-on-scroll text-white/60 text-sm font-light opacity-0 blur-sm translate-y-4 transition-all duration-700 delay-100">
                 Multiple formats. One standard of excellence.
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto">
-              {competitions.map((c, i) => {
-                const coming = c.status === "coming-soon";
+              {competitions.map((comp, index) => {
+                const isComingSoon = comp.status === 'coming-soon';
 
                 return (
                   <Link
-                    key={c.title}
-                    to={coming ? "#" : c.href}
-                    onClick={(e) => coming && e.preventDefault()}
-                    className={`reveal-on-scroll ${
-                      coming ? "cursor-not-allowed" : ""
-                    }`}
-                    style={{ transitionDelay: `${(i + 2) * 100}ms` }}
+                    key={comp.title}
+                    to={isComingSoon ? '#' : comp.href}
+                    onClick={(e) => isComingSoon && e.preventDefault()}
+                    className={`reveal-on-scroll opacity-0 blur-sm translate-y-4 transition-all duration-700 ${isComingSoon ? 'cursor-not-allowed' : ''}`}
+                    style={{ transitionDelay: `${(index + 2) * 100}ms` }}
                   >
-                    <Card className="relative h-full bg-[#111]/80 backdrop-blur-xl border border-white/10 hover:bg-[#161616] transition-all">
-                      {coming && (
+                    <Card
+                      className={`
+                        relative h-full
+                        bg-[#111]/80
+                        backdrop-blur-xl
+                        border border-white/10
+                        overflow-hidden
+                        ${
+                          isComingSoon
+                            ? ''
+                            : 'transition-all duration-500 hover:-translate-y-1 hover:bg-[#161616] hover:border-white/15 hover:shadow-2xl hover:shadow-black/50'
+                        }
+                      `}
+                    >
+                      {/* COMING SOON OVERLAY - Full blur */}
+                      {isComingSoon && (
                         <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-2xl z-10">
-                          <Badge className="px-5 py-2 bg-white/10 text-white/80 border border-white/20 text-xs uppercase tracking-widest">
+                          <Badge
+                            className="
+                              px-5 py-2
+                              bg-white/10
+                              text-white/80
+                              border border-white/20
+                              backdrop-blur-md
+                              tracking-widest
+                              text-xs
+                              uppercase
+                            "
+                          >
                             Coming Soon
                           </Badge>
                         </div>
                       )}
 
                       <CardContent className="p-10">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-8">
-                          <c.icon className="w-6 h-6 text-white/70" />
+                        <div
+                          className={`
+                            w-12 h-12 rounded-2xl
+                            bg-white/5
+                            border border-white/10
+                            flex items-center justify-center mb-8
+                          `}
+                        >
+                          <comp.icon className="w-6 h-6 text-white/70" />
                         </div>
 
-                        <h3 className="text-lg font-medium mb-4">
-                          {c.title}
+                        <h3 className="text-lg font-medium mb-4 text-white/90">
+                          {comp.title}
                         </h3>
 
-                        <p className="text-white/50 text-sm">
-                          {c.description}
+                        <p className="text-white/50 text-sm leading-relaxed">
+                          {comp.description}
                         </p>
                       </CardContent>
                     </Card>
@@ -266,32 +235,34 @@ export default function Landing() {
 
         {/* ===== CTA ===== */}
         <section ref={ctaRef} className="py-32 md:py-40">
-          <div className="container mx-auto px-4 text-center">
-            <Card className="reveal-on-scroll bg-[#111]/80 backdrop-blur-xl border border-white/10 max-w-2xl mx-auto">
-              <CardContent className="p-16 md:p-20">
-                <h2 className="text-2xl md:text-3xl font-semibold mb-6">
-                  Ready to Compete?
-                </h2>
-                <p className="text-white/50 text-sm mb-12">
-                  Performance deserves visibility. Step into the arena.
-                </p>
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto text-center">
+              <Card className="reveal-on-scroll bg-[#111]/80 backdrop-blur-xl border border-white/10 opacity-0 blur-sm translate-y-4 transition-all duration-700">
+                <CardContent className="p-16 md:p-20">
+                  <h2 className="text-2xl md:text-3xl font-semibold mb-6 text-white/95">
+                    Ready to Compete?
+                  </h2>
+                  <p className="text-white/50 text-sm font-light mb-12">
+                    Performance deserves visibility. Step into the arena.
+                  </p>
 
-                <Button
-                  onClick={scrollToArena}
-                  className="h-12 px-12 rounded-full bg-white text-black hover:bg-white/90"
-                >
-                  Start Now
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button 
+                    onClick={scrollToArena}
+                    className="h-12 px-12 rounded-full bg-white text-black hover:bg-white/90 transition-all shadow-xl shadow-black/40 border-0"
+                  >
+                    Start Now
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
 
         <Footer />
       </div>
 
-      {/* Reveal animation */}
+      {/* CSS for reveal animation */}
       <style>{`
         .reveal-on-scroll {
           opacity: 0;
@@ -300,9 +271,9 @@ export default function Landing() {
           transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .reveal-visible {
-          opacity: 1;
-          filter: blur(0);
-          transform: translateY(0);
+          opacity: 1 !important;
+          filter: blur(0) !important;
+          transform: translateY(0) !important;
         }
       `}</style>
     </div>
