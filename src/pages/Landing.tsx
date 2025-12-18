@@ -382,9 +382,9 @@ export default function Landing() {
         <section className="py-24 md:py-32">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <div className="scroll-reveal inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/[0.08] border border-yellow-500/15 mb-6">
-                <Coins className="w-4 h-4 text-yellow-500/80" />
-                <span className="text-yellow-500/80 text-sm font-medium">Space Coins Rewards</span>
+              <div className="scroll-reveal inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] mb-6">
+                <Coins className="w-4 h-4 text-white/60" />
+                <span className="text-white/60 text-sm font-medium">Space Coins Rewards</span>
               </div>
               <h2 className="scroll-reveal text-3xl md:text-4xl font-semibold tracking-tight mb-4" style={{ transitionDelay: '80ms' }}>
                 Get Rewards Through Space Coins
@@ -414,10 +414,10 @@ export default function Landing() {
 
               {/* $5K Account */}
               <div className="scroll-reveal" style={{ transitionDelay: '280ms' }}>
-                <Card className="h-full bg-[#0f0f0f]/90 border border-white/[0.06] hover:border-green-500/20 transition-all duration-300 hover:-translate-y-0.5">
+                <Card className="h-full bg-[#0f0f0f]/90 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 hover:-translate-y-0.5">
                   <CardContent className="p-6 flex flex-col h-full">
-                    <div className="w-12 h-12 rounded-2xl bg-green-500/[0.08] border border-green-500/15 flex items-center justify-center mb-4">
-                      <Gift className="w-6 h-6 text-green-500/80" />
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4">
+                      <Gift className="w-6 h-6 text-white/60" />
                     </div>
                     <h3 className="text-lg font-medium text-white/90 mb-2">$5K Account</h3>
                     <p className="text-white/45 text-sm mb-4 flex-grow">Get a $5,000 funded trading account</p>
@@ -431,10 +431,10 @@ export default function Landing() {
 
               {/* Journal */}
               <div className="scroll-reveal" style={{ transitionDelay: '360ms' }}>
-                <Card className="h-full bg-[#0f0f0f]/90 border border-white/[0.06] hover:border-blue-500/20 transition-all duration-300 hover:-translate-y-0.5">
+                <Card className="h-full bg-[#0f0f0f]/90 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 hover:-translate-y-0.5">
                   <CardContent className="p-6 flex flex-col h-full">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/[0.08] border border-blue-500/15 flex items-center justify-center mb-4">
-                      <BookOpen className="w-6 h-6 text-blue-500/80" />
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-4">
+                      <BookOpen className="w-6 h-6 text-white/60" />
                     </div>
                     <h3 className="text-lg font-medium text-white/90 mb-2">Trading Journal</h3>
                     <p className="text-white/45 text-sm mb-4 flex-grow">Premium journal to track your trades</p>
