@@ -559,6 +559,78 @@ export default function EventPage() {
               </Card>
             )}
 
+            {/* Live Leaderboard (shown during active competitions) */}
+            {isEventActive && liveSubmissions.length > 0 && (
+              <Card className="mb-8 border-white/10 bg-[#111]/80 backdrop-blur-xl animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Trophy className="w-5 h-5 text-white" />
+                    Live Leaderboard
+                  </CardTitle>
+                  <CardDescription className="text-white/50">
+                    Current standings based on votes • {liveSubmissions.reduce((sum, s) => sum + s.vote_count, 0)} total votes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[...liveSubmissions]
+                      .sort((a, b) => b.vote_count - a.vote_count)
+                      .map((submission, index) => {
+                        const rank = index + 1;
+                        return (
+                          <div 
+                            key={submission.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                              rank === 1 
+                                ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' 
+                                : rank === 2 
+                                  ? 'bg-gradient-to-r from-gray-400/10 to-transparent border-gray-400/30'
+                                  : rank === 3
+                                    ? 'bg-gradient-to-r from-amber-600/10 to-transparent border-amber-600/30'
+                                    : 'bg-white/5 border-white/10'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              rank === 1 
+                                ? 'bg-yellow-500/20' 
+                                : rank === 2 
+                                  ? 'bg-gray-400/20'
+                                  : rank === 3
+                                    ? 'bg-amber-600/20'
+                                    : 'bg-white/10'
+                            }`}>
+                              {rank <= 3 ? (
+                                rank === 1 ? <Crown className="w-4 h-4 text-yellow-500" /> :
+                                rank === 2 ? <Medal className="w-4 h-4 text-gray-400" /> :
+                                <Medal className="w-4 h-4 text-amber-600" />
+                              ) : (
+                                <span className="text-sm font-bold text-white/60">#{rank}</span>
+                              )}
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-semibold text-white">
+                                {submission.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-white truncate">{submission.name}</p>
+                              {submission.blog_title && (
+                                <p className="text-sm text-white/50 truncate">{submission.blog_title}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <ThumbsUp className="w-4 h-4 text-white/40" />
+                              <span className="font-bold text-white">{submission.vote_count}</span>
+                              <span className="text-white/40 text-sm">votes</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Submission Form or Closed Message */}
             {isEventActive ? (
               <>
