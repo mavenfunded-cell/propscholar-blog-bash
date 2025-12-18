@@ -18,7 +18,6 @@ const handler = async (req: Request): Promise<Response> => {
     const payload = await req.json();
     console.log("Received payload:", JSON.stringify(payload, null, 2));
 
-    // Handle Supabase Auth Hook format
     const user = payload.user;
     const emailData = payload.email_data;
 
@@ -29,13 +28,11 @@ const handler = async (req: Request): Promise<Response> => {
     const { token_hash, redirect_to, email_action_type } = emailData;
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 
-    // Build the magic link URL
     const magicLinkUrl = `${supabaseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`;
 
     console.log("Sending magic link to:", user.email);
     console.log("Magic link URL:", magicLinkUrl);
 
-    // Send email via Render backend
     const emailResponse = await fetch(RENDER_BACKEND_URL, {
       method: "POST",
       headers: {
@@ -43,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         to: user.email,
-        subject: "Your Magic Link to Sign In",
+        subject: "Welcome to PropScholar Space - Your Verification Link",
         html: `
           <!DOCTYPE html>
           <html>
@@ -51,25 +48,71 @@ const handler = async (req: Request): Promise<Response> => {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 40px 20px;">
-            <div style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-              <h1 style="color: #18181b; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
-                Sign in to PropScholar
-              </h1>
-              <p style="color: #71717a; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; text-align: center;">
-                Click the button below to securely sign in to your account. This link will expire in 1 hour.
-              </p>
-              <a href="${magicLinkUrl}" style="display: block; background-color: #18181b; color: #ffffff; text-decoration: none; padding: 16px 24px; border-radius: 8px; font-size: 16px; font-weight: 500; text-align: center; margin: 0 0 32px 0;">
-                Sign In
-              </a>
-              <p style="color: #a1a1aa; font-size: 14px; line-height: 1.5; margin: 0; text-align: center;">
-                If you didn't request this email, you can safely ignore it.
-              </p>
-              <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
-              <p style="color: #a1a1aa; font-size: 12px; margin: 0; text-align: center;">
-                PropScholar
-              </p>
-            </div>
+          <body style="margin: 0; padding: 0; background-color: #030014; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #030014; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width: 600px;">
+                    <!-- Logo -->
+                    <tr>
+                      <td align="center" style="padding-bottom: 30px;">
+                        <img src="https://res.cloudinary.com/dzozyqlqr/image/upload/v1765962713/Untitled_design_3_nkt1ky.png" alt="PropScholar Space" width="80" style="display: block;">
+                      </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                      <td style="background: linear-gradient(180deg, #0f0a2e 0%, #1a0a3e 50%, #0a0a1a 100%); border-radius: 16px; padding: 40px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 16px 0; text-align: center;">
+                          Welcome to PropScholar Space
+                        </h1>
+                        
+                        <p style="color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1.6; margin: 0 0 24px 0; text-align: center;">
+                          Your gateway to trading competitions, exclusive rewards, and the PropScholar scholarship program.
+                        </p>
+                        
+                        <!-- Features -->
+                        <div style="background: rgba(139, 92, 246, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                          <p style="color: #a78bfa; font-size: 14px; font-weight: 600; margin: 0 0 12px 0;">What awaits you:</p>
+                          <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 8px 0;">- Compete in Blog and Reel competitions</p>
+                          <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 8px 0;">- Earn Space Coins for participation</p>
+                          <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 8px 0;">- Redeem coins for PropScholar account coupons</p>
+                          <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0;">- Win funded trading accounts</p>
+                        </div>
+                        
+                        <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin: 0 0 24px 0; text-align: center;">
+                          Click the button below to verify your email and start your journey. This link expires in 1 hour.
+                        </p>
+                        
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td align="center">
+                              <a href="${magicLinkUrl}" 
+                                 style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: #ffffff; font-weight: 600; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px;">
+                                Verify and Enter Space
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin: 24px 0 0 0; text-align: center;">
+                          If you did not request this email, you can safely ignore it.
+                        </p>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding-top: 30px; text-align: center;">
+                        <p style="color: rgba(255,255,255,0.3); font-size: 11px; margin: 0;">
+                          PropScholar Space - Where Traders Become Scholars
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
           </html>
         `,
