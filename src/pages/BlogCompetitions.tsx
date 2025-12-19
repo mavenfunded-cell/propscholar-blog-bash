@@ -377,11 +377,11 @@ export default function BlogCompetitions() {
                         key={entry.id}
                         className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                           rank === 1 
-                            ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30' 
+                            ? 'bg-yellow-500/5 border-yellow-500/20' 
                             : rank === 2 
-                              ? 'bg-gradient-to-r from-gray-400/10 to-transparent border-gray-400/30'
+                              ? 'bg-gray-400/5 border-gray-400/20'
                               : rank === 3
-                                ? 'bg-gradient-to-r from-amber-600/10 to-transparent border-amber-600/30'
+                                ? 'bg-amber-600/5 border-amber-600/20'
                                 : 'bg-white/5 border-white/10'
                         }`}
                       >
