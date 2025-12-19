@@ -34,6 +34,7 @@ import AdminSEO from "./pages/AdminSEO";
 import AdminVotes from "./pages/AdminVotes";
 import AdminAddVotes from "./pages/AdminAddVotes";
 import AdminEmails from "./pages/AdminEmails";
+import AdminNotifications from "./pages/AdminNotifications";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/admin/votes" element={<AdminVotes />} />
             <Route path="/admin/add-votes" element={<AdminAddVotes />} />
             <Route path="/admin/emails" element={<AdminEmails />} />
+            <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/blog/:slug" element={<EventPage />} />
             <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
             <Route path="/reels/:slug" element={<ReelEventPage />} />

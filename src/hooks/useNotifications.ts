@@ -10,15 +10,48 @@ export interface Notification {
   message: string;
   action_url: string | null;
   is_read: boolean;
+  is_persistent?: boolean;
+  cta_text?: string | null;
   created_at: string;
+}
+
+export interface TaskNotification {
+  type: string;
+  task_type: string;
+  title: string;
+  message: string;
+  action_url: string;
+  cta_text: string;
+  coins: number;
 }
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [taskNotifications, setTaskNotifications] = useState<TaskNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const { user } = useAuth();
+
+  // Fetch task notifications (pending tasks)
+  const fetchTaskNotifications = useCallback(async () => {
+    if (!user) {
+      setTaskNotifications([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_task_notifications', {
+        _user_id: user.id
+      });
+
+      if (!error && data) {
+        setTaskNotifications(data as unknown as TaskNotification[]);
+      }
+    } catch (err) {
+      console.error('Error fetching task notifications:', err);
+    }
+  }, [user]);
 
   // Fetch unread count only
   const fetchUnreadCount = useCallback(async () => {
@@ -33,8 +66,10 @@ export function useNotifications() {
       .eq('user_id', user.id)
       .eq('is_read', false);
 
-    setUnreadCount(count || 0);
-  }, [user]);
+    // Include task notifications in unread count
+    const taskCount = taskNotifications.length;
+    setUnreadCount((count || 0) + taskCount);
+  }, [user, taskNotifications.length]);
 
   // Fetch notifications list (only when needed)
   const fetchNotifications = useCallback(async () => {
@@ -44,19 +79,24 @@ export function useNotifications() {
     }
 
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
+    
+    // Fetch both regular notifications and task notifications
+    const [{ data, error }, _] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      fetchTaskNotifications()
+    ]);
 
     if (!error && data) {
       setNotifications(data as Notification[]);
       setHasFetched(true);
     }
     setIsLoading(false);
-  }, [user]);
+  }, [user, fetchTaskNotifications]);
 
   // Mark single notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
@@ -82,9 +122,20 @@ export function useNotifications() {
 
     if (!error) {
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
+      // Keep task notifications count as they can't be dismissed
+      setUnreadCount(taskNotifications.length);
     }
-  }, [user]);
+  }, [user, taskNotifications.length]);
+
+  // Refresh task notifications (call after completing a task)
+  const refreshTaskNotifications = useCallback(async () => {
+    await fetchTaskNotifications();
+  }, [fetchTaskNotifications]);
+
+  // Fetch task notifications on mount and user change
+  useEffect(() => {
+    fetchTaskNotifications();
+  }, [fetchTaskNotifications]);
 
   // Fetch unread count on mount and user change
   useEffect(() => {
@@ -120,12 +171,14 @@ export function useNotifications() {
 
   return {
     notifications,
+    taskNotifications,
     unreadCount,
     isLoading,
     hasFetched,
     fetchNotifications,
     fetchUnreadCount,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    refreshTaskNotifications
   };
 }

@@ -434,6 +434,16 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
+            <Link to="/admin/notifications">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-blue-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    Send Notifications
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
           </div>
 
         <Tabs defaultValue="blog" className="space-y-6">
