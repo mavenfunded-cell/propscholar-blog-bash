@@ -30,7 +30,8 @@ import {
   Trophy,
   Search,
   ThumbsUp,
-  Mail
+  Mail,
+  Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -440,6 +441,16 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-blue-400" />
                     Send Notifications
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link to="/admin/analytics">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-emerald-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    User Analytics
                   </CardDescription>
                 </CardHeader>
               </Card>

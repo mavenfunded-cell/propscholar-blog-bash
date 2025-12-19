@@ -269,6 +269,16 @@
     background: radial-gradient(circle, rgba(255,215,0,0.015) 0%, transparent 70%);
   }
 
+  /* Space floating animation */
+  .space-float {
+    animation: spaceFloat 30s ease-in-out infinite;
+  }
+
+  .space-float-delayed {
+    animation: spaceFloat 35s ease-in-out infinite;
+    animation-delay: -15s;
+  }
+
   /* Static grain overlay */
   .grain-overlay {
     position: fixed;
@@ -284,7 +294,9 @@
     .hero-fade-in,
     .hero-fade-in-blur,
     .scroll-reveal,
-    .scroll-reveal-blur {
+    .scroll-reveal-blur,
+    .space-float,
+    .space-float-delayed {
       animation: none;
       opacity: 1;
       transform: none;
@@ -344,6 +356,21 @@
   75% {
     transform: translate(-30px, -10px) scale(1.01);
     opacity: 0.9;
+  }
+}
+
+@keyframes spaceFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -30px) scale(1.05);
+  }
+  50% {
+    transform: translate(-30px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(10px, -15px) scale(1.02);
   }
 }
 

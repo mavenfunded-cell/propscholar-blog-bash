@@ -17,13 +17,14 @@ import {
   Send,
   Share2,
   ListTodo,
-  AlertCircle
+  Pin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications, Notification, TaskNotification } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useCoinSound } from '@/hooks/useCoinSound';
+
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -72,7 +73,6 @@ export function NotificationBell() {
 
   const handleRemoveNotification = async (e: React.MouseEvent, notification: Notification) => {
     e.stopPropagation();
-    // Only allow removal if read and not persistent
     if (notification.is_read && !notification.is_persistent) {
       await removeNotification(notification.id);
     }
@@ -86,7 +86,6 @@ export function NotificationBell() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'coins_earned':
-        return <Coins className="w-4 h-4" />;
       case 'coins_spent':
         return <Coins className="w-4 h-4" />;
       case 'reward_claimed':
@@ -136,12 +135,12 @@ export function NotificationBell() {
           playClick();
           setIsOpen(!isOpen);
         }}
-        className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+        className="relative p-2 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/5 transition-all duration-200"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-primary text-primary-foreground rounded-full">
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[10px] font-medium bg-white text-black rounded-full">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -149,14 +148,14 @@ export function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-h-[70vh] overflow-hidden bg-background border border-border rounded-xl shadow-2xl z-50">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-h-[70vh] overflow-hidden bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-            <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+            <h3 className="text-sm font-medium text-white/80">Notifications</h3>
             {hasUnreadRegular && (
               <button
                 onClick={markAllAsRead}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 Mark all read
@@ -167,49 +166,51 @@ export function NotificationBell() {
           {/* Notifications List */}
           <div className="overflow-y-auto max-h-[50vh] custom-scrollbar">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-5 h-5 border-2 border-muted border-t-primary rounded-full animate-spin" />
+              <div className="flex items-center justify-center py-10">
+                <div className="w-5 h-5 border border-white/20 border-t-white/60 rounded-full animate-spin" />
               </div>
             ) : totalItems === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <Bell className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">No notifications yet</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">We'll notify you when something happens</p>
+              <div className="flex flex-col items-center justify-center py-14 px-4 text-center">
+                <div className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
+                  <Bell className="w-5 h-5 text-white/20" />
+                </div>
+                <p className="text-sm text-white/40 font-light">No notifications yet</p>
+                <p className="text-xs text-white/25 mt-1 font-light">We'll notify you when something happens</p>
               </div>
             ) : (
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-white/[0.04]">
                 {/* Task Notifications (Persistent - Always on top) */}
                 {taskNotifications.map((task, index) => (
                   <div
                     key={`task-${task.task_type}-${index}`}
-                    className="w-full text-left px-4 py-3 bg-primary/5 border-l-2 border-primary"
+                    className="w-full text-left px-4 py-4 bg-white/[0.02] border-l-2 border-white/20"
                   >
                     <div className="flex gap-3">
                       {/* Icon */}
-                      <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.06] text-white/60">
                         {getTaskIcon(task.task_type)}
                       </div>
                       
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">
+                          <p className="text-sm font-medium text-white/80">
                             {task.title}
                           </p>
-                          <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium text-primary bg-primary/10 rounded">
+                          <span className="flex-shrink-0 px-2 py-0.5 text-[10px] font-medium text-white/60 bg-white/[0.06] rounded">
                             +{task.coins}
                           </span>
                         </div>
-                        <p className="text-xs mt-0.5 text-muted-foreground">
+                        <p className="text-xs mt-1 text-white/40 font-light">
                           {task.message}
                         </p>
                         <Button
                           size="sm"
                           onClick={() => handleTaskClick(task)}
-                          className="mt-2 h-7 px-3 text-xs"
+                          className="mt-3 h-7 px-4 text-xs bg-white/10 hover:bg-white/15 text-white/80 border-0"
                         >
                           {task.cta_text}
-                          <ArrowRight className="w-3 h-3 ml-1" />
+                          <ArrowRight className="w-3 h-3 ml-1.5" />
                         </Button>
                       </div>
                     </div>
@@ -220,18 +221,18 @@ export function NotificationBell() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`relative w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors group ${
-                      !notification.is_read ? 'bg-muted/20' : ''
-                    } ${notification.type === 'admin' ? 'border-l-2 border-primary bg-primary/5' : ''}`}
+                    className={`relative w-full text-left px-4 py-3.5 hover:bg-white/[0.02] transition-colors group ${
+                      !notification.is_read ? 'bg-white/[0.01]' : ''
+                    } ${notification.type === 'admin' ? 'border-l-2 border-white/20' : ''}`}
                   >
-                    {/* Remove button - only show for read, non-persistent notifications */}
+                    {/* Remove button */}
                     {notification.is_read && !notification.is_persistent && (
                       <button
                         onClick={(e) => handleRemoveNotification(e, notification)}
-                        className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
                         aria-label="Remove notification"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3 h-3" />
                       </button>
                     )}
                     
@@ -241,8 +242,8 @@ export function NotificationBell() {
                     >
                       <div className="flex gap-3">
                         {/* Icon */}
-                        <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full ${
-                          notification.type === 'admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                        <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full ${
+                          notification.type === 'admin' ? 'bg-white/[0.08] text-white/70' : 'bg-white/[0.04] text-white/40'
                         }`}>
                           {getNotificationIcon(notification.type)}
                         </div>
@@ -250,35 +251,35 @@ export function NotificationBell() {
                         {/* Content */}
                         <div className="flex-1 min-w-0 pr-4">
                           <div className="flex items-start justify-between gap-2">
-                            <p className={`text-sm font-medium truncate ${
-                              !notification.is_read ? 'text-foreground' : 'text-muted-foreground'
+                            <p className={`text-sm truncate ${
+                              !notification.is_read ? 'font-medium text-white/80' : 'font-normal text-white/50'
                             }`}>
                               {notification.title}
                             </p>
                             {!notification.is_read && (
-                              <span className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-primary" />
+                              <span className="flex-shrink-0 w-1.5 h-1.5 mt-2 rounded-full bg-white/60" />
                             )}
                           </div>
-                          <p className={`text-xs mt-0.5 line-clamp-2 ${
-                            !notification.is_read ? 'text-muted-foreground' : 'text-muted-foreground/70'
+                          <p className={`text-xs mt-0.5 line-clamp-2 font-light ${
+                            !notification.is_read ? 'text-white/40' : 'text-white/30'
                           }`}>
                             {notification.message}
                           </p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[10px] text-muted-foreground/50">
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-[10px] text-white/25 font-light">
                               {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                             </span>
                             {notification.action_url && (
-                              <ExternalLink className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
+                              <ExternalLink className="w-2.5 h-2.5 text-white/20" />
                             )}
                             {notification.cta_text && notification.action_url && (
-                              <span className="text-[10px] text-primary font-medium">
+                              <span className="text-[10px] text-white/40 font-medium">
                                 {notification.cta_text}
                               </span>
                             )}
                             {notification.is_persistent && (
-                              <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
-                                <AlertCircle className="w-2.5 h-2.5" />
+                              <span className="text-[10px] text-white/25 flex items-center gap-0.5 font-light">
+                                <Pin className="w-2.5 h-2.5" />
                                 Pinned
                               </span>
                             )}
@@ -294,10 +295,10 @@ export function NotificationBell() {
 
           {/* Footer */}
           {totalItems > 0 && (
-            <div className="px-4 py-2.5 border-t border-border bg-muted/30">
-              <p className="text-[10px] text-muted-foreground/60 text-center">
+            <div className="px-4 py-2.5 border-t border-white/[0.04] bg-white/[0.01]">
+              <p className="text-[10px] text-white/25 text-center font-light">
                 {taskNotifications.length > 0 && (
-                  <span className="text-primary/80">{taskNotifications.length} pending task{taskNotifications.length !== 1 ? 's' : ''} · </span>
+                  <span className="text-white/40">{taskNotifications.length} pending task{taskNotifications.length !== 1 ? 's' : ''} · </span>
                 )}
                 {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
               </p>
