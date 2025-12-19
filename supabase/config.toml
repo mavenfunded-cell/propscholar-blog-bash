@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.notify-referral]
 verify_jwt = false
+
+[functions.notify-blog-vote]
+verify_jwt = false
