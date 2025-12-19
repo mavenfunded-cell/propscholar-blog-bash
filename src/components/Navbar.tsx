@@ -61,8 +61,8 @@ export function Navbar() {
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled 
-          ? 'bg-[#080808]/95 backdrop-blur-2xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]' 
-          : 'bg-transparent backdrop-blur-sm border-b border-transparent'
+          ? 'bg-background/70 backdrop-blur-xl border-b border-border/50 shadow-[0_10px_30px_-18px_hsl(var(--foreground)/0.35)]'
+          : 'bg-background/0 backdrop-blur-sm border-b border-transparent'
       }`}
     >
       <div className="container mx-auto px-4">
