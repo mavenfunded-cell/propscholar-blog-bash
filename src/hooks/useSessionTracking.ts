@@ -3,10 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 const SESSION_KEY = 'ps_session_id';
+const GEO_KEY = 'ps_session_geo_done';
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
 function generateSessionId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function getOrCreateSessionId(): string {
@@ -27,21 +28,33 @@ export function useSessionTracking() {
 
   useEffect(() => {
     const sessionId = sessionIdRef.current;
-    
+
+    const maybeGeoLocate = async () => {
+      // Only do this once per session (cheap + avoids rate limits)
+      if (sessionStorage.getItem(GEO_KEY) === 'true') return;
+      sessionStorage.setItem(GEO_KEY, 'true');
+
+      try {
+        await supabase.functions.invoke('geo-session', {
+          body: { session_id: sessionId },
+        });
+      } catch {
+        // silent
+      }
+    };
+
     const initSession = async () => {
       if (isInitializedRef.current) return;
       isInitializedRef.current = true;
 
       try {
-        // Check if session exists
         const { data: existing } = await supabase
           .from('user_sessions')
-          .select('id')
+          .select('id, page_views, country, city')
           .eq('session_id', sessionId)
-          .single();
+          .maybeSingle();
 
         if (!existing) {
-          // Create new session
           await supabase.from('user_sessions').insert({
             session_id: sessionId,
             user_id: user?.id || null,
@@ -49,16 +62,20 @@ export function useSessionTracking() {
             page_views: 1,
             total_seconds: 0,
           });
+          await maybeGeoLocate();
         } else {
-          // Increment page views
           await supabase
             .from('user_sessions')
             .update({
-              page_views: (existing as any).page_views + 1,
+              page_views: (existing.page_views ?? 1) + 1,
               last_active_at: new Date().toISOString(),
               user_id: user?.id || null,
             })
             .eq('session_id', sessionId);
+
+          if (!existing.country && !existing.city) {
+            await maybeGeoLocate();
+          }
         }
       } catch (err) {
         console.error('Session init error:', err);
@@ -67,7 +84,6 @@ export function useSessionTracking() {
 
     const sendHeartbeat = async () => {
       const now = Date.now();
-      const secondsSinceLastHeartbeat = Math.round((now - lastHeartbeatRef.current) / 1000);
       lastHeartbeatRef.current = now;
 
       try {
@@ -79,51 +95,30 @@ export function useSessionTracking() {
             user_id: user?.id || null,
           })
           .eq('session_id', sessionId);
-      } catch (err) {
-        // Silent fail
+      } catch {
+        // silent
       }
     };
 
     initSession();
 
-    // Heartbeat interval
     const heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
-    // Track visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         sendHeartbeat();
       }
     };
 
-    // Send heartbeat before leaving
-    const handleBeforeUnload = () => {
-      const now = Date.now();
-      const totalSeconds = Math.round((now - startTimeRef.current) / 1000);
-      
-      // Use sendBeacon for reliable delivery
-      const data = JSON.stringify({
-        session_id: sessionId,
-        total_seconds: totalSeconds,
-        last_active_at: new Date().toISOString(),
-      });
-      
-      navigator.sendBeacon(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?session_id=eq.${sessionId}`,
-        data
-      );
-    };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       clearInterval(heartbeatInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
       sendHeartbeat();
     };
   }, [user?.id]);
 
   return sessionIdRef.current;
 }
+

@@ -52,6 +52,7 @@ interface SessionAnalytics {
   session_id: string;
   user_id: string | null;
   user_email: string | null;
+  user_name: string | null;
   started_at: string;
   last_active_at: string;
   total_seconds: number;
@@ -131,18 +132,24 @@ export default function AdminUserAnalytics() {
         .order('total_seconds', { ascending: false })
         .limit(500);
 
-      // Get user emails for sessions
+      // Get user emails + names for sessions
       const userIds = [...new Set((sessionsData || []).filter(s => s.user_id).map(s => s.user_id))];
       let emailMap: Record<string, string> = {};
-      
+      let nameMap: Record<string, string> = {};
+
       if (userIds.length > 0) {
-        const { data: coinsData } = await supabase
-          .from('user_coins')
-          .select('user_id, email')
-          .in('user_id', userIds);
-        
+        const [{ data: coinsData }, { data: profilesData }] = await Promise.all([
+          supabase.from('user_coins').select('user_id, email').in('user_id', userIds),
+          supabase.from('profiles').select('id, full_name').in('id', userIds),
+        ]);
+
         emailMap = (coinsData || []).reduce((acc, c) => {
           acc[c.user_id] = c.email;
+          return acc;
+        }, {} as Record<string, string>);
+
+        nameMap = (profilesData || []).reduce((acc, p) => {
+          if (p.full_name) acc[p.id] = p.full_name;
           return acc;
         }, {} as Record<string, string>);
       }
@@ -152,6 +159,7 @@ export default function AdminUserAnalytics() {
         session_id: s.session_id,
         user_id: s.user_id,
         user_email: s.user_id ? emailMap[s.user_id] : null,
+        user_name: s.user_id ? (nameMap[s.user_id] || null) : null,
         started_at: s.started_at,
         last_active_at: s.last_active_at,
         total_seconds: s.total_seconds,
@@ -209,6 +217,32 @@ export default function AdminUserAnalytics() {
   const avgSessionTime = sessions.length > 0 ? totalSessionTime / sessions.length : 0;
   const totalPageViews = sessions.reduce((sum, s) => sum + s.page_views, 0);
   const loggedInSessions = sessions.filter(s => s.user_id).length;
+
+  const userSessionTotals = Object.values(
+    sessions
+      .filter(s => s.user_id)
+      .reduce((acc, s) => {
+        const key = s.user_id as string;
+        if (!acc[key]) {
+          acc[key] = {
+            user_id: key,
+            user_email: s.user_email,
+            user_name: s.user_name,
+            total_seconds: 0,
+            page_views: 0,
+            sessions: 0,
+            last_active_at: s.last_active_at,
+          };
+        }
+        acc[key].total_seconds += s.total_seconds;
+        acc[key].page_views += s.page_views;
+        acc[key].sessions += 1;
+        if (new Date(s.last_active_at) > new Date(acc[key].last_active_at)) {
+          acc[key].last_active_at = s.last_active_at;
+        }
+        return acc;
+      }, {} as Record<string, any>)
+  ).sort((a: any, b: any) => (sortOrder === 'high' ? b.total_seconds - a.total_seconds : a.total_seconds - b.total_seconds));
 
   if (loading || loadingData) {
     return (
@@ -373,10 +407,14 @@ export default function AdminUserAnalytics() {
                               {index + 1}
                             </TableCell>
                             <TableCell>
-                              {session.user_email ? (
+                              {session.user_id ? (
                                 <div>
-                                  <p className="font-medium text-green-400">{session.user_email}</p>
-                                  <p className="text-xs text-muted-foreground">Logged in</p>
+                                  <p className="font-medium">
+                                    {session.user_name || session.user_email || 'User'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {session.user_email || '—'}
+                                  </p>
                                 </div>
                               ) : (
                                 <div>
@@ -413,6 +451,59 @@ export default function AdminUserAnalytics() {
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground text-sm">
                               {formatDistanceToNow(new Date(session.last_active_at), { addSuffix: true })}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Logged-in Users (aggregated) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Logged-in Users — Total Time on Site
+                </CardTitle>
+                <CardDescription>
+                  Aggregated across sessions (highest to lowest)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right">Total Time</TableHead>
+                        <TableHead className="text-right">Sessions</TableHead>
+                        <TableHead className="text-right">Page Views</TableHead>
+                        <TableHead className="text-right">Last Active</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {userSessionTotals.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No logged-in sessions yet
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        userSessionTotals.slice(0, 100).map((u: any, idx: number) => (
+                          <TableRow key={u.user_id}>
+                            <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
+                            <TableCell className="font-medium">{u.user_name || '—'}</TableCell>
+                            <TableCell className="text-muted-foreground">{u.user_email || '—'}</TableCell>
+                            <TableCell className="text-right font-medium">{formatTime(u.total_seconds)}</TableCell>
+                            <TableCell className="text-right tabular-nums">{u.sessions}</TableCell>
+                            <TableCell className="text-right tabular-nums">{u.page_views}</TableCell>
+                            <TableCell className="text-right text-muted-foreground text-sm">
+                              {formatDistanceToNow(new Date(u.last_active_at), { addSuffix: true })}
                             </TableCell>
                           </TableRow>
                         ))
