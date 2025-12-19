@@ -357,7 +357,7 @@ export default function BlogCompetitions() {
               </div>
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
+          <div className="max-h-[60vh] overflow-y-auto">
             {loadingLeaderboard ? (
               <div className="p-8 text-center">
                 <div className="animate-pulse text-white/50">Loading leaderboard...</div>
@@ -367,7 +367,7 @@ export default function BlogCompetitions() {
                 No submissions yet
               </div>
             ) : (
-              <div className="p-3 sm:p-4 space-y-2">
+              <div className="p-3 sm:p-4 pr-6 space-y-2">
                 {[...leaderboard]
                   .sort((a, b) => b.vote_count - a.vote_count)
                   .map((entry, index) => {
@@ -422,7 +422,7 @@ export default function BlogCompetitions() {
                   })}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 

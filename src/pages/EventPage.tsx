@@ -945,8 +945,8 @@ export default function EventPage() {
               </div>
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="p-3 sm:p-4 space-y-2">
+          <div className="max-h-[60vh] overflow-y-auto">
+            <div className="p-3 sm:p-4 pr-6 space-y-2">
               {[...liveSubmissions]
                 .sort((a, b) => b.vote_count - a.vote_count)
                 .map((submission, index) => {
@@ -1012,7 +1012,7 @@ export default function EventPage() {
                   );
                 })}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
