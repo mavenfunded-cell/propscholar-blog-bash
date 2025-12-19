@@ -17,9 +17,9 @@ import {
   Award,
   BookOpen,
   ShoppingBag,
+  Rocket,
 } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
-import spaceHero from '@/assets/space-hero.jpg';
 
 const competitions = [
   {
@@ -139,26 +139,6 @@ export default function Landing() {
     };
   }, [loaderComplete, setupScrollReveal]);
 
-  // Subtle parallax background (makes changes visibly "live")
-  useEffect(() => {
-    if (!loaderComplete) return;
-
-    let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const y = Math.min(window.scrollY, 1200);
-        document.documentElement.style.setProperty('--landing-parallax', `${y * 0.06}px`);
-      });
-    };
-
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('scroll', onScroll);
-    };
-  }, [loaderComplete]);
 
   // Show loader on first visit
   if (showLoader) {
@@ -169,17 +149,6 @@ export default function Landing() {
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       {/* ===== Premium Space Background ===== */}
       <div className="fixed inset-0 pointer-events-none">
-        {/* Hero image layer (parallax) */}
-        <div
-          className="absolute inset-0 opacity-[0.16]"
-          style={{
-            backgroundImage: `url(${spaceHero})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            transform: 'translate3d(0, calc(var(--landing-parallax, 0px) * -1), 0)',
-          }}
-        />
-
         {/* Base depth gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
 
@@ -207,14 +176,15 @@ export default function Landing() {
 
       <div className="relative z-10 pt-16 text-foreground">
         <Navbar />
-
-        {/* Visible build marker (helps confirm changes are live) */}
-        <div className="fixed bottom-4 right-4 z-50 rounded-full border border-border/60 bg-card/70 backdrop-blur px-3 py-1 text-[10px] tracking-widest text-muted-foreground animate-fade-in">
-          HOME V2
-        </div>
-
         {/* ===== HERO ===== */}
         <section className="relative py-24 md:py-32">
+          {/* Calm rocket accent (decorative) */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute left-1/2 top-10 -translate-x-1/2 opacity-[0.10] hero-rocket-float">
+              <Rocket className="h-20 w-20" style={{ transform: 'rotate(-30deg)' }} />
+            </div>
+          </div>
+
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
         

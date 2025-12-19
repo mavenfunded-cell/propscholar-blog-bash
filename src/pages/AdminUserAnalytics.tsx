@@ -232,14 +232,26 @@ export default function AdminUserAnalytics() {
             page_views: 0,
             sessions: 0,
             last_active_at: s.last_active_at,
+            country: s.country || null,
+            city: s.city || null,
           };
         }
         acc[key].total_seconds += s.total_seconds;
         acc[key].page_views += s.page_views;
         acc[key].sessions += 1;
+
+        // Keep newest last_active + location from newest session that has it
         if (new Date(s.last_active_at) > new Date(acc[key].last_active_at)) {
           acc[key].last_active_at = s.last_active_at;
+          if (s.city || s.country) {
+            acc[key].city = s.city || null;
+            acc[key].country = s.country || null;
+          }
+        } else if (!acc[key].city && !acc[key].country && (s.city || s.country)) {
+          acc[key].city = s.city || null;
+          acc[key].country = s.country || null;
         }
+
         return acc;
       }, {} as Record<string, any>)
   ).sort((a: any, b: any) => (sortOrder === 'high' ? b.total_seconds - a.total_seconds : a.total_seconds - b.total_seconds));
@@ -475,37 +487,48 @@ export default function AdminUserAnalytics() {
               <CardContent>
                 <div className="rounded-md border">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">#</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead className="text-right">Total Time</TableHead>
-                        <TableHead className="text-right">Sessions</TableHead>
-                        <TableHead className="text-right">Page Views</TableHead>
-                        <TableHead className="text-right">Last Active</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">#</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead className="text-right">Total Time</TableHead>
+                          <TableHead className="text-right">Sessions</TableHead>
+                          <TableHead className="text-right">Page Views</TableHead>
+                          <TableHead className="text-right">Last Active</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {userSessionTotals.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                             No logged-in sessions yet
                           </TableCell>
                         </TableRow>
                       ) : (
                         userSessionTotals.slice(0, 100).map((u: any, idx: number) => (
-                          <TableRow key={u.user_id}>
-                            <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
-                            <TableCell className="font-medium">{u.user_name || '—'}</TableCell>
-                            <TableCell className="text-muted-foreground">{u.user_email || '—'}</TableCell>
-                            <TableCell className="text-right font-medium">{formatTime(u.total_seconds)}</TableCell>
-                            <TableCell className="text-right tabular-nums">{u.sessions}</TableCell>
-                            <TableCell className="text-right tabular-nums">{u.page_views}</TableCell>
-                            <TableCell className="text-right text-muted-foreground text-sm">
-                              {formatDistanceToNow(new Date(u.last_active_at), { addSuffix: true })}
-                            </TableCell>
-                          </TableRow>
+                            <TableRow key={u.user_id}>
+                              <TableCell className="font-medium text-muted-foreground">{idx + 1}</TableCell>
+                              <TableCell className="font-medium">{u.user_name || '—'}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.user_email || '—'}</TableCell>
+                              <TableCell>
+                                {u.city || u.country ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <span className="text-sm">{[u.city, u.country].filter(Boolean).join(', ')}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{formatTime(u.total_seconds)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{u.sessions}</TableCell>
+                              <TableCell className="text-right tabular-nums">{u.page_views}</TableCell>
+                              <TableCell className="text-right text-muted-foreground text-sm">
+                                {formatDistanceToNow(new Date(u.last_active_at), { addSuffix: true })}
+                              </TableCell>
+                            </TableRow>
                         ))
                       )}
                     </TableBody>
