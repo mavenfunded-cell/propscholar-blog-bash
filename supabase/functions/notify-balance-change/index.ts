@@ -24,11 +24,11 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  try {
     const { user_id, amount, transaction_type, source, description, new_balance }: BalanceChangeRequest = await req.json();
     
     console.log(`notify-balance-change: Processing for user ${user_id}, amount: ${amount}, type: ${transaction_type}`);
@@ -82,6 +82,8 @@ const handler = async (req: Request): Promise<Response> => {
     };
     const sourceLabel = sourceLabels[source] || source.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
+    const emailSubject = `You ${action} ${amount} Space Coins`;
+
     console.log(`notify-balance-change: Sending email to ${email}`);
 
     const emailResponse = await fetch(RENDER_BACKEND_URL, {
@@ -91,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         to: email,
-        subject: `You ${action} ${amount} Space Coins`,
+        subject: emailSubject,
         html: `
           <!DOCTYPE html>
           <html>
@@ -196,7 +198,25 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const emailResult = await emailResponse.json();
-    console.log("notify-balance-change: Email sent successfully:", emailResult);
+    const emailStatus = emailResult.success ? 'sent' : 'failed';
+    console.log("notify-balance-change: Email response:", emailResult);
+
+    // Log the email to email_logs table
+    const { error: logError } = await supabase
+      .from('email_logs')
+      .insert({
+        recipient_email: email,
+        subject: emailSubject,
+        email_type: 'balance_change',
+        status: emailStatus,
+        error_message: emailResult.success ? null : JSON.stringify(emailResult),
+      });
+
+    if (logError) {
+      console.error("notify-balance-change: Failed to log email:", logError);
+    } else {
+      console.log("notify-balance-change: Email logged successfully");
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

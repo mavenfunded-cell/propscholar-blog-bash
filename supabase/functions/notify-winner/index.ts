@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RENDER_BACKEND_URL = "https://propscholar-blog-bash.onrender.com";
 
@@ -13,6 +14,7 @@ interface WinnerNotificationRequest {
   position: number;
   event_title: string;
   winner_type: string;
+  event_id?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,8 +24,12 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
-    const { email, name, position, event_title, winner_type }: WinnerNotificationRequest = await req.json();
+    const { email, name, position, event_title, winner_type, event_id }: WinnerNotificationRequest = await req.json();
     
     console.log(`notify-winner: Processing for ${email}, position: ${position}, event: ${event_title}`);
 
@@ -37,6 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const positionText = position === 1 ? "1st Place" : position === 2 ? "2nd Place" : "3rd Place";
     const competitionType = winner_type === 'blog' ? 'Blog Competition' : 'Reel Competition';
+    const emailSubject = `Congratulations - You Won ${positionText} in ${event_title}`;
 
     console.log(`notify-winner: Sending email to ${email}`);
 
@@ -47,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         to: email,
-        subject: `Congratulations - You Won ${positionText} in ${event_title}`,
+        subject: emailSubject,
         html: `
           <!DOCTYPE html>
           <html>
@@ -154,7 +161,26 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const emailResult = await emailResponse.json();
-    console.log("notify-winner: Email sent successfully:", emailResult);
+    const emailStatus = emailResult.success ? 'sent' : 'failed';
+    console.log("notify-winner: Email response:", emailResult);
+
+    // Log the email to email_logs table
+    const { error: logError } = await supabase
+      .from('email_logs')
+      .insert({
+        recipient_email: email,
+        subject: emailSubject,
+        email_type: 'winner_notification',
+        status: emailStatus,
+        event_id: event_id || null,
+        error_message: emailResult.success ? null : JSON.stringify(emailResult),
+      });
+
+    if (logError) {
+      console.error("notify-winner: Failed to log email:", logError);
+    } else {
+      console.log("notify-winner: Email logged successfully");
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

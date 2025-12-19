@@ -21,6 +21,10 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     const { referrer_id, referred_email, coins_earned }: ReferralNotificationRequest = await req.json();
     
@@ -35,10 +39,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get referrer's email from user_coins
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data: referrerData, error: referrerError } = await supabase
       .from('user_coins')
       .select('email')
@@ -56,6 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
     const referrerEmail = referrerData.email;
     // Mask the referred email for privacy (show first 2 chars and domain)
     const maskedEmail = referred_email.replace(/^(.{2})(.*)(@.*)$/, "$1***$3");
+    const emailSubject = `You earned ${coins_earned} coins from a referral`;
 
     console.log(`notify-referral: Sending email to ${referrerEmail}`);
 
@@ -66,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         to: referrerEmail,
-        subject: `You earned ${coins_earned} coins from a referral`,
+        subject: emailSubject,
         html: `
           <!DOCTYPE html>
           <html>
@@ -173,7 +174,25 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const emailResult = await emailResponse.json();
-    console.log("notify-referral: Email sent successfully:", emailResult);
+    const emailStatus = emailResult.success ? 'sent' : 'failed';
+    console.log("notify-referral: Email response:", emailResult);
+
+    // Log the email to email_logs table
+    const { error: logError } = await supabase
+      .from('email_logs')
+      .insert({
+        recipient_email: referrerEmail,
+        subject: emailSubject,
+        email_type: 'referral_notification',
+        status: emailStatus,
+        error_message: emailResult.success ? null : JSON.stringify(emailResult),
+      });
+
+    if (logError) {
+      console.error("notify-referral: Failed to log email:", logError);
+    } else {
+      console.log("notify-referral: Email logged successfully");
+    }
 
     return new Response(
       JSON.stringify({ success: true }),
