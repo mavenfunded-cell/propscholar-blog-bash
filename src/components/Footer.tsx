@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Instagram, Twitter, MessageSquare, Shield, Mail } from 'lucide-react';
+import { PropScholarInvitation } from '@/components/PropScholarInvitation';
 
 export function Footer() {
   const socialLinks = [
@@ -21,7 +22,12 @@ export function Footer() {
       {/* Subtle gradient line at top */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-      <div className="container mx-auto px-4 py-12 relative">
+      {/* PropScholar Invitation Banner */}
+      <div className="container mx-auto px-4 pt-12 pb-6">
+        <PropScholarInvitation variant="compact" />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 relative">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Company */}
           <div>

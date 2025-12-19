@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { PropScholarInvitation } from '@/components/PropScholarInvitation';
 
 interface Event {
   id: string;
@@ -195,6 +196,15 @@ export default function Index() {
             </div>
           </section>
         )}
+
+        {/* PropScholar Invitation */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <PropScholarInvitation />
+            </div>
+          </div>
+        </section>
 
         {/* Empty State */}
         {events.length === 0 && !loading && (
