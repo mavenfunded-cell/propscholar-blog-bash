@@ -12,27 +12,8 @@ export function ReferralCTA() {
   const [copied, setCopied] = useState(false);
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
-  const handleClick = async () => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    // Fetch referral code if not already loaded
-    if (!referralCode) {
-      const { data } = await supabase
-        .from('user_coins')
-        .select('referral_code')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (data?.referral_code) {
-        setReferralCode(data.referral_code);
-        copyToClipboard(`${window.location.origin}/auth?ref=${data.referral_code}`);
-      }
-    } else {
-      copyToClipboard(`${window.location.origin}/auth?ref=${referralCode}`);
-    }
+  const handleClick = () => {
+    navigate('/rewards');
   };
 
   const copyToClipboard = (text: string) => {
