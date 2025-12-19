@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
   Bell, 
-  Check, 
   CheckCheck, 
   ExternalLink, 
   ArrowRight, 
@@ -24,11 +23,12 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications, Notification, TaskNotification } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-
+import { useCoinSound } from '@/hooks/useCoinSound';
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { playClick } = useCoinSound();
   
   const {
     notifications,
@@ -132,7 +132,10 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          playClick();
+          setIsOpen(!isOpen);
+        }}
         className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         aria-label="Notifications"
       >
