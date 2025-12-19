@@ -13,7 +13,7 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://tisijoiblvcrigwhzprn.supabase.co/functions/v1/sitemap
+Sitemap: https://api.propscholar.space/functions/v1/sitemap
 
 # Disallow admin pages
 Disallow: /admin/
