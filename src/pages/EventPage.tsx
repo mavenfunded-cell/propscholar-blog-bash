@@ -931,7 +931,7 @@ export default function EventPage() {
 
       {/* Leaderboard Modal */}
       <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[85vh] !bg-[#111111] border-white/10 p-0 overflow-hidden mx-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] !bg-[#111111] border-white/10 p-0 overflow-hidden">
           <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-white/10">
             <DialogTitle className="text-white flex items-center gap-3">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-yellow-500/20 to-amber-600/20 flex items-center justify-center flex-shrink-0">
@@ -986,13 +986,13 @@ export default function EventPage() {
                           {submission.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </span>
                       </div>
-                      <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium text-white text-sm sm:text-base truncate">{submission.name}</p>
                         {submission.blog_title && (
                           <p className="text-xs sm:text-sm text-white/50 truncate">{submission.blog_title}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-1">
                         <button
                           onClick={() => {
                             setSelectedLiveSubmission(submission);
@@ -1003,8 +1003,8 @@ export default function EventPage() {
                         >
                           <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/60" />
                         </button>
-                        <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-white/5">
-                          <ThumbsUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/40" />
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/5">
+                          <ThumbsUp className="w-3 h-3 text-white/40" />
                           <span className="text-xs sm:text-sm font-bold text-white">{submission.vote_count}</span>
                         </div>
                       </div>
