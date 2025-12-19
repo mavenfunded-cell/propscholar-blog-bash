@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, ArrowRight, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { PropScholarInvitation } from '@/components/PropScholarInvitation';
+import { ReferralCTA } from '@/components/ReferralCTA';
 
 interface Event {
   id: string;
@@ -196,6 +197,9 @@ export default function Index() {
             </div>
           </section>
         )}
+
+        {/* Referral CTA */}
+        <ReferralCTA />
 
         {/* PropScholar Invitation */}
         <section className="py-16">
