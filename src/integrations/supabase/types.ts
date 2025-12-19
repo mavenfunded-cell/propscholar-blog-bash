@@ -799,6 +799,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          last_active_at: string
+          page_views: number
+          session_id: string
+          started_at: string
+          total_seconds: number
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          last_active_at?: string
+          page_views?: number
+          session_id: string
+          started_at?: string
+          total_seconds?: number
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          last_active_at?: string
+          page_views?: number
+          session_id?: string
+          started_at?: string
+          total_seconds?: number
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       winner_claims: {
         Row: {
           admin_notes: string | null

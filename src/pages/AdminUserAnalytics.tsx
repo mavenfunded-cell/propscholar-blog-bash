@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   LogOut, 
   ArrowLeft,
@@ -14,9 +15,11 @@ import {
   Users,
   TrendingUp,
   ArrowUpDown,
-  FileText
+  FileText,
+  Eye,
+  Monitor
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
   Table,
   TableBody,
@@ -44,14 +47,29 @@ interface SubmissionAnalytics {
   event_id: string;
 }
 
+interface SessionAnalytics {
+  id: string;
+  session_id: string;
+  user_id: string | null;
+  user_email: string | null;
+  started_at: string;
+  last_active_at: string;
+  total_seconds: number;
+  page_views: number;
+  country: string | null;
+  city: string | null;
+}
+
 export default function AdminUserAnalytics() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<SubmissionAnalytics[]>([]);
+  const [sessions, setSessions] = useState<SessionAnalytics[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [sortOrder, setSortOrder] = useState<'high' | 'low'>('high');
   const [filterEvent, setFilterEvent] = useState<string>('all');
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
+  const [activeTab, setActiveTab] = useState('sessions');
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -105,6 +123,44 @@ export default function AdminUserAnalytics() {
       }));
 
       setSubmissions(formatted);
+
+      // Fetch sessions
+      const { data: sessionsData } = await supabase
+        .from('user_sessions')
+        .select('*')
+        .order('total_seconds', { ascending: false })
+        .limit(500);
+
+      // Get user emails for sessions
+      const userIds = [...new Set((sessionsData || []).filter(s => s.user_id).map(s => s.user_id))];
+      let emailMap: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: coinsData } = await supabase
+          .from('user_coins')
+          .select('user_id, email')
+          .in('user_id', userIds);
+        
+        emailMap = (coinsData || []).reduce((acc, c) => {
+          acc[c.user_id] = c.email;
+          return acc;
+        }, {} as Record<string, string>);
+      }
+
+      const formattedSessions = (sessionsData || []).map((s: any) => ({
+        id: s.id,
+        session_id: s.session_id,
+        user_id: s.user_id,
+        user_email: s.user_id ? emailMap[s.user_id] : null,
+        started_at: s.started_at,
+        last_active_at: s.last_active_at,
+        total_seconds: s.total_seconds,
+        page_views: s.page_views,
+        country: s.country,
+        city: s.city,
+      }));
+
+      setSessions(formattedSessions);
     } catch (err) {
       console.error('Error fetching analytics:', err);
     } finally {
@@ -140,9 +196,19 @@ export default function AdminUserAnalytics() {
       return sortOrder === 'high' ? bTime - aTime : aTime - bTime;
     });
 
+  const sortedSessions = [...sessions].sort((a, b) => {
+    return sortOrder === 'high' ? b.total_seconds - a.total_seconds : a.total_seconds - b.total_seconds;
+  });
+
   const totalTimeSpent = filteredSubmissions.reduce((sum, s) => sum + (s.time_spent_seconds || 0), 0);
   const avgTimeSpent = filteredSubmissions.length > 0 ? totalTimeSpent / filteredSubmissions.length : 0;
   const submissionsWithTime = filteredSubmissions.filter(s => s.time_spent_seconds && s.time_spent_seconds > 0).length;
+
+  // Session stats
+  const totalSessionTime = sessions.reduce((sum, s) => sum + s.total_seconds, 0);
+  const avgSessionTime = sessions.length > 0 ? totalSessionTime / sessions.length : 0;
+  const totalPageViews = sessions.reduce((sum, s) => sum + s.page_views, 0);
+  const loggedInSessions = sessions.filter(s => s.user_id).length;
 
   if (loading || loadingData) {
     return (
@@ -183,200 +249,362 @@ export default function AdminUserAnalytics() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold mb-2">User Analytics</h1>
-          <p className="text-muted-foreground">Track user engagement and time spent on submissions</p>
+          <p className="text-muted-foreground">Track website sessions and user engagement</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-400" />
-                Total Submissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">{filteredSubmissions.length}</p>
-            </CardContent>
-          </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="sessions" className="flex items-center gap-2">
+              <Monitor className="w-4 h-4" />
+              Website Sessions
+            </TabsTrigger>
+            <TabsTrigger value="submissions" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Blog Time
+            </TabsTrigger>
+          </TabsList>
 
-          <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-green-400" />
-                Avg. Time Spent
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">{formatTime(Math.round(avgTimeSpent))}</p>
-            </CardContent>
-          </Card>
+          {/* Sessions Tab */}
+          <TabsContent value="sessions" className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    Total Sessions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{sessions.length}</p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-purple-400" />
-                Total Time Tracked
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">{formatTime(totalTimeSpent)}</p>
-            </CardContent>
-          </Card>
+              <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-green-400" />
+                    Avg. Session Time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{formatTime(Math.round(avgSessionTime))}</p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-gradient-to-br from-amber-500/10 to-transparent border-amber-500/20">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-amber-400" />
-                With Time Data
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">{submissionsWithTime}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {filteredSubmissions.length > 0 ? Math.round((submissionsWithTime / filteredSubmissions.length) * 100) : 0}% of submissions
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-purple-400" />
+                    Total Page Views
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{totalPageViews.toLocaleString()}</p>
+                </CardContent>
+              </Card>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Sort by time:</span>
-            <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'high' | 'low')}>
-              <SelectTrigger className="w-40">
-                <ArrowUpDown className="w-4 h-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="high">High to Low</SelectItem>
-                <SelectItem value="low">Low to High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <Card className="bg-gradient-to-br from-amber-500/10 to-transparent border-amber-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-amber-400" />
+                    Logged In Users
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{loggedInSessions}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {sessions.length > 0 ? Math.round((loggedInSessions / sessions.length) * 100) : 0}% of sessions
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Filter by event:</span>
-            <Select value={filterEvent} onValueChange={setFilterEvent}>
-              <SelectTrigger className="w-60">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                {events.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+            {/* Sort Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Sort by time:</span>
+              <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'high' | 'low')}>
+                <SelectTrigger className="w-40">
+                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High to Low</SelectItem>
+                  <SelectItem value="low">Low to High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Time Spent Analysis
-            </CardTitle>
-            <CardDescription>
-              Submissions sorted by time spent writing
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Event</TableHead>
-                    <TableHead className="text-right">Time Spent</TableHead>
-                    <TableHead className="text-right">Words</TableHead>
-                    <TableHead className="text-right">Words/Min</TableHead>
-                    <TableHead className="text-right">Submitted</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSubmissions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No submissions found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredSubmissions.map((submission, index) => {
-                      const wordsPerMin = submission.time_spent_seconds && submission.time_spent_seconds > 0
-                        ? Math.round((submission.word_count / submission.time_spent_seconds) * 60)
-                        : null;
-                      
-                      return (
-                        <TableRow key={submission.id}>
-                          <TableCell className="font-medium text-muted-foreground">
-                            {index + 1}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{submission.name}</p>
-                              <p className="text-xs text-muted-foreground">{submission.email}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-normal">
-                              {submission.event_title}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {submission.time_spent_seconds ? (
-                              <span className={`font-medium ${
-                                submission.time_spent_seconds > 3600 ? 'text-green-500' :
-                                submission.time_spent_seconds > 1800 ? 'text-blue-500' :
-                                submission.time_spent_seconds > 600 ? 'text-amber-500' : 'text-muted-foreground'
-                              }`}>
-                                {formatTime(submission.time_spent_seconds)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {submission.word_count.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {wordsPerMin !== null ? (
-                              <span className={wordsPerMin > 50 ? 'text-amber-500' : ''}>
-                                {wordsPerMin}
-                              </span>
-                            ) : '-'}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground text-sm">
-                            {format(new Date(submission.submitted_at), 'MMM d, HH:mm')}
+            {/* Sessions Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Monitor className="w-5 h-5" />
+                  Website Sessions
+                </CardTitle>
+                <CardDescription>
+                  Time spent on website by visitors
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead className="text-right">Time on Site</TableHead>
+                        <TableHead className="text-right">Page Views</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead className="text-right">Last Active</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedSessions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No sessions tracked yet
                           </TableCell>
                         </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                      ) : (
+                        sortedSessions.slice(0, 100).map((session, index) => (
+                          <TableRow key={session.id}>
+                            <TableCell className="font-medium text-muted-foreground">
+                              {index + 1}
+                            </TableCell>
+                            <TableCell>
+                              {session.user_email ? (
+                                <div>
+                                  <p className="font-medium text-green-400">{session.user_email}</p>
+                                  <p className="text-xs text-muted-foreground">Logged in</p>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="text-muted-foreground">Anonymous</p>
+                                  <p className="text-xs text-muted-foreground/50 truncate max-w-[120px]">
+                                    {session.session_id.slice(0, 12)}...
+                                  </p>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-medium ${
+                                session.total_seconds > 600 ? 'text-green-500' :
+                                session.total_seconds > 180 ? 'text-blue-500' :
+                                session.total_seconds > 60 ? 'text-amber-500' : 'text-muted-foreground'
+                              }`}>
+                                {formatTime(session.total_seconds)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {session.page_views}
+                            </TableCell>
+                            <TableCell>
+                              {session.city || session.country ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                                  <span className="text-sm">
+                                    {[session.city, session.country].filter(Boolean).join(', ')}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground text-sm">
+                              {formatDistanceToNow(new Date(session.last_active_at), { addSuffix: true })}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Note about location */}
-        <Card className="mt-6 border-amber-500/20 bg-amber-500/5">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Globe className="w-5 h-5 text-amber-500" />
-              Location Tracking
-            </CardTitle>
-            <CardDescription>
-              Location data requires additional user consent and IP geolocation service integration. 
-              Currently tracking time spent on submissions. Contact support to enable location tracking.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+          {/* Submissions Tab */}
+          <TabsContent value="submissions" className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    Total Submissions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{filteredSubmissions.length}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-green-400" />
+                    Avg. Writing Time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{formatTime(Math.round(avgTimeSpent))}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-purple-400" />
+                    Total Writing Time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{formatTime(totalTimeSpent)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-amber-500/10 to-transparent border-amber-500/20">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-amber-400" />
+                    With Time Data
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold">{submissionsWithTime}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {filteredSubmissions.length > 0 ? Math.round((submissionsWithTime / filteredSubmissions.length) * 100) : 0}% of submissions
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort by time:</span>
+                <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'high' | 'low')}>
+                  <SelectTrigger className="w-40">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">High to Low</SelectItem>
+                    <SelectItem value="low">Low to High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Filter by event:</span>
+                <Select value={filterEvent} onValueChange={setFilterEvent}>
+                  <SelectTrigger className="w-60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Events</SelectItem>
+                    {events.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Writing Time Analysis
+                </CardTitle>
+                <CardDescription>
+                  Time spent writing blog submissions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead className="text-right">Time Spent</TableHead>
+                        <TableHead className="text-right">Words</TableHead>
+                        <TableHead className="text-right">Words/Min</TableHead>
+                        <TableHead className="text-right">Submitted</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSubmissions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No submissions found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredSubmissions.map((submission, index) => {
+                          const wordsPerMin = submission.time_spent_seconds && submission.time_spent_seconds > 0
+                            ? Math.round((submission.word_count / submission.time_spent_seconds) * 60)
+                            : null;
+                          
+                          return (
+                            <TableRow key={submission.id}>
+                              <TableCell className="font-medium text-muted-foreground">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{submission.name}</p>
+                                  <p className="text-xs text-muted-foreground">{submission.email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="font-normal">
+                                  {submission.event_title}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {submission.time_spent_seconds ? (
+                                  <span className={`font-medium ${
+                                    submission.time_spent_seconds > 3600 ? 'text-green-500' :
+                                    submission.time_spent_seconds > 1800 ? 'text-blue-500' :
+                                    submission.time_spent_seconds > 600 ? 'text-amber-500' : 'text-muted-foreground'
+                                  }`}>
+                                    {formatTime(submission.time_spent_seconds)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {submission.word_count.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {wordsPerMin !== null ? (
+                                  <span className={wordsPerMin > 50 ? 'text-amber-500' : ''}>
+                                    {wordsPerMin}
+                                  </span>
+                                ) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground text-sm">
+                                {format(new Date(submission.submitted_at), 'MMM d, HH:mm')}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

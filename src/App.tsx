@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
+import { useSessionTracking } from "@/hooks/useSessionTracking";
 import Landing from "./pages/Landing";
 import BlogCompetitions from "./pages/BlogCompetitions";
 import ReelCompetitions from "./pages/ReelCompetitions";
@@ -39,12 +40,15 @@ import AdminUserAnalytics from "./pages/AdminUserAnalytics";
 
 const queryClient = new QueryClient();
 
-// Scroll to top on route change
-function ScrollToTop() {
+// Scroll to top on route change and track sessions
+function AppEffects() {
   const { pathname } = useLocation();
+  useSessionTracking();
+  
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
+  
   return null;
 }
 
@@ -55,7 +59,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <ScrollToTop />
+          <AppEffects />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />
