@@ -8,8 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Loader2, Coins, Gift, Share2, Users, FileText, Video } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Coins, Gift, Share2, Users, FileText, Video, Plus, Trash2, Edit2, Percent, Tag, Package } from 'lucide-react';
 
 interface RewardSetting {
   id: string;
@@ -24,13 +27,27 @@ interface RewardSetting {
 interface Reward {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   coin_cost: number;
   reward_type: string;
-  expiry_days: number;
-  is_enabled: boolean;
-  max_claims_per_user: number;
+  expiry_days: number | null;
+  is_enabled: boolean | null;
+  max_claims_per_user: number | null;
 }
+
+const REWARD_TYPES = [
+  { value: 'discount_10', label: '10% Discount' },
+  { value: 'discount_15', label: '15% Discount' },
+  { value: 'discount_20', label: '20% Discount' },
+  { value: 'discount_25', label: '25% Discount' },
+  { value: 'discount_33', label: '33% Discount' },
+  { value: 'discount_50', label: '50% Discount' },
+  { value: 'free_product', label: 'Free Product' },
+  { value: 'bonus_coins', label: 'Bonus Coins' },
+  { value: 'early_access', label: 'Early Access' },
+  { value: 'exclusive_content', label: 'Exclusive Content' },
+  { value: 'custom', label: 'Custom Reward' },
+];
 
 export default function AdminRewardSettings() {
   const { user, isAdmin, loading } = useAuth();
@@ -39,6 +56,26 @@ export default function AdminRewardSettings() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // New reward dialog state
+  const [showNewRewardDialog, setShowNewRewardDialog] = useState(false);
+  const [newReward, setNewReward] = useState({
+    name: '',
+    description: '',
+    coin_cost: 10,
+    reward_type: 'discount_10',
+    expiry_days: 14,
+    max_claims_per_user: 1,
+    is_enabled: true
+  });
+  const [creatingReward, setCreatingReward] = useState(false);
+
+  // Edit reward dialog state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
+
+  // Delete confirmation
+  const [deletingRewardId, setDeletingRewardId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -101,6 +138,97 @@ export default function AdminRewardSettings() {
     }));
   };
 
+  const createReward = async () => {
+    if (!newReward.name.trim()) {
+      toast.error('Please enter a reward name');
+      return;
+    }
+
+    setCreatingReward(true);
+    try {
+      const { data, error } = await supabase
+        .from('rewards')
+        .insert({
+          name: newReward.name,
+          description: newReward.description || null,
+          coin_cost: newReward.coin_cost,
+          reward_type: newReward.reward_type,
+          expiry_days: newReward.expiry_days,
+          max_claims_per_user: newReward.max_claims_per_user,
+          is_enabled: newReward.is_enabled
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setRewards(prev => [...prev, data]);
+      setShowNewRewardDialog(false);
+      setNewReward({
+        name: '',
+        description: '',
+        coin_cost: 10,
+        reward_type: 'discount_10',
+        expiry_days: 14,
+        max_claims_per_user: 1,
+        is_enabled: true
+      });
+      toast.success('Reward created successfully!');
+    } catch (error) {
+      console.error('Error creating reward:', error);
+      toast.error('Failed to create reward');
+    } finally {
+      setCreatingReward(false);
+    }
+  };
+
+  const saveEditedReward = async () => {
+    if (!editingReward) return;
+
+    try {
+      const { error } = await supabase
+        .from('rewards')
+        .update({
+          name: editingReward.name,
+          description: editingReward.description,
+          coin_cost: editingReward.coin_cost,
+          reward_type: editingReward.reward_type,
+          expiry_days: editingReward.expiry_days,
+          max_claims_per_user: editingReward.max_claims_per_user,
+          is_enabled: editingReward.is_enabled
+        })
+        .eq('id', editingReward.id);
+
+      if (error) throw error;
+
+      setRewards(prev => prev.map(r => r.id === editingReward.id ? editingReward : r));
+      setShowEditDialog(false);
+      setEditingReward(null);
+      toast.success('Reward updated successfully!');
+    } catch (error) {
+      console.error('Error updating reward:', error);
+      toast.error('Failed to update reward');
+    }
+  };
+
+  const deleteReward = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('rewards')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRewards(prev => prev.filter(r => r.id !== id));
+      setDeletingRewardId(null);
+      toast.success('Reward deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      toast.error('Failed to delete reward');
+    }
+  };
+
   const saveAll = async () => {
     setSaving(true);
     try {
@@ -153,6 +281,13 @@ export default function AdminRewardSettings() {
   const reelParticipationSetting = settings.find(s => s.setting_key === 'participation_reel');
   const socialSettings = settings.filter(s => s.setting_key.startsWith('social_'));
 
+  const getRewardTypeIcon = (type: string) => {
+    if (type.startsWith('discount_')) return <Percent className="w-4 h-4" />;
+    if (type === 'free_product') return <Package className="w-4 h-4" />;
+    if (type === 'bonus_coins') return <Coins className="w-4 h-4" />;
+    return <Tag className="w-4 h-4" />;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
@@ -176,7 +311,7 @@ export default function AdminRewardSettings() {
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Reward Settings</h1>
-          <p className="text-muted-foreground">Configure Space Coin earning rules and rewards</p>
+          <p className="text-muted-foreground">Configure Space Coin earning rules and rewards catalog</p>
         </div>
 
         {/* Coin Earning Settings */}
@@ -217,7 +352,7 @@ export default function AdminRewardSettings() {
                 <Users className="w-5 h-5 text-blue-400" />
                 Referral Bonus
               </CardTitle>
-              <CardDescription>Coins when referred user submits approved blog</CardDescription>
+              <CardDescription>Coins when someone joins using referral link</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -349,68 +484,283 @@ export default function AdminRewardSettings() {
           </CardContent>
         </Card>
 
-        {/* Rewards Configuration */}
+        {/* Rewards Catalog - Full CRUD */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Coins className="w-5 h-5 text-yellow-400" />
-              Rewards Catalog
-            </CardTitle>
-            <CardDescription>Configure available rewards</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Coins className="w-5 h-5 text-yellow-400" />
+                  Rewards Catalog
+                </CardTitle>
+                <CardDescription>Create, edit, and manage redeemable rewards</CardDescription>
+              </div>
+              <Dialog open={showNewRewardDialog} onOpenChange={setShowNewRewardDialog}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Reward
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Create New Reward</DialogTitle>
+                    <DialogDescription>Add a new reward to the catalog</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Reward Name</Label>
+                      <Input
+                        placeholder="e.g., 33% Discount Coupon"
+                        value={newReward.name}
+                        onChange={(e) => setNewReward(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        placeholder="Describe what the user gets..."
+                        value={newReward.description}
+                        onChange={(e) => setNewReward(prev => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Reward Type</Label>
+                        <Select
+                          value={newReward.reward_type}
+                          onValueChange={(value) => setNewReward(prev => ({ ...prev, reward_type: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {REWARD_TYPES.map(type => (
+                              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Coin Cost</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={newReward.coin_cost}
+                          onChange={(e) => setNewReward(prev => ({ ...prev, coin_cost: parseInt(e.target.value) || 1 }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Expiry Days</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={newReward.expiry_days}
+                          onChange={(e) => setNewReward(prev => ({ ...prev, expiry_days: parseInt(e.target.value) || 14 }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Claims/User</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={newReward.max_claims_per_user}
+                          onChange={(e) => setNewReward(prev => ({ ...prev, max_claims_per_user: parseInt(e.target.value) || 1 }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label>Enable Reward</Label>
+                      <Switch
+                        checked={newReward.is_enabled}
+                        onCheckedChange={(checked) => setNewReward(prev => ({ ...prev, is_enabled: checked }))}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowNewRewardDialog(false)}>Cancel</Button>
+                    <Button onClick={createReward} disabled={creatingReward}>
+                      {creatingReward ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                      Create Reward
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {rewards.map(reward => (
-                <div key={reward.id} className="p-4 rounded-lg border border-border/50 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-foreground">{reward.name}</h4>
-                    <Switch
-                      checked={reward.is_enabled}
-                      onCheckedChange={(checked) => updateReward(reward.id, 'is_enabled', checked)}
-                    />
+            {rewards.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No rewards created yet</p>
+                <p className="text-sm">Click "Add Reward" to create your first reward</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rewards.map(reward => (
+                  <div key={reward.id} className="p-4 rounded-lg border border-border/50 hover:border-border transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className={`p-2 rounded-lg ${reward.is_enabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                          {getRewardTypeIcon(reward.reward_type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">{reward.name}</h4>
+                            {!reward.is_enabled && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Disabled</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-1">{reward.description || 'No description'}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Coins className="w-3 h-3" />
+                              {reward.coin_cost} coins
+                            </span>
+                            <span>Expires: {reward.expiry_days} days</span>
+                            <span>Max: {reward.max_claims_per_user}/user</span>
+                            <span className="capitalize">{reward.reward_type.replace('_', ' ')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={reward.is_enabled ?? true}
+                          onCheckedChange={(checked) => updateReward(reward.id, 'is_enabled', checked)}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingReward(reward);
+                            setShowEditDialog(true);
+                          }}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Dialog open={deletingRewardId === reward.id} onOpenChange={(open) => !open && setDeletingRewardId(null)}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeletingRewardId(reward.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Delete Reward</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to delete "{reward.name}"? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setDeletingRewardId(null)}>Cancel</Button>
+                              <Button variant="destructive" onClick={() => deleteReward(reward.id)}>Delete</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid md:grid-cols-4 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Coin Cost</Label>
-                      <Input
-                        type="number"
-                        value={reward.coin_cost}
-                        onChange={(e) => updateReward(reward.id, 'coin_cost', parseInt(e.target.value) || 0)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Expiry Days</Label>
-                      <Input
-                        type="number"
-                        value={reward.expiry_days}
-                        onChange={(e) => updateReward(reward.id, 'expiry_days', parseInt(e.target.value) || 14)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Max Claims/User</Label>
-                      <Input
-                        type="number"
-                        value={reward.max_claims_per_user}
-                        onChange={(e) => updateReward(reward.id, 'max_claims_per_user', parseInt(e.target.value) || 1)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Description</Label>
-                      <Input
-                        value={reward.description || ''}
-                        onChange={(e) => updateReward(reward.id, 'description', e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {/* Edit Reward Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Reward</DialogTitle>
+              <DialogDescription>Update reward details</DialogDescription>
+            </DialogHeader>
+            {editingReward && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Reward Name</Label>
+                  <Input
+                    value={editingReward.name}
+                    onChange={(e) => setEditingReward(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={editingReward.description || ''}
+                    onChange={(e) => setEditingReward(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Reward Type</Label>
+                    <Select
+                      value={editingReward.reward_type}
+                      onValueChange={(value) => setEditingReward(prev => prev ? { ...prev, reward_type: value } : null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REWARD_TYPES.map(type => (
+                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Coin Cost</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={editingReward.coin_cost}
+                      onChange={(e) => setEditingReward(prev => prev ? { ...prev, coin_cost: parseInt(e.target.value) || 1 } : null)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Expiry Days</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={editingReward.expiry_days || 14}
+                      onChange={(e) => setEditingReward(prev => prev ? { ...prev, expiry_days: parseInt(e.target.value) || 14 } : null)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Claims/User</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={editingReward.max_claims_per_user || 1}
+                      onChange={(e) => setEditingReward(prev => prev ? { ...prev, max_claims_per_user: parseInt(e.target.value) || 1 } : null)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Enable Reward</Label>
+                  <Switch
+                    checked={editingReward.is_enabled ?? true}
+                    onCheckedChange={(checked) => setEditingReward(prev => prev ? { ...prev, is_enabled: checked } : null)}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+              <Button onClick={saveEditedReward}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
