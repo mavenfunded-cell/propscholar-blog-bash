@@ -6,19 +6,7 @@ import { RocketLoader } from '@/components/RocketLoader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  ArrowRight,
-  PenTool,
-  Video,
-  Sparkles,
-  ExternalLink,
-  Coins,
-  Gift,
-  Award,
-  BookOpen,
-  ShoppingBag,
-  Rocket,
-} from 'lucide-react';
+import { ArrowRight, PenTool, Video, Sparkles, ExternalLink, Coins, Gift, Award, BookOpen, ShoppingBag } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
 
 const competitions = [
@@ -112,26 +100,22 @@ export default function Landing() {
   useEffect(() => {
     // Only setup scroll reveal after loader is complete and content is rendered
     if (!loaderComplete) return;
-
+    
     // Use requestAnimationFrame + setTimeout to ensure DOM is painted
     let rafId: number;
     const timer = setTimeout(() => {
       rafId = requestAnimationFrame(() => {
         setupScrollReveal();
-
+        
         // Fallback: reveal all elements after 500ms if they haven't been revealed
         setTimeout(() => {
-          document
-            .querySelectorAll(
-              '.scroll-reveal:not(.revealed), .scroll-reveal-blur:not(.revealed)'
-            )
-            .forEach((el) => {
-              el.classList.add('revealed');
-            });
+          document.querySelectorAll('.scroll-reveal:not(.revealed), .scroll-reveal-blur:not(.revealed)').forEach(el => {
+            el.classList.add('revealed');
+          });
         }, 500);
       });
     }, 150);
-
+    
     return () => {
       clearTimeout(timer);
       cancelAnimationFrame(rafId);
@@ -139,52 +123,37 @@ export default function Landing() {
     };
   }, [loaderComplete, setupScrollReveal]);
 
-
   // Show loader on first visit
   if (showLoader) {
     return <RocketLoader minDuration={2200} onComplete={handleLoaderComplete} />;
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
-      {/* ===== Premium Space Background ===== */}
+    <div className="min-h-screen relative overflow-hidden bg-[#0a0a0a] text-white">
+      {/* ===== Premium Background ===== */}
       <div className="fixed inset-0 pointer-events-none">
-        {/* Base depth gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
-
-        {/* Star field + slow drift */}
-        <div
-          className="absolute inset-0 opacity-40 landing-starfield"
-          style={{
-            backgroundImage: `radial-gradient(1px 1px at 20px 30px, hsl(var(--foreground) / 0.16), transparent),
-                              radial-gradient(1px 1px at 40px 70px, hsl(var(--foreground) / 0.12), transparent),
-                              radial-gradient(1px 1px at 50px 160px, hsl(var(--foreground) / 0.16), transparent),
-                              radial-gradient(1px 1px at 90px 40px, hsl(var(--foreground) / 0.10), transparent),
-                              radial-gradient(1px 1px at 130px 80px, hsl(var(--foreground) / 0.14), transparent),
-                              radial-gradient(1px 1px at 160px 120px, hsl(var(--foreground) / 0.10), transparent)` ,
-            backgroundSize: '240px 240px',
-          }}
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0b0b0b] to-[#0d0d0d]" />
+        
+        {/* Ambient glow - Perplexity style */}
+        <div 
+          className="ambient-glow" 
+          style={{ top: '10%', left: '20%' }}
         />
-
-        {/* Ambient glows */}
-        <div className="absolute -top-24 left-1/4 h-[520px] w-[520px] rounded-full bg-foreground/[0.02] blur-[120px] space-float" />
-        <div className="absolute -bottom-40 right-1/4 h-[520px] w-[520px] rounded-full bg-foreground/[0.015] blur-[120px] space-float-delayed" />
-
+        <div 
+          className="ambient-glow ambient-glow-gold" 
+          style={{ top: '60%', right: '10%', animationDelay: '-12s' }}
+        />
+        
         {/* Static grain overlay */}
         <div className="grain-overlay" />
       </div>
 
-      <div className="relative z-10 pt-16 text-foreground">
+      <div className="relative z-10 pt-16">
         <Navbar />
+
         {/* ===== HERO ===== */}
         <section className="relative py-24 md:py-32">
-          {/* Calm rocket accent (decorative) */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute left-1/2 top-10 -translate-x-1/2 opacity-[0.10] hero-rocket-float">
-              <Rocket className="h-20 w-20" style={{ transform: 'rotate(-30deg)' }} />
-            </div>
-          </div>
-
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
         
