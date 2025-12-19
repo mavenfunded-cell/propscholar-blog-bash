@@ -343,8 +343,8 @@ export default function BlogCompetitions() {
 
       {/* Leaderboard Modal */}
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] bg-[#111] border-white/10 p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-4 border-b border-white/10">
+        <DialogContent className="max-w-lg max-h-[85vh] !bg-[#111111] border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-white/10 bg-transparent">
             <DialogTitle className="text-white flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500/20 to-amber-600/20 flex items-center justify-center">
                 <Trophy className="w-5 h-5 text-yellow-500" />

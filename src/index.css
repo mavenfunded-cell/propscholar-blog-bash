@@ -46,13 +46,13 @@
     --sidebar-ring: 0 0% 50%;
 
     /* Custom tokens */
-    --gold: 0 0% 90%;
-    --gold-light: 0 0% 98%;
-    --navy-deep: 0 0% 2%;
-    --navy-dark: 0 0% 3%;
-    --navy-medium: 0 0% 8%;
-    --navy-light: 0 0% 15%;
-    --blue-accent: 0 0% 70%;
+    --gold: 45 93% 58%;
+    --gold-light: 45 93% 70%;
+    --navy-deep: 222 47% 4%;
+    --navy-dark: 222 47% 6%;
+    --navy-medium: 222 35% 12%;
+    --navy-light: 222 25% 20%;
+    --blue-accent: 215 75% 55%;
     --success: 142 76% 45%;
     --warning: 38 92% 50%;
 
