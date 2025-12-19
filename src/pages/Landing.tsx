@@ -6,8 +6,20 @@ import { RocketLoader } from '@/components/RocketLoader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, PenTool, Video, Sparkles, ExternalLink, Coins, Gift, Award, BookOpen, ShoppingBag } from 'lucide-react';
+import {
+  ArrowRight,
+  PenTool,
+  Video,
+  Sparkles,
+  ExternalLink,
+  Coins,
+  Gift,
+  Award,
+  BookOpen,
+  ShoppingBag,
+} from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
+import spaceHero from '@/assets/space-hero.jpg';
 
 const competitions = [
   {
@@ -100,28 +112,53 @@ export default function Landing() {
   useEffect(() => {
     // Only setup scroll reveal after loader is complete and content is rendered
     if (!loaderComplete) return;
-    
+
     // Use requestAnimationFrame + setTimeout to ensure DOM is painted
     let rafId: number;
     const timer = setTimeout(() => {
       rafId = requestAnimationFrame(() => {
         setupScrollReveal();
-        
+
         // Fallback: reveal all elements after 500ms if they haven't been revealed
         setTimeout(() => {
-          document.querySelectorAll('.scroll-reveal:not(.revealed), .scroll-reveal-blur:not(.revealed)').forEach(el => {
-            el.classList.add('revealed');
-          });
+          document
+            .querySelectorAll(
+              '.scroll-reveal:not(.revealed), .scroll-reveal-blur:not(.revealed)'
+            )
+            .forEach((el) => {
+              el.classList.add('revealed');
+            });
         }, 500);
       });
     }, 150);
-    
+
     return () => {
       clearTimeout(timer);
       cancelAnimationFrame(rafId);
       observerRef.current?.disconnect();
     };
   }, [loaderComplete, setupScrollReveal]);
+
+  // Subtle parallax background (makes changes visibly "live")
+  useEffect(() => {
+    if (!loaderComplete) return;
+
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const y = Math.min(window.scrollY, 1200);
+        document.documentElement.style.setProperty('--landing-parallax', `${y * 0.06}px`);
+      });
+    };
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [loaderComplete]);
 
   // Show loader on first visit
   if (showLoader) {
@@ -132,12 +169,23 @@ export default function Landing() {
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       {/* ===== Premium Space Background ===== */}
       <div className="fixed inset-0 pointer-events-none">
+        {/* Hero image layer (parallax) */}
+        <div
+          className="absolute inset-0 opacity-[0.16]"
+          style={{
+            backgroundImage: `url(${spaceHero})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transform: 'translate3d(0, calc(var(--landing-parallax, 0px) * -1), 0)',
+          }}
+        />
+
         {/* Base depth gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
 
-        {/* Subtle star field (tiny + sparse) */}
+        {/* Star field + slow drift */}
         <div
-          className="absolute inset-0 opacity-35"
+          className="absolute inset-0 opacity-40 landing-starfield"
           style={{
             backgroundImage: `radial-gradient(1px 1px at 20px 30px, hsl(var(--foreground) / 0.16), transparent),
                               radial-gradient(1px 1px at 40px 70px, hsl(var(--foreground) / 0.12), transparent),
@@ -149,7 +197,7 @@ export default function Landing() {
           }}
         />
 
-        {/* Ambient glows - ultra subtle */}
+        {/* Ambient glows */}
         <div className="absolute -top-24 left-1/4 h-[520px] w-[520px] rounded-full bg-foreground/[0.02] blur-[120px] space-float" />
         <div className="absolute -bottom-40 right-1/4 h-[520px] w-[520px] rounded-full bg-foreground/[0.015] blur-[120px] space-float-delayed" />
 
@@ -159,6 +207,11 @@ export default function Landing() {
 
       <div className="relative z-10 pt-16 text-foreground">
         <Navbar />
+
+        {/* Visible build marker (helps confirm changes are live) */}
+        <div className="fixed bottom-4 right-4 z-50 rounded-full border border-border/60 bg-card/70 backdrop-blur px-3 py-1 text-[10px] tracking-widest text-muted-foreground animate-fade-in">
+          HOME V2
+        </div>
 
         {/* ===== HERO ===== */}
         <section className="relative py-24 md:py-32">
