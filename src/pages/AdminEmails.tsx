@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Download, Mail, CheckCircle, XCircle, Clock, RefreshCw, Users } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ArrowLeft, Download, Mail, CheckCircle, XCircle, Clock, RefreshCw, Users, Send, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -35,7 +39,15 @@ export default function AdminEmails() {
   const [userEmails, setUserEmails] = useState<UserEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0 });
-  const [activeTab, setActiveTab] = useState<'logs' | 'subscribers'>('logs');
+  const [activeTab, setActiveTab] = useState<'logs' | 'subscribers' | 'compose'>('logs');
+  
+  // Compose email state
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [targetType, setTargetType] = useState<'all' | 'specific'>('all');
+  const [specificEmails, setSpecificEmails] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -104,6 +116,65 @@ export default function AdminEmails() {
     toast.success(`Exported ${userEmails.length} emails`);
   };
 
+  const sendAdminEmail = async () => {
+    if (!emailSubject.trim() || !emailMessage.trim()) {
+      toast.error('Please fill in subject and message');
+      return;
+    }
+
+    if (targetType === 'specific' && !specificEmails.trim()) {
+      toast.error('Please enter recipient email addresses');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No session');
+      }
+
+      const targetEmails = targetType === 'specific' 
+        ? specificEmails.split(/[,\n]/).map(e => e.trim()).filter(Boolean)
+        : undefined;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-admin-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            subject: emailSubject,
+            message: emailMessage,
+            targetType,
+            targetEmails,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send emails');
+      }
+
+      toast.success(`Emails sent! ${result.sent} successful, ${result.failed} failed`);
+      setComposeOpen(false);
+      setEmailSubject('');
+      setEmailMessage('');
+      setSpecificEmails('');
+      fetchEmailLogs();
+    } catch (error: any) {
+      console.error('Error sending admin email:', error);
+      toast.error(error.message || 'Failed to send emails');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
@@ -123,8 +194,11 @@ export default function AdminEmails() {
       winner_notification: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
       balance_change: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       magic_link: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      admin_broadcast: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+      blog_vote: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+      referral: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     };
-    return <Badge className={colors[type] || 'bg-gray-500/20 text-gray-400'}>{type.replace('_', ' ')}</Badge>;
+    return <Badge className={colors[type] || 'bg-gray-500/20 text-gray-400'}>{type.replace(/_/g, ' ')}</Badge>;
   };
 
   if (authLoading || loading) {
@@ -154,7 +228,93 @@ export default function AdminEmails() {
             </h1>
             <p className="text-white/60 mt-1">Track email delivery and manage subscribers</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Send className="w-4 h-4 mr-2" />
+                  Compose Email
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px] bg-card border-white/10">
+                <DialogHeader>
+                  <DialogTitle className="text-white">Send Email to Users</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-white/80">Recipients</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={targetType === 'all' ? 'default' : 'outline'}
+                        onClick={() => setTargetType('all')}
+                        size="sm"
+                      >
+                        All Users ({userEmails.length})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={targetType === 'specific' ? 'default' : 'outline'}
+                        onClick={() => setTargetType('specific')}
+                        size="sm"
+                      >
+                        Specific Emails
+                      </Button>
+                    </div>
+                  </div>
+
+                  {targetType === 'specific' && (
+                    <div className="space-y-2">
+                      <Label className="text-white/80">Email Addresses (comma or newline separated)</Label>
+                      <Textarea
+                        placeholder="user1@example.com, user2@example.com"
+                        value={specificEmails}
+                        onChange={(e) => setSpecificEmails(e.target.value)}
+                        className="bg-background/50 border-white/10 text-white min-h-[80px]"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label className="text-white/80">Subject</Label>
+                    <Input
+                      placeholder="Email subject..."
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      className="bg-background/50 border-white/10 text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white/80">Message</Label>
+                    <Textarea
+                      placeholder="Write your message here..."
+                      value={emailMessage}
+                      onChange={(e) => setEmailMessage(e.target.value)}
+                      className="bg-background/50 border-white/10 text-white min-h-[200px]"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={sendAdminEmail}
+                    disabled={sending}
+                    className="w-full"
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Email
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button 
               variant={activeTab === 'logs' ? 'default' : 'outline'}
               onClick={() => setActiveTab('logs')}
