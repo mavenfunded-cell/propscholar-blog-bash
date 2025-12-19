@@ -102,7 +102,7 @@ export default function AdminSocialFollows() {
     }
   };
 
-  const updateStatus = async (followId: string, status: 'verified' | 'rejected') => {
+  const updateStatus = async (followId: string, status: 'verified' | 'rejected', currentStatus?: string) => {
     setUpdating(followId);
     try {
       if (status === 'verified') {
@@ -115,13 +115,18 @@ export default function AdminSocialFollows() {
         }
         toast.success('Verified! Coins have been added to user account.');
       } else {
-        // Just update status for rejection
-        const { error } = await supabase
-          .from('social_follows')
-          .update({ status: 'rejected' })
-          .eq('id', followId);
+        // Use reject function which also handles coin deduction if was verified
+        const { data, error } = await supabase.rpc('reject_social_follow', { _follow_id: followId });
         if (error) throw error;
-        toast.success('Claim rejected');
+        if (!data) {
+          toast.error('Follow not found');
+          return;
+        }
+        if (currentStatus === 'verified') {
+          toast.success('Rejected! Coins have been revoked from user account.');
+        } else {
+          toast.success('Claim rejected');
+        }
       }
       fetchFollows();
     } catch (error: any) {
@@ -221,30 +226,38 @@ export default function AdminSocialFollows() {
                             Open in new tab <ExternalLink className="w-3 h-3" />
                           </a>
                           
-                          {showActions && follow.status === 'pending' && (
+                          {showActions && follow.status !== 'rejected' && (
                             <div className="flex gap-2">
+                              {follow.status === 'pending' && (
+                                <Button 
+                                  className="flex-1 bg-green-600 hover:bg-green-700"
+                                  onClick={() => updateStatus(follow.id, 'verified')}
+                                  disabled={updating === follow.id}
+                                >
+                                  {updating === follow.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      Verify
+                                    </>
+                                  )}
+                                </Button>
+                              )}
                               <Button 
-                                className="flex-1 bg-green-600 hover:bg-green-700"
-                                onClick={() => updateStatus(follow.id, 'verified')}
+                                variant="destructive"
+                                className="flex-1"
+                                onClick={() => updateStatus(follow.id, 'rejected', follow.status)}
                                 disabled={updating === follow.id}
                               >
                                 {updating === follow.id ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                   <>
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                    Verify
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    {follow.status === 'verified' ? 'Revoke' : 'Reject'}
                                   </>
                                 )}
-                              </Button>
-                              <Button 
-                                variant="destructive"
-                                className="flex-1"
-                                onClick={() => updateStatus(follow.id, 'rejected')}
-                                disabled={updating === follow.id}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                Reject
                               </Button>
                             </div>
                           )}
@@ -255,25 +268,27 @@ export default function AdminSocialFollows() {
                     <span className="text-xs text-muted-foreground">No screenshot</span>
                   )}
 
-                  {showActions && follow.status === 'pending' && (
+                  {showActions && follow.status !== 'rejected' && (
                     <div className="flex gap-1">
-                      <Button 
-                        size="sm"
-                        variant="ghost"
-                        className="text-green-500"
-                        onClick={() => updateStatus(follow.id, 'verified')}
-                        disabled={updating === follow.id}
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </Button>
+                      {follow.status === 'pending' && (
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          className="text-green-500"
+                          onClick={() => updateStatus(follow.id, 'verified')}
+                          disabled={updating === follow.id}
+                        >
+                          {updating === follow.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        </Button>
+                      )}
                       <Button 
                         size="sm"
                         variant="ghost"
                         className="text-red-500"
-                        onClick={() => updateStatus(follow.id, 'rejected')}
+                        onClick={() => updateStatus(follow.id, 'rejected', follow.status)}
                         disabled={updating === follow.id}
                       >
-                        <XCircle className="w-4 h-4" />
+                        {updating === follow.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                       </Button>
                     </div>
                   )}
@@ -366,7 +381,7 @@ export default function AdminSocialFollows() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {renderFollowsList(verifiedFollows)}
+                {renderFollowsList(verifiedFollows, true)}
               </CardContent>
             </Card>
           </TabsContent>

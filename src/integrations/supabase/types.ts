@@ -1024,6 +1024,7 @@ export type Database = {
         Args: { _notification_id: string }
         Returns: boolean
       }
+      reject_social_follow: { Args: { _follow_id: string }; Returns: boolean }
       send_admin_notification: {
         Args: {
           _action_url?: string
