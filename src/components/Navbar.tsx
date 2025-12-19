@@ -1,9 +1,10 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus, Info } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus, Info, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const navLinks = [
   { name: 'Home', href: '/', external: false, icon: Home, scrollTo: null },
@@ -140,6 +141,9 @@ export function Navbar() {
                   <Plus className="w-3.5 h-3.5 text-yellow-500 group-hover:scale-110 transition-transform" />
                 </Link>
                 
+                {/* Notification Bell */}
+                <NotificationBell />
+                
                 <Link 
                   to="/dashboard" 
                   className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5"
@@ -251,6 +255,10 @@ export function Navbar() {
                     <span className="text-yellow-500 font-semibold">{coinBalance !== null ? coinBalance : '—'} Coins</span>
                     <Plus className="w-4 h-4 text-yellow-500 ml-auto" />
                   </Link>
+                  {/* Mobile Notifications */}
+                  <div className="px-4 py-2">
+                    <NotificationBell />
+                  </div>
                   <Link
                     to="/dashboard"
                     className="px-4 py-3 text-sm font-medium text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/5 flex items-center gap-2"

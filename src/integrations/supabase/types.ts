@@ -243,6 +243,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -841,6 +874,16 @@ export type Database = {
         Args: { _platform: string; _screenshot_url?: string }
         Returns: Json
       }
+      create_notification: {
+        Args: {
+          _action_url?: string
+          _message: string
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
       current_user_email: { Args: never; Returns: string }
       generate_slug: { Args: { title: string }; Returns: string }
       get_event_submissions: {
@@ -883,6 +926,11 @@ export type Database = {
       }
       is_event_accepting_submissions: {
         Args: { _event_id: string }
+        Returns: boolean
+      }
+      mark_all_notifications_read: { Args: never; Returns: number }
+      mark_notification_read: {
+        Args: { _notification_id: string }
         Returns: boolean
       }
       spend_coins: {
