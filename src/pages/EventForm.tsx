@@ -10,12 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, X, Image as ImageIcon, PenTool, Video, Plus, Trash2, Trophy } from 'lucide-react';
+import { ArrowLeft, X, Image as ImageIcon, PenTool, Video, Plus, Trash2, Trophy, LinkIcon } from 'lucide-react';
 
 interface Prize {
   position: number;
   title: string;
   prize: string;
+  link?: string;
 }
 
 export default function EventForm() {
@@ -33,9 +34,9 @@ export default function EventForm() {
   const [minWords, setMinWords] = useState(250);
   const [rewards, setRewards] = useState('');
   const [prizes, setPrizes] = useState<Prize[]>([
-    { position: 1, title: '1st Place', prize: '' },
-    { position: 2, title: '2nd Place', prize: '' },
-    { position: 3, title: '3rd Place', prize: '' },
+    { position: 1, title: '1st Place', prize: '', link: '' },
+    { position: 2, title: '2nd Place', prize: '', link: '' },
+    { position: 3, title: '3rd Place', prize: '', link: '' },
   ]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -420,14 +421,15 @@ export default function EventForm() {
                     <Trophy className="w-4 h-4 text-yellow-500" />
                     Winner Prizes
                   </Label>
-                  <Button
+                    <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setPrizes([...prizes, { 
                       position: prizes.length + 1, 
                       title: `${prizes.length + 1}${prizes.length === 0 ? 'st' : prizes.length === 1 ? 'nd' : prizes.length === 2 ? 'rd' : 'th'} Place`,
-                      prize: '' 
+                      prize: '',
+                      link: ''
                     }])}
                   >
                     <Plus className="w-4 h-4 mr-1" />
@@ -460,6 +462,16 @@ export default function EventForm() {
                             setPrizes(newPrizes);
                           }}
                           placeholder="e.g., $500 Scholarship + Certificate"
+                          className="bg-background/50"
+                        />
+                        <Input
+                          value={prize.link || ''}
+                          onChange={(e) => {
+                            const newPrizes = [...prizes];
+                            newPrizes[index].link = e.target.value;
+                            setPrizes(newPrizes);
+                          }}
+                          placeholder="https://rewards.propscholar.space/... (optional link)"
                           className="bg-background/50"
                         />
                       </div>
