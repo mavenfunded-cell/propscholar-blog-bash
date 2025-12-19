@@ -170,6 +170,7 @@ export type Database = {
           error_message: string | null
           event_id: string | null
           id: string
+          message_body: string | null
           recipient_email: string
           status: string
           subject: string
@@ -180,6 +181,7 @@ export type Database = {
           error_message?: string | null
           event_id?: string | null
           id?: string
+          message_body?: string | null
           recipient_email: string
           status?: string
           subject: string
@@ -190,6 +192,7 @@ export type Database = {
           error_message?: string | null
           event_id?: string | null
           id?: string
+          message_body?: string | null
           recipient_email?: string
           status?: string
           subject?: string

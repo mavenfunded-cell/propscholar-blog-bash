@@ -188,11 +188,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Log all emails to email_logs table
+    // Log all emails to email_logs table with message body
     if (emailLogs.length > 0) {
+      const logsWithBody = emailLogs.map(log => ({
+        ...log,
+        message_body: message,
+      }));
+      
       const { error: logError } = await supabase
         .from("email_logs")
-        .insert(emailLogs);
+        .insert(logsWithBody);
 
       if (logError) {
         console.error("Error logging emails:", logError);
