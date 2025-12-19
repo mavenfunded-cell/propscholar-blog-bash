@@ -664,9 +664,11 @@ export default function Rewards() {
                     if (!setting?.enabled) return null;
                     
                     const Icon = platformIcons[platform];
-                    const socialFollow = socialFollows.find(f => f.platform === platform);
+                    // Only consider pending or verified follows as "claimed" - rejected should allow re-upload
+                    const socialFollow = socialFollows.find(f => f.platform === platform && f.status !== 'rejected');
                     const isFollowed = !!socialFollow;
                     const isPending = socialFollow?.status === 'pending';
+                    const isVerified = socialFollow?.status === 'verified';
                     
                     return (
                       <div 
@@ -681,7 +683,7 @@ export default function Rewards() {
                             <div>
                               <p className="font-medium text-white capitalize text-sm md:text-base">{platform}</p>
                               <p className="text-xs text-white/40">
-                                {isFollowed ? (isPending ? 'Pending Review' : 'Verified') : `+${setting.value} coins`}
+                                {isVerified ? 'Verified' : isPending ? 'Pending Review' : `+${setting.value} coins`}
                               </p>
                             </div>
                           </div>
