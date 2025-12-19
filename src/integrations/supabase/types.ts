@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          action_url: string | null
+          admin_id: string
+          cta_text: string | null
+          id: string
+          message: string
+          recipient_count: number | null
+          sent_at: string
+          target_type: string
+          target_users: string[] | null
+          title: string
+        }
+        Insert: {
+          action_url?: string | null
+          admin_id: string
+          cta_text?: string | null
+          id?: string
+          message: string
+          recipient_count?: number | null
+          sent_at?: string
+          target_type?: string
+          target_users?: string[] | null
+          title: string
+        }
+        Update: {
+          action_url?: string | null
+          admin_id?: string
+          cta_text?: string | null
+          id?: string
+          message?: string
+          recipient_count?: number | null
+          sent_at?: string
+          target_type?: string
+          target_users?: string[] | null
+          title?: string
+        }
+        Relationships: []
+      }
       blog_votes: {
         Row: {
           created_at: string
@@ -247,7 +286,9 @@ export type Database = {
         Row: {
           action_url: string | null
           created_at: string
+          cta_text: string | null
           id: string
+          is_persistent: boolean
           is_read: boolean
           message: string
           title: string
@@ -257,7 +298,9 @@ export type Database = {
         Insert: {
           action_url?: string | null
           created_at?: string
+          cta_text?: string | null
           id?: string
+          is_persistent?: boolean
           is_read?: boolean
           message: string
           title: string
@@ -267,7 +310,9 @@ export type Database = {
         Update: {
           action_url?: string | null
           created_at?: string
+          cta_text?: string | null
           id?: string
+          is_persistent?: boolean
           is_read?: boolean
           message?: string
           title?: string
@@ -913,6 +958,7 @@ export type Database = {
           vote_count: number
         }[]
       }
+      get_task_notifications: { Args: { _user_id: string }; Returns: Json }
       grant_participation_coins: {
         Args: { _email: string; _participation_type: string }
         Returns: Json
@@ -932,6 +978,17 @@ export type Database = {
       mark_notification_read: {
         Args: { _notification_id: string }
         Returns: boolean
+      }
+      send_admin_notification: {
+        Args: {
+          _action_url?: string
+          _cta_text?: string
+          _message: string
+          _target_type?: string
+          _target_users?: string[]
+          _title: string
+        }
+        Returns: Json
       }
       spend_coins: {
         Args: {
