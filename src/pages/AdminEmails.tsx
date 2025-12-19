@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Download, Mail, CheckCircle, XCircle, Clock, RefreshCw, Users, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Mail, CheckCircle, XCircle, Clock, RefreshCw, Users, Send, Loader2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -25,6 +25,7 @@ interface EmailLog {
   error_message: string | null;
   event_id: string | null;
   created_at: string;
+  message_body: string | null;
 }
 
 interface UserEmail {
@@ -48,6 +49,10 @@ export default function AdminEmails() {
   const [targetType, setTargetType] = useState<'all' | 'specific'>('all');
   const [specificEmails, setSpecificEmails] = useState('');
   const [sending, setSending] = useState(false);
+  
+  // View email state
+  const [viewEmailOpen, setViewEmailOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -390,12 +395,13 @@ export default function AdminEmails() {
                         <TableHead className="text-white/70">Type</TableHead>
                         <TableHead className="text-white/70">Status</TableHead>
                         <TableHead className="text-white/70">Date</TableHead>
+                        <TableHead className="text-white/70">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {emailLogs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-white/50 py-8">
+                          <TableCell colSpan={6} className="text-center text-white/50 py-8">
                             No email logs found
                           </TableCell>
                         </TableRow>
@@ -419,6 +425,20 @@ export default function AdminEmails() {
                             </TableCell>
                             <TableCell className="text-white/50 text-sm">
                               {format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedEmail(log);
+                                  setViewEmailOpen(true);
+                                }}
+                                className="text-white/60 hover:text-white"
+                                title="View email content"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -466,6 +486,50 @@ export default function AdminEmails() {
             </CardContent>
           </Card>
         )}
+        {/* View Email Dialog */}
+        <Dialog open={viewEmailOpen} onOpenChange={setViewEmailOpen}>
+          <DialogContent className="sm:max-w-[600px] bg-card border-white/10 max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-white">Email Details</DialogTitle>
+            </DialogHeader>
+            {selectedEmail && (
+              <div className="space-y-4 mt-4">
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-sm">Recipient</Label>
+                  <p className="text-white font-mono">{selectedEmail.recipient_email}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-sm">Subject</Label>
+                  <p className="text-white">{selectedEmail.subject}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-sm">Type</Label>
+                  <div>{getTypeBadge(selectedEmail.email_type)}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-sm">Status</Label>
+                  <div>{getStatusBadge(selectedEmail.status)}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-sm">Sent At</Label>
+                  <p className="text-white/80">{format(new Date(selectedEmail.created_at), 'MMMM d, yyyy HH:mm:ss')}</p>
+                </div>
+                {selectedEmail.error_message && (
+                  <div className="space-y-1">
+                    <Label className="text-white/60 text-sm">Error Message</Label>
+                    <p className="text-red-400">{selectedEmail.error_message}</p>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label className="text-white/60 text-sm">Message Content</Label>
+                  <div className="bg-background/50 border border-white/10 rounded-lg p-4 text-white/80 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                    {selectedEmail.message_body || <span className="text-white/40 italic">No message content stored</span>}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>
