@@ -132,13 +132,13 @@ export function Navbar() {
                 {/* Coin Balance Indicator */}
                 <Link 
                   to="/rewards"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40 hover:bg-muted/70 transition-colors group"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors group"
                 >
-                  <Coins className="w-4 h-4 text-foreground/70" />
-                  <span className="text-sm font-semibold text-foreground/80">
+                  <Coins className="w-4 h-4 text-yellow-500" />
+                  <span className="text-sm font-semibold text-yellow-500">
                     {coinBalance !== null ? coinBalance : '—'}
                   </span>
-                  <Plus className="w-3.5 h-3.5 text-foreground/60 group-hover:scale-110 transition-transform" />
+                  <Plus className="w-3.5 h-3.5 text-yellow-500 group-hover:scale-110 transition-transform" />
                 </Link>
                 
                 {/* Notification Bell */}
@@ -248,12 +248,12 @@ export function Navbar() {
                   {/* Mobile Coin Balance */}
                   <Link
                     to="/rewards"
-                    className="px-4 py-3 text-sm font-medium transition-colors rounded-md flex items-center gap-2 bg-muted/50 border border-border/40"
+                    className="px-4 py-3 text-sm font-medium transition-colors rounded-md flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20"
                     onClick={() => setIsOpen(false)}
                   >
-                    <Coins className="w-4 h-4 text-foreground/70" />
-                    <span className="text-foreground/80 font-semibold">{coinBalance !== null ? coinBalance : '—'} Coins</span>
-                    <Plus className="w-4 h-4 text-foreground/60 ml-auto" />
+                    <Coins className="w-4 h-4 text-yellow-500" />
+                    <span className="text-yellow-500 font-semibold">{coinBalance !== null ? coinBalance : '—'} Coins</span>
+                    <Plus className="w-4 h-4 text-yellow-500 ml-auto" />
                   </Link>
                   {/* Mobile Notifications */}
                   <div className="px-4 py-2">

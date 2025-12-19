@@ -136,16 +136,6 @@ export default function Landing() {
         {/* Base gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0b0b0b] to-[#0d0d0d]" />
         
-        {/* Ambient glow - Perplexity style */}
-        <div 
-          className="ambient-glow" 
-          style={{ top: '10%', left: '20%' }}
-        />
-        <div 
-          className="ambient-glow ambient-glow-gold" 
-          style={{ top: '60%', right: '10%', animationDelay: '-12s' }}
-        />
-        
         {/* Static grain overlay */}
         <div className="grain-overlay" />
       </div>
