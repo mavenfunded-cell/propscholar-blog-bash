@@ -404,6 +404,16 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </Link>
+            <Link to="/admin/add-votes">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-orange-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-orange-400" />
+                    Add Manual Votes
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
             <Link to="/admin/seo">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-green-500/30">
                 <CardHeader className="pb-2">

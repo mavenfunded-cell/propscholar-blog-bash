@@ -32,6 +32,7 @@ import AdminSocialFollows from "./pages/AdminSocialFollows";
 import AdminWinnerClaims from "./pages/AdminWinnerClaims";
 import AdminSEO from "./pages/AdminSEO";
 import AdminVotes from "./pages/AdminVotes";
+import AdminAddVotes from "./pages/AdminAddVotes";
 import AdminEmails from "./pages/AdminEmails";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
             <Route path="/admin/winner-claims" element={<AdminWinnerClaims />} />
             <Route path="/admin/seo" element={<AdminSEO />} />
             <Route path="/admin/votes" element={<AdminVotes />} />
+            <Route path="/admin/add-votes" element={<AdminAddVotes />} />
             <Route path="/admin/emails" element={<AdminEmails />} />
             <Route path="/blog/:slug" element={<EventPage />} />
             <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
