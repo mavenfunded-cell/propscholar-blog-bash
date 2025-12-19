@@ -348,15 +348,39 @@ export default function EventForm() {
                         alt="Preview" 
                         className="w-full h-48 object-cover rounded-lg"
                       />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={removeImage}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <label className="cursor-pointer">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            asChild
+                          >
+                            <span>
+                              <ImageIcon className="w-4 h-4" />
+                            </span>
+                          </Button>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={removeImage}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {imagePreview && existingImageUrl && (
+                        <div className="absolute bottom-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded">
+                          New image selected
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center h-32 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg">
