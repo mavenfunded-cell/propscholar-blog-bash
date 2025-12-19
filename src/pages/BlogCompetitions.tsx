@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, ThumbsUp, Gift, Coins, Star, Award } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, ThumbsUp, Gift, Coins, Star, Award, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSEO } from '@/hooks/useSEO';
 
@@ -16,6 +16,7 @@ interface Prize {
   position: number;
   title: string;
   prize: string;
+  link?: string;
 }
 
 interface Event {
@@ -483,6 +484,17 @@ export default function BlogCompetitions() {
                         <Award className="w-4 h-4 text-white/50" />
                       )}
                       <span className="text-white/70">{prize.title} - {prize.prize}</span>
+                      {prize.link && (
+                        <a 
+                          href={prize.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="ml-1 text-yellow-500 hover:text-yellow-400 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
                     </div>
                   ))
                 ) : (
