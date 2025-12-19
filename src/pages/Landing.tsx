@@ -49,8 +49,11 @@ export default function Landing() {
 
   // Check if this is first visit in session
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const skipLoader = params.get('skipLoader') === '1';
+
     const hasSeenLoader = sessionStorage.getItem('landing_loader_shown');
-    if (hasSeenLoader) {
+    if (skipLoader || hasSeenLoader) {
       setShowLoader(false);
       setLoaderComplete(true);
     }
@@ -129,27 +132,35 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#0a0a0a] text-white">
-      {/* ===== Premium Background ===== */}
+    <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
+      {/* ===== Premium Space Background ===== */}
       <div className="fixed inset-0 pointer-events-none">
-        {/* Base gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0b0b0b] to-[#0d0d0d]" />
-        
-        {/* Ambient glow - Perplexity style */}
-        <div 
-          className="ambient-glow" 
-          style={{ top: '10%', left: '20%' }}
+        {/* Base depth gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
+
+        {/* Subtle star field (tiny + sparse) */}
+        <div
+          className="absolute inset-0 opacity-35"
+          style={{
+            backgroundImage: `radial-gradient(1px 1px at 20px 30px, hsl(var(--foreground) / 0.16), transparent),
+                              radial-gradient(1px 1px at 40px 70px, hsl(var(--foreground) / 0.12), transparent),
+                              radial-gradient(1px 1px at 50px 160px, hsl(var(--foreground) / 0.16), transparent),
+                              radial-gradient(1px 1px at 90px 40px, hsl(var(--foreground) / 0.10), transparent),
+                              radial-gradient(1px 1px at 130px 80px, hsl(var(--foreground) / 0.14), transparent),
+                              radial-gradient(1px 1px at 160px 120px, hsl(var(--foreground) / 0.10), transparent)` ,
+            backgroundSize: '240px 240px',
+          }}
         />
-        <div 
-          className="ambient-glow ambient-glow-gold" 
-          style={{ top: '60%', right: '10%', animationDelay: '-12s' }}
-        />
-        
+
+        {/* Ambient glows - ultra subtle */}
+        <div className="absolute -top-24 left-1/4 h-[520px] w-[520px] rounded-full bg-foreground/[0.02] blur-[120px] space-float" />
+        <div className="absolute -bottom-40 right-1/4 h-[520px] w-[520px] rounded-full bg-foreground/[0.015] blur-[120px] space-float-delayed" />
+
         {/* Static grain overlay */}
         <div className="grain-overlay" />
       </div>
 
-      <div className="relative z-10 pt-16">
+      <div className="relative z-10 pt-16 text-foreground">
         <Navbar />
 
         {/* ===== HERO ===== */}
