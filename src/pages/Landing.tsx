@@ -49,11 +49,8 @@ export default function Landing() {
 
   // Check if this is first visit in session
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const skipLoader = params.get('skipLoader') === '1';
-
     const hasSeenLoader = sessionStorage.getItem('landing_loader_shown');
-    if (skipLoader || hasSeenLoader) {
+    if (hasSeenLoader) {
       setShowLoader(false);
       setLoaderComplete(true);
     }
