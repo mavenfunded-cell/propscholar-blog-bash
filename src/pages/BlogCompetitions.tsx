@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LeaderboardDialog } from '@/components/LeaderboardDialog';
+import { PropScholarInvitation } from '@/components/PropScholarInvitation';
 import { Calendar, Clock, ArrowLeft, XCircle, PenTool, Trophy, Crown, Medal, ThumbsUp, Gift, Coins, Star, Award, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSEO } from '@/hooks/useSEO';
@@ -337,6 +338,15 @@ export default function BlogCompetitions() {
             </div>
           </section>
         )}
+
+        {/* PropScholar Invitation */}
+        <section className="py-12">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <PropScholarInvitation />
+            </div>
+          </div>
+        </section>
 
         <Footer />
       </div>

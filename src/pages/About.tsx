@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
+import { PropScholarInvitation } from '@/components/PropScholarInvitation';
 import { useSEO } from '@/hooks/useSEO';
 import { 
   ArrowRight, 
@@ -522,6 +523,15 @@ export default function About() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* PropScholar Invitation Section */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <PropScholarInvitation />
             </div>
           </div>
         </section>

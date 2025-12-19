@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { PropScholarInvitation } from '@/components/PropScholarInvitation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -553,6 +554,15 @@ export default function ReelEventPage() {
             )}
           </div>
         </main>
+
+        {/* PropScholar Invitation */}
+        <section className="py-12">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <PropScholarInvitation variant="compact" />
+            </div>
+          </div>
+        </section>
 
         <Footer />
       </div>

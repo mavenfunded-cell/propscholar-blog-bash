@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { PropScholarInvitation } from '@/components/PropScholarInvitation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -967,6 +968,15 @@ export default function Rewards() {
           </Tabs>
         </div>
       </main>
+
+      {/* PropScholar Invitation */}
+      <section className="py-12 relative z-10">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto">
+            <PropScholarInvitation />
+          </div>
+        </div>
+      </section>
 
       <Footer />
 
