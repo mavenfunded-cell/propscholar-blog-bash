@@ -6,9 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Gmail IMAP configuration - credentials from environment variables
-const IMAP_HOST = "imap.gmail.com";
+// Hostinger IMAP configuration - ONLY for support@propscholar.com
+const IMAP_HOST = "imap.hostinger.com";
 const IMAP_PORT = 993;
+const SUPPORT_EMAIL = "support@propscholar.com";
 
 // Simple IMAP command sender/receiver with timeout
 async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Promise<string> {
@@ -223,7 +224,7 @@ function stripHtml(html: string): string {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Gmail IMAP poll triggered at:", new Date().toISOString());
+  console.log("Hostinger IMAP poll triggered at:", new Date().toISOString());
   
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -233,15 +234,15 @@ const handler = async (req: Request): Promise<Response> => {
   let processedCount = 0;
   let errorCount = 0;
   
-  // Get Gmail credentials from environment variables
-  const gmailUser = Deno.env.get("GMAIL_IMAP_USER") || "";
-  const gmailPassword = Deno.env.get("GMAIL_IMAP_PASSWORD") || "";
+  // Get Hostinger credentials from environment variables
+  const imapUser = Deno.env.get("HOSTINGER_SUPPORT_EMAIL") || "";
+  const imapPassword = Deno.env.get("HOSTINGER_SUPPORT_PASSWORD") || "";
   
-  if (!gmailUser || !gmailPassword) {
-    console.error("Gmail IMAP credentials not configured");
+  if (!imapUser || !imapPassword) {
+    console.error("Hostinger IMAP credentials not configured");
     return new Response(
       JSON.stringify({ 
-        error: "Gmail IMAP credentials not configured", 
+        error: "Hostinger IMAP credentials not configured", 
         success: false,
         timestamp: new Date().toISOString(),
       }),
@@ -249,7 +250,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 
-  console.log(`Using Gmail account: ${gmailUser}`);
+  console.log(`Using Hostinger support email: ${SUPPORT_EMAIL}`);
 
   try {
     const supabase = createClient(
@@ -257,30 +258,30 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    console.log(`Connecting to Gmail IMAP at ${IMAP_HOST}:${IMAP_PORT}...`);
+    console.log(`Connecting to Hostinger IMAP at ${IMAP_HOST}:${IMAP_PORT}...`);
     
-    // Connect to Gmail IMAP server
+    // Connect to Hostinger IMAP server
     conn = await Deno.connectTls({
       hostname: IMAP_HOST,
       port: IMAP_PORT,
     });
     
-    console.log("Connected to Gmail IMAP server");
+    console.log("Connected to Hostinger IMAP server");
     
     // Read greeting
     const greeting = await readResponse(conn);
     console.log("IMAP greeting received");
 
-    // Login with Gmail credentials
+    // Login with Hostinger credentials
     let tagNum = 1;
-    const loginResp = await sendCommand(conn, `A${tagNum++}`, `LOGIN ${gmailUser} ${gmailPassword}`);
+    const loginResp = await sendCommand(conn, `A${tagNum++}`, `LOGIN "${imapUser}" "${imapPassword}"`);
     if (!loginResp.includes("OK")) {
-      const errorMsg = loginResp.includes("AUTHENTICATIONFAILED") 
-        ? "Gmail authentication failed - check username and app password"
-        : "Gmail IMAP login failed";
+      const errorMsg = loginResp.includes("AUTHENTICATIONFAILED") || loginResp.includes("NO") 
+        ? "Hostinger authentication failed - check username and password"
+        : "Hostinger IMAP login failed";
       throw new Error(errorMsg);
     }
-    console.log("Gmail IMAP login successful");
+    console.log("Hostinger IMAP login successful");
 
     // Select INBOX
     const selectResp = await sendCommand(conn, `A${tagNum++}`, "SELECT INBOX");
@@ -304,6 +305,7 @@ const handler = async (req: Request): Promise<Response> => {
           message: "No new emails",
           processed: 0, 
           errors: 0,
+          email: SUPPORT_EMAIL,
           timestamp: new Date().toISOString(),
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -353,7 +355,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Skip emails from self (avoid loops)
-        if (senderEmail === gmailUser.toLowerCase() || senderEmail.includes("propscholar")) {
+        if (senderEmail === SUPPORT_EMAIL.toLowerCase()) {
           console.log(`Skipping email from self: ${senderEmail}`);
           await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
           continue;
@@ -412,7 +414,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        // Find ticket by ticket number in subject
+        // Find ticket by ticket number in subject [Ticket #ID]
         if (!ticketId) {
           const ticketMatch = subject.match(/\[Ticket #(\d+)\]/i);
           if (ticketMatch) {
@@ -499,12 +501,11 @@ const handler = async (req: Request): Promise<Response> => {
         // Mark as seen ONLY after successful processing
         await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
         processedCount++;
-        console.log(`Successfully processed email from: ${senderEmail}`);
+        console.log(`Successfully processed message ${uid}`);
         
       } catch (msgError) {
         console.error(`Error processing message ${uid}:`, msgError);
         errorCount++;
-        // Don't mark as seen if processing failed
       }
     }
 
@@ -512,43 +513,36 @@ const handler = async (req: Request): Promise<Response> => {
     await sendCommand(conn, `A${tagNum++}`, "LOGOUT");
     conn.close();
 
-    console.log(`Gmail IMAP sync complete. Processed: ${processedCount}, Errors: ${errorCount}`);
+    console.log(`IMAP sync complete. Processed: ${processedCount}, Errors: ${errorCount}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         processed: processedCount, 
         errors: errorCount,
+        email: SUPPORT_EMAIL,
         timestamp: new Date().toISOString(),
       }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
+
   } catch (error: any) {
-    console.error("Gmail IMAP poll error:", error);
+    console.error("Hostinger IMAP poll error:", error);
     
     if (conn) {
       try {
         conn.close();
-      } catch (e) {
-        console.error("Error closing connection:", e);
-      }
+      } catch {}
     }
 
     return new Response(
       JSON.stringify({ 
         error: error.message, 
         success: false,
-        processed: processedCount,
-        errors: errorCount + 1,
+        email: SUPPORT_EMAIL,
         timestamp: new Date().toISOString(),
       }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
