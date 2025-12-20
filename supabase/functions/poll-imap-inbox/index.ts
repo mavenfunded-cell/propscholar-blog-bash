@@ -6,22 +6,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// IMAP connection details
-const IMAP_HOST = "mail.hostinger.com";
+// Gmail IMAP configuration (FIXED - DO NOT CHANGE)
+const IMAP_HOST = "imap.gmail.com";
 const IMAP_PORT = 993;
-const IMAP_USER = "support@propscholar.com";
+const IMAP_USER = "support.propscholar@gmail.com";
 
-// Simple IMAP command sender/receiver
+// Simple IMAP command sender/receiver with timeout
 async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Promise<string> {
   const encoder = new TextEncoder();
   const fullCommand = `${tag} ${command}\r\n`;
+  // Don't log password
+  const logCmd = command.includes("LOGIN") ? `LOGIN ${IMAP_USER} ****` : command.substring(0, 80);
+  console.log(`IMAP >>> ${tag} ${logCmd}`);
   await conn.write(encoder.encode(fullCommand));
   
   const decoder = new TextDecoder();
   const buffer = new Uint8Array(65536);
   let response = "";
+  const startTime = Date.now();
+  const timeout = 30000; // 30 second timeout
   
   while (true) {
+    if (Date.now() - startTime > timeout) {
+      console.error("IMAP timeout. Response so far:", response);
+      throw new Error(`IMAP command timeout: ${tag}`);
+    }
+    
     const n = await conn.read(buffer);
     if (n === null) break;
     response += decoder.decode(buffer.subarray(0, n));
@@ -32,6 +42,7 @@ async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Pr
     }
   }
   
+  console.log(`IMAP <<< ${response.substring(0, 200)}`);
   return response;
 }
 
@@ -87,7 +98,7 @@ function isAutoReply(subject: string, from: string): boolean {
 function extractEmail(emailString: string): string {
   if (!emailString) return "";
   const match = emailString.match(/<([^>]+)>/);
-  return match ? match[1] : emailString.trim();
+  return match ? match[1].toLowerCase() : emailString.trim().toLowerCase();
 }
 
 // Extract name from email string
@@ -185,7 +196,7 @@ function decodeContent(content: string, encoding: string): string {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("IMAP poll triggered at:", new Date().toISOString());
+  console.log("Gmail IMAP poll triggered at:", new Date().toISOString());
   
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -194,7 +205,17 @@ const handler = async (req: Request): Promise<Response> => {
   let conn: Deno.TlsConn | null = null;
   let processedCount = 0;
   let errorCount = 0;
-  const imapPassword = Deno.env.get("IMAP_PASSWORD") || "";
+  
+  // Use Gmail App Password
+  const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD") || "";
+  
+  if (!gmailPassword) {
+    console.error("GMAIL_APP_PASSWORD not configured");
+    return new Response(
+      JSON.stringify({ error: "Gmail credentials not configured", success: false }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
 
   try {
     const supabase = createClient(
@@ -202,23 +223,27 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Connect to IMAP server
+    console.log(`Connecting to Gmail IMAP at ${IMAP_HOST}:${IMAP_PORT}...`);
+    
+    // Connect to Gmail IMAP server
     conn = await Deno.connectTls({
       hostname: IMAP_HOST,
       port: IMAP_PORT,
     });
     
+    console.log("Connected to Gmail IMAP");
+    
     // Read greeting
     const greeting = await readResponse(conn);
-    console.log("IMAP greeting received");
+    console.log("IMAP greeting received:", greeting.substring(0, 100));
 
-    // Login
+    // Login with Gmail credentials
     let tagNum = 1;
-    const loginResp = await sendCommand(conn, `A${tagNum++}`, `LOGIN "${IMAP_USER}" "${imapPassword}"`);
+    const loginResp = await sendCommand(conn, `A${tagNum++}`, `LOGIN ${IMAP_USER} ${gmailPassword}`);
     if (!loginResp.includes("OK")) {
-      throw new Error("IMAP login failed");
+      throw new Error("Gmail IMAP login failed - check app password");
     }
-    console.log("IMAP login successful");
+    console.log("Gmail IMAP login successful");
 
     // Select INBOX
     const selectResp = await sendCommand(conn, `A${tagNum++}`, "SELECT INBOX");
@@ -231,11 +256,28 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Found ${messageUids.length} unseen messages`);
 
+    if (messageUids.length === 0) {
+      // Logout and close connection
+      await sendCommand(conn, `A${tagNum++}`, "LOGOUT");
+      conn.close();
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "No new emails",
+          processed: 0, 
+          errors: 0,
+          timestamp: new Date().toISOString(),
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     for (const uid of messageUids) {
       if (!uid) continue;
       
       try {
-        console.log(`Processing message ${uid}`);
+        console.log(`Processing message ${uid}...`);
         
         // Fetch the message
         const fetchResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822)`);
@@ -259,6 +301,8 @@ const handler = async (req: Request): Promise<Response> => {
         const references = headers["references"] || null;
         const contentTransferEncoding = headers["content-transfer-encoding"] || "";
 
+        console.log(`Email from: ${senderEmail}, subject: ${subject.substring(0, 50)}`);
+
         // Skip auto-replies
         if (isAutoReply(subject, senderEmail)) {
           console.log(`Skipping auto-reply from: ${senderEmail}`);
@@ -277,13 +321,13 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Check for duplicate
+        // Check for duplicate by message_id
         if (messageId) {
           const { data: existingMessage } = await supabase
             .from("support_messages")
             .select("id")
             .eq("message_id", messageId)
-            .single();
+            .maybeSingle();
 
           if (existingMessage) {
             console.log(`Duplicate message: ${messageId}`);
@@ -292,7 +336,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        // Find existing ticket
+        // Find existing ticket by message references
         let ticketId: string | null = null;
 
         if (inReplyTo || references) {
@@ -304,9 +348,11 @@ const handler = async (req: Request): Promise<Response> => {
           
           if (foundTicket) {
             ticketId = foundTicket;
+            console.log(`Found ticket by reference: ${ticketId}`);
           }
         }
 
+        // Find ticket by ticket number in subject
         if (!ticketId) {
           const ticketMatch = subject.match(/\[Ticket #(\d+)\]/i);
           if (ticketMatch) {
@@ -314,11 +360,29 @@ const handler = async (req: Request): Promise<Response> => {
               .from("support_tickets")
               .select("id")
               .eq("ticket_number", parseInt(ticketMatch[1]))
-              .single();
+              .maybeSingle();
             
             if (ticketByNumber) {
               ticketId = ticketByNumber.id;
+              console.log(`Found ticket by number: ${ticketId}`);
             }
+          }
+        }
+
+        // Find open ticket for this sender
+        if (!ticketId) {
+          const { data: openTicket } = await supabase
+            .from("support_tickets")
+            .select("id")
+            .eq("user_email", senderEmail)
+            .neq("status", "closed")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (openTicket) {
+            ticketId = openTicket.id;
+            console.log(`Found open ticket for sender: ${ticketId}`);
           }
         }
 
@@ -327,7 +391,7 @@ const handler = async (req: Request): Promise<Response> => {
           .from("user_coins")
           .select("user_id")
           .eq("email", senderEmail)
-          .single();
+          .maybeSingle();
 
         // Create ticket if needed
         if (!ticketId) {
@@ -350,7 +414,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           ticketId = newTicket.id;
-          console.log(`Created ticket #${newTicket.ticket_number}`);
+          console.log(`Created new ticket #${newTicket.ticket_number}`);
         }
 
         // Insert message
@@ -372,10 +436,10 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Mark as seen
+        // Mark as seen ONLY after successful processing
         await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
         processedCount++;
-        console.log(`Processed email from: ${senderEmail}`);
+        console.log(`Successfully processed email from: ${senderEmail}`);
         
       } catch (msgError) {
         console.error(`Error processing message ${uid}:`, msgError);
@@ -387,7 +451,7 @@ const handler = async (req: Request): Promise<Response> => {
     await sendCommand(conn, `A${tagNum++}`, "LOGOUT");
     conn.close();
 
-    console.log(`IMAP poll done. Processed: ${processedCount}, Errors: ${errorCount}`);
+    console.log(`Gmail IMAP poll done. Processed: ${processedCount}, Errors: ${errorCount}`);
 
     return new Response(
       JSON.stringify({ 
@@ -402,7 +466,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("IMAP poll error:", error);
+    console.error("Gmail IMAP poll error:", error);
     
     if (conn) {
       try {
