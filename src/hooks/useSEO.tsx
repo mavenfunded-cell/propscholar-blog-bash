@@ -14,11 +14,11 @@ interface SEOSettings {
 }
 
 const DEFAULT_SEO: SEOSettings = {
-  title: 'PropScholar - Blog & Reel Competitions',
+  title: 'PropScholar Space - The Giveaway Hub',
   description: 'Join PropScholar competitions to showcase your writing and video skills. Win prizes and earn rewards!',
-  keywords: 'propscholar, blog competition, reel competition, writing contest',
-  og_title: null,
-  og_description: null,
+  keywords: 'propscholar, blog competition, reel competition, writing contest, giveaway',
+  og_title: 'PropScholar Space - The Giveaway Hub',
+  og_description: 'Join PropScholar competitions to showcase your writing and video skills. Win prizes and earn rewards!',
   og_image: 'https://propscholar.space/og-image.png',
   canonical_url: null,
   robots: 'index, follow'
