@@ -224,6 +224,39 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Successfully processed email into ticket:", ticketId);
 
+    // Get the ticket number for the auto-reply
+    const { data: ticketData } = await supabase
+      .from("support_tickets")
+      .select("ticket_number, subject")
+      .eq("id", ticketId)
+      .single();
+
+    // Send auto-reply email for new tickets
+    if (ticketData) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+        
+        await fetch(`${supabaseUrl}/functions/v1/ticket-auto-reply`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({
+            to: senderEmail,
+            ticketNumber: ticketData.ticket_number,
+            subject: ticketData.subject,
+            ticketId: ticketId,
+          }),
+        });
+        console.log("Auto-reply email triggered for ticket:", ticketData.ticket_number);
+      } catch (autoReplyError) {
+        console.error("Failed to send auto-reply:", autoReplyError);
+        // Don't fail the main request if auto-reply fails
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, ticketId }),
       {
