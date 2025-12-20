@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Search, RefreshCw, MessageSquare } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { 
+  ArrowLeft, 
+  Mail, 
+  Search, 
+  RefreshCw, 
+  MessageSquare, 
+  Inbox, 
+  CheckCircle2, 
+  AlertCircle,
+  Clock,
+  Loader2
+} from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
+import { toast } from "sonner";
 
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -62,10 +74,17 @@ const priorityColors: Record<TicketPriority, string> = {
 };
 
 const AdminSupportTickets = () => {
-  const { adminNavigate, getAdminPath } = useAdminNavigation();
+  const { adminNavigate } = useAdminNavigation();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [lastSyncResult, setLastSyncResult] = useState<{
+    success: boolean;
+    processed: number;
+    errors: number;
+    timestamp: string;
+  } | null>(null);
 
   const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-support-tickets", statusFilter, priorityFilter],
@@ -85,6 +104,27 @@ const AdminSupportTickets = () => {
       const { data, error } = await query;
       if (error) throw error;
       return data as Ticket[];
+    },
+  });
+
+  const syncInboxMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("poll-imap-inbox");
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setLastSyncResult(data);
+      if (data.processed > 0) {
+        toast.success(`Synced ${data.processed} new email(s)`);
+        queryClient.invalidateQueries({ queryKey: ["admin-support-tickets"] });
+      } else {
+        toast.info("No new emails found");
+      }
+    },
+    onError: (error: any) => {
+      toast.error("Sync failed: " + error.message);
+      setLastSyncResult({ success: false, processed: 0, errors: 1, timestamp: new Date().toISOString() });
     },
   });
 
@@ -118,7 +158,7 @@ const AdminSupportTickets = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Mail className="h-8 w-8 text-primary" />
               Support Tickets
@@ -129,14 +169,71 @@ const AdminSupportTickets = () => {
           </div>
         </div>
 
+        {/* Email Sync Section */}
+        <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Inbox className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Email Inbox Sync</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sync emails from support@propscholar.com
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                {lastSyncResult && (
+                  <div className="flex items-center gap-2 text-sm">
+                    {lastSyncResult.success ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className="text-muted-foreground">
+                      Last sync: {format(new Date(lastSyncResult.timestamp), "MMM d, h:mm a")}
+                    </span>
+                    {lastSyncResult.processed > 0 && (
+                      <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/30">
+                        +{lastSyncResult.processed}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                
+                <Button
+                  onClick={() => syncInboxMutation.mutate()}
+                  disabled={syncInboxMutation.isPending}
+                  className="gap-2"
+                >
+                  {syncInboxMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Sync Now
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           {[
-            { key: "all", label: "All Tickets", count: ticketCounts.all },
-            { key: "open", label: "Open", count: ticketCounts.open },
-            { key: "awaiting_support", label: "Needs Response", count: ticketCounts.awaiting_support },
-            { key: "awaiting_user", label: "Awaiting User", count: ticketCounts.awaiting_user },
-            { key: "closed", label: "Closed", count: ticketCounts.closed },
+            { key: "all", label: "All Tickets", count: ticketCounts.all, icon: MessageSquare },
+            { key: "open", label: "Open", count: ticketCounts.open, icon: Mail },
+            { key: "awaiting_support", label: "Needs Response", count: ticketCounts.awaiting_support, icon: Clock },
+            { key: "awaiting_user", label: "Awaiting User", count: ticketCounts.awaiting_user, icon: Clock },
+            { key: "closed", label: "Closed", count: ticketCounts.closed, icon: CheckCircle2 },
           ].map((stat) => (
             <Card
               key={stat.key}
@@ -146,7 +243,10 @@ const AdminSupportTickets = () => {
               onClick={() => setStatusFilter(stat.key)}
             >
               <CardContent className="p-4">
-                <p className="text-2xl font-bold">{stat.count}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-bold">{stat.count}</p>
+                  <stat.icon className={`h-5 w-5 ${statusFilter === stat.key ? "text-primary" : "text-muted-foreground"}`} />
+                </div>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </CardContent>
             </Card>
@@ -191,12 +291,14 @@ const AdminSupportTickets = () => {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="p-8 text-center text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
                 Loading tickets...
               </div>
             ) : filteredTickets?.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No tickets found</p>
+                <p className="text-sm mt-2">Click "Sync Now" to check for new emails</p>
               </div>
             ) : (
               <Table>
