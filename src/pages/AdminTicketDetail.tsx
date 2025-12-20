@@ -23,9 +23,13 @@ import {
   Clock,
   Mail,
   StickyNote,
+  Bot,
+  PanelRightOpen,
+  PanelRightClose,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
+import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
 
 type TicketStatus = "open" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -81,6 +85,11 @@ const AdminTicketDetail = () => {
   const queryClient = useQueryClient();
   const [replyBody, setReplyBody] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
+  const [showAISidebar, setShowAISidebar] = useState(true);
+
+  const handleInsertReply = (content: string) => {
+    setReplyBody(content);
+  };
 
   const { data: ticket, isLoading: ticketLoading } = useQuery({
     queryKey: ["admin-ticket", id],
@@ -213,8 +222,9 @@ const AdminTicketDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto py-8 px-4">
+    <div className="min-h-screen bg-background text-foreground flex">
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Button
@@ -239,6 +249,24 @@ const AdminTicketDetail = () => {
             </div>
             <h1 className="text-2xl font-bold mt-1">{ticket.subject}</h1>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAISidebar(!showAISidebar)}
+            className="ml-auto"
+          >
+            {showAISidebar ? (
+              <>
+                <PanelRightClose className="h-4 w-4 mr-2" />
+                Hide AI
+              </>
+            ) : (
+              <>
+                <Bot className="h-4 w-4 mr-2" />
+                Show AI
+              </>
+            )}
+          </Button>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -430,7 +458,17 @@ const AdminTicketDetail = () => {
             </Card>
           </div>
         </div>
+        </div>
       </div>
+
+      {/* AI Suggestions Sidebar */}
+      {showAISidebar && messages && (
+        <AISuggestionsSidebar
+          ticketId={id || ""}
+          messages={messages}
+          onInsertReply={handleInsertReply}
+        />
+      )}
     </div>
   );
 };
