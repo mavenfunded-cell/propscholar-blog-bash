@@ -86,6 +86,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          admin_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          request_type: string
+          status: string
+          ticket_id: string | null
+          tokens_estimated: number
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          request_type?: string
+          status?: string
+          ticket_id?: string | null
+          tokens_estimated?: number
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          request_type?: string
+          status?: string
+          ticket_id?: string | null
+          tokens_estimated?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_votes: {
         Row: {
           created_at: string

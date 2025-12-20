@@ -45,6 +45,7 @@ import AdminTicketDetail from "./pages/AdminTicketDetail";
 import AdminTicketReviews from "./pages/AdminTicketReviews";
 import AdminCannedMessages from "./pages/AdminCannedMessages";
 import AdminAIKnowledge from "./pages/AdminAIKnowledge";
+import AdminAIUsage from "./pages/AdminAIUsage";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ function AdminRoutes({ basePath = "" }: { basePath?: string }) {
       <Route path={`${basePath}/reviews`} element={<AdminTicketReviews />} />
       <Route path={`${basePath}/canned-messages`} element={<AdminCannedMessages />} />
       <Route path={`${basePath}/ai-knowledge`} element={<AdminAIKnowledge />} />
+      <Route path={`${basePath}/ai-usage`} element={<AdminAIUsage />} />
     </>
   );
 }
