@@ -52,17 +52,18 @@ interface Ticket {
   last_reply_by: string;
 }
 
-const statusColors: Record<TicketStatus, string> = {
-  open: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  awaiting_support: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  awaiting_user: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+// Display status - treat awaiting_support and awaiting_user as "open"
+const getDisplayStatus = (status: TicketStatus): "open" | "closed" => {
+  return status === "closed" ? "closed" : "open";
+};
+
+const statusColors: Record<"open" | "closed", string> = {
+  open: "bg-green-500/20 text-green-400 border-green-500/30",
   closed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
 
-const statusLabels: Record<TicketStatus, string> = {
+const statusLabels: Record<"open" | "closed", string> = {
   open: "Open",
-  awaiting_support: "Awaiting Support",
-  awaiting_user: "Awaiting User",
   closed: "Closed",
 };
 
@@ -94,9 +95,13 @@ const AdminSupportTickets = () => {
         .select("*")
         .order("last_reply_at", { ascending: false });
 
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter as TicketStatus);
+      // Filter by simplified status
+      if (statusFilter === "open") {
+        query = query.in("status", ["open", "awaiting_support", "awaiting_user"]);
+      } else if (statusFilter === "closed") {
+        query = query.eq("status", "closed");
       }
+      
       if (priorityFilter !== "all") {
         query = query.eq("priority", priorityFilter as TicketPriority);
       }
@@ -140,9 +145,7 @@ const AdminSupportTickets = () => {
 
   const ticketCounts = {
     all: tickets?.length || 0,
-    open: tickets?.filter((t) => t.status === "open").length || 0,
-    awaiting_support: tickets?.filter((t) => t.status === "awaiting_support").length || 0,
-    awaiting_user: tickets?.filter((t) => t.status === "awaiting_user").length || 0,
+    open: tickets?.filter((t) => t.status !== "closed").length || 0,
     closed: tickets?.filter((t) => t.status === "closed").length || 0,
   };
 
@@ -239,12 +242,10 @@ const AdminSupportTickets = () => {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { key: "all", label: "All Tickets", count: ticketCounts.all, icon: MessageSquare },
             { key: "open", label: "Open", count: ticketCounts.open, icon: Mail },
-            { key: "awaiting_support", label: "Needs Response", count: ticketCounts.awaiting_support, icon: Clock },
-            { key: "awaiting_user", label: "Awaiting User", count: ticketCounts.awaiting_user, icon: Clock },
             { key: "closed", label: "Closed", count: ticketCounts.closed, icon: CheckCircle2 },
           ].map((stat) => (
             <Card
@@ -343,9 +344,9 @@ const AdminSupportTickets = () => {
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={statusColors[ticket.status]}
+                          className={statusColors[getDisplayStatus(ticket.status)]}
                         >
-                          {statusLabels[ticket.status]}
+                          {statusLabels[getDisplayStatus(ticket.status)]}
                         </Badge>
                       </TableCell>
                       <TableCell>
