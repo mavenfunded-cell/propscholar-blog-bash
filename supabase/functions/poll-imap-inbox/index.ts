@@ -6,17 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Gmail IMAP configuration (FIXED - DO NOT CHANGE)
+// Gmail IMAP configuration - credentials from environment variables
 const IMAP_HOST = "imap.gmail.com";
 const IMAP_PORT = 993;
-const IMAP_USER = "support.propscholar@gmail.com";
 
 // Simple IMAP command sender/receiver with timeout
 async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Promise<string> {
   const encoder = new TextEncoder();
   const fullCommand = `${tag} ${command}\r\n`;
   // Don't log password
-  const logCmd = command.includes("LOGIN") ? `LOGIN ${IMAP_USER} ****` : command.substring(0, 80);
+  const logCmd = command.includes("LOGIN") ? "LOGIN ****" : command.substring(0, 80);
   console.log(`IMAP >>> ${tag} ${logCmd}`);
   await conn.write(encoder.encode(fullCommand));
   
@@ -42,7 +41,9 @@ async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Pr
     }
   }
   
-  console.log(`IMAP <<< ${response.substring(0, 200)}`);
+  // Log response without sensitive data
+  const logResponse = response.length > 300 ? response.substring(0, 300) + "..." : response;
+  console.log(`IMAP <<< ${logResponse.replace(/\r?\n/g, " ")}`);
   return response;
 }
 
@@ -62,13 +63,16 @@ function stripQuotedContent(text: string): string {
   const cleanLines: string[] = [];
   
   for (const line of lines) {
+    // Stop at quoted content markers
     if (
       line.match(/^On .+ wrote:$/i) ||
       line.match(/^-{2,}.*Original Message.*-{2,}$/i) ||
       line.match(/^>{1,}/) ||
       line.match(/^From:.*@/i) ||
       line.match(/^Sent:.*\d{4}/i) ||
-      line.match(/^--\s*$/)
+      line.match(/^--\s*$/) ||
+      line.match(/^_{3,}/) ||
+      line.match(/^Forwarded message/i)
     ) {
       break;
     }
@@ -87,6 +91,7 @@ function isAutoReply(subject: string, from: string): boolean {
     "auto-reply", "autoreply", "automatic reply", "out of office",
     "ooo:", "vacation reply", "delivery status notification",
     "undeliverable", "mailer-daemon", "postmaster@", "noreply@", "no-reply@",
+    "do-not-reply@", "donotreply@", "bounce", "failure notice",
   ];
   
   return autoReplyPatterns.some(
@@ -98,14 +103,17 @@ function isAutoReply(subject: string, from: string): boolean {
 function extractEmail(emailString: string): string {
   if (!emailString) return "";
   const match = emailString.match(/<([^>]+)>/);
-  return match ? match[1].toLowerCase() : emailString.trim().toLowerCase();
+  return match ? match[1].toLowerCase().trim() : emailString.trim().toLowerCase();
 }
 
 // Extract name from email string
 function extractName(emailString: string): string {
   if (!emailString) return "";
-  const match = emailString.match(/^([^<]+)</);
-  return match ? match[1].trim() : emailString.split("@")[0];
+  const match = emailString.match(/^"?([^"<]+)"?\s*</);
+  if (match) return match[1].trim();
+  const emailMatch = emailString.match(/<([^>]+)>/);
+  if (emailMatch) return emailMatch[1].split("@")[0];
+  return emailString.split("@")[0];
 }
 
 // Parse email headers from raw email
@@ -150,16 +158,18 @@ function parseEmailBody(raw: string): { text: string; html: string | null } {
     const boundaryMatch = contentType.match(/boundary="?([^";\s]+)"?/i);
     if (boundaryMatch) {
       const boundary = boundaryMatch[1];
-      const sections = body.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+      const escapedBoundary = boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const sections = body.split(new RegExp(`--${escapedBoundary}`));
       
       let textBody = "";
       let htmlBody: string | null = null;
       
       for (const section of sections) {
-        if (section.includes("text/plain")) {
+        const sectionLower = section.toLowerCase();
+        if (sectionLower.includes("content-type: text/plain") || sectionLower.includes("content-type:text/plain")) {
           const sectionParts = section.split(/\r?\n\r?\n/);
           textBody = sectionParts.slice(1).join("\n\n").replace(/--$/, "").trim();
-        } else if (section.includes("text/html")) {
+        } else if (sectionLower.includes("content-type: text/html") || sectionLower.includes("content-type:text/html")) {
           const sectionParts = section.split(/\r?\n\r?\n/);
           htmlBody = sectionParts.slice(1).join("\n\n").replace(/--$/, "").trim();
         }
@@ -174,14 +184,15 @@ function parseEmailBody(raw: string): { text: string; html: string | null } {
 
 // Decode quoted-printable or base64 encoded content
 function decodeContent(content: string, encoding: string): string {
-  if (!encoding) return content;
+  if (!encoding || !content) return content || "";
   
-  encoding = encoding.toLowerCase();
+  encoding = encoding.toLowerCase().trim();
   
   if (encoding === "base64") {
     try {
       return atob(content.replace(/\s/g, ""));
     } catch {
+      console.log("Base64 decode failed, returning original");
       return content;
     }
   }
@@ -195,6 +206,22 @@ function decodeContent(content: string, encoding: string): string {
   return content;
 }
 
+// Strip HTML tags to get plain text
+function stripHtml(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("Gmail IMAP poll triggered at:", new Date().toISOString());
   
@@ -206,16 +233,23 @@ const handler = async (req: Request): Promise<Response> => {
   let processedCount = 0;
   let errorCount = 0;
   
-  // Use Gmail App Password
-  const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD") || "";
+  // Get Gmail credentials from environment variables
+  const gmailUser = Deno.env.get("GMAIL_IMAP_USER") || "";
+  const gmailPassword = Deno.env.get("GMAIL_IMAP_PASSWORD") || "";
   
-  if (!gmailPassword) {
-    console.error("GMAIL_APP_PASSWORD not configured");
+  if (!gmailUser || !gmailPassword) {
+    console.error("Gmail IMAP credentials not configured");
     return new Response(
-      JSON.stringify({ error: "Gmail credentials not configured", success: false }),
+      JSON.stringify({ 
+        error: "Gmail IMAP credentials not configured", 
+        success: false,
+        timestamp: new Date().toISOString(),
+      }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
+
+  console.log(`Using Gmail account: ${gmailUser}`);
 
   try {
     const supabase = createClient(
@@ -231,17 +265,20 @@ const handler = async (req: Request): Promise<Response> => {
       port: IMAP_PORT,
     });
     
-    console.log("Connected to Gmail IMAP");
+    console.log("Connected to Gmail IMAP server");
     
     // Read greeting
     const greeting = await readResponse(conn);
-    console.log("IMAP greeting received:", greeting.substring(0, 100));
+    console.log("IMAP greeting received");
 
     // Login with Gmail credentials
     let tagNum = 1;
-    const loginResp = await sendCommand(conn, `A${tagNum++}`, `LOGIN ${IMAP_USER} ${gmailPassword}`);
+    const loginResp = await sendCommand(conn, `A${tagNum++}`, `LOGIN ${gmailUser} ${gmailPassword}`);
     if (!loginResp.includes("OK")) {
-      throw new Error("Gmail IMAP login failed - check app password");
+      const errorMsg = loginResp.includes("AUTHENTICATIONFAILED") 
+        ? "Gmail authentication failed - check username and app password"
+        : "Gmail IMAP login failed";
+      throw new Error(errorMsg);
     }
     console.log("Gmail IMAP login successful");
 
@@ -254,7 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
     const uidMatch = searchResp.match(/\* SEARCH([\d\s]*)/);
     const messageUids = uidMatch && uidMatch[1] ? uidMatch[1].trim().split(/\s+/).filter(Boolean) : [];
     
-    console.log(`Found ${messageUids.length} unseen messages`);
+    console.log(`Found ${messageUids.length} unread message(s)`);
 
     if (messageUids.length === 0) {
       // Logout and close connection
@@ -285,35 +322,58 @@ const handler = async (req: Request): Promise<Response> => {
         // Extract raw email from response
         const rawMatch = fetchResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
         if (!rawMatch) {
-          console.log(`Could not parse message ${uid}`);
-          continue;
+          console.log(`Could not parse message ${uid}, trying alternate parsing`);
+          // Try alternate parsing
+          const altMatch = fetchResp.match(/\* \d+ FETCH[^{]*\{(\d+)\}\r?\n([\s\S]+)/);
+          if (!altMatch) {
+            console.log(`Failed to parse message ${uid}`);
+            continue;
+          }
         }
         
-        const rawEmail = rawMatch[2];
+        const rawEmail = rawMatch ? rawMatch[2] : fetchResp;
         const headers = parseEmailHeaders(rawEmail);
         
         const fromHeader = headers["from"] || "";
         const senderEmail = extractEmail(fromHeader);
         const senderName = extractName(fromHeader);
         const subject = headers["subject"] || "No Subject";
-        const messageId = headers["message-id"]?.replace(/[<>]/g, "") || null;
-        const inReplyTo = headers["in-reply-to"]?.replace(/[<>]/g, "") || null;
+        const messageId = headers["message-id"]?.replace(/[<>]/g, "").trim() || null;
+        const inReplyTo = headers["in-reply-to"]?.replace(/[<>]/g, "").trim() || null;
         const references = headers["references"] || null;
         const contentTransferEncoding = headers["content-transfer-encoding"] || "";
 
-        console.log(`Email from: ${senderEmail}, subject: ${subject.substring(0, 50)}`);
+        console.log(`Email from: ${senderEmail}, subject: ${subject.substring(0, 60)}`);
 
-        // Skip auto-replies
+        // Skip auto-replies and bounces
         if (isAutoReply(subject, senderEmail)) {
-          console.log(`Skipping auto-reply from: ${senderEmail}`);
+          console.log(`Skipping auto-reply/bounce from: ${senderEmail}`);
+          await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
+          continue;
+        }
+
+        // Skip emails from self (avoid loops)
+        if (senderEmail === gmailUser.toLowerCase() || senderEmail.includes("propscholar")) {
+          console.log(`Skipping email from self: ${senderEmail}`);
           await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
           continue;
         }
 
         // Parse body
         const { text, html } = parseEmailBody(rawEmail);
-        const decodedText = decodeContent(text, contentTransferEncoding);
-        const cleanBody = stripQuotedContent(decodedText);
+        let bodyText = text;
+        
+        // Decode if needed
+        if (contentTransferEncoding) {
+          bodyText = decodeContent(text, contentTransferEncoding);
+        }
+        
+        // Fall back to HTML if no text
+        if (!bodyText.trim() && html) {
+          bodyText = stripHtml(html);
+        }
+        
+        const cleanBody = stripQuotedContent(bodyText);
 
         if (!cleanBody.trim()) {
           console.log(`Skipping empty email from: ${senderEmail}`);
@@ -330,7 +390,7 @@ const handler = async (req: Request): Promise<Response> => {
             .maybeSingle();
 
           if (existingMessage) {
-            console.log(`Duplicate message: ${messageId}`);
+            console.log(`Duplicate message detected: ${messageId}`);
             await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
             continue;
           }
@@ -348,7 +408,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           if (foundTicket) {
             ticketId = foundTicket;
-            console.log(`Found ticket by reference: ${ticketId}`);
+            console.log(`Found ticket by message reference: ${ticketId}`);
           }
         }
 
@@ -364,7 +424,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             if (ticketByNumber) {
               ticketId = ticketByNumber.id;
-              console.log(`Found ticket by number: ${ticketId}`);
+              console.log(`Found ticket by number in subject: ${ticketId}`);
             }
           }
         }
@@ -382,18 +442,18 @@ const handler = async (req: Request): Promise<Response> => {
           
           if (openTicket) {
             ticketId = openTicket.id;
-            console.log(`Found open ticket for sender: ${ticketId}`);
+            console.log(`Found existing open ticket for sender: ${ticketId}`);
           }
         }
 
-        // Find user
+        // Find user by email
         const { data: userCoins } = await supabase
           .from("user_coins")
           .select("user_id")
           .eq("email", senderEmail)
           .maybeSingle();
 
-        // Create ticket if needed
+        // Create new ticket if needed
         if (!ticketId) {
           const { data: newTicket, error: ticketError } = await supabase
             .from("support_tickets")
@@ -444,6 +504,7 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (msgError) {
         console.error(`Error processing message ${uid}:`, msgError);
         errorCount++;
+        // Don't mark as seen if processing failed
       }
     }
 
@@ -451,7 +512,7 @@ const handler = async (req: Request): Promise<Response> => {
     await sendCommand(conn, `A${tagNum++}`, "LOGOUT");
     conn.close();
 
-    console.log(`Gmail IMAP poll done. Processed: ${processedCount}, Errors: ${errorCount}`);
+    console.log(`Gmail IMAP sync complete. Processed: ${processedCount}, Errors: ${errorCount}`);
 
     return new Response(
       JSON.stringify({ 
@@ -471,11 +532,19 @@ const handler = async (req: Request): Promise<Response> => {
     if (conn) {
       try {
         conn.close();
-      } catch (e) {}
+      } catch (e) {
+        console.error("Error closing connection:", e);
+      }
     }
 
     return new Response(
-      JSON.stringify({ error: error.message, success: false }),
+      JSON.stringify({ 
+        error: error.message, 
+        success: false,
+        processed: processedCount,
+        errors: errorCount + 1,
+        timestamp: new Date().toISOString(),
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
