@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Brain, Clock, Zap, AlertTriangle, RefreshCw, Settings } from 'lucide-react';
+import { ArrowLeft, Brain, Clock, Zap, AlertTriangle, RefreshCw, Settings, CreditCard, ExternalLink, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -201,6 +201,48 @@ const AdminAIUsage = () => {
           </div>
         </div>
 
+        {/* Lovable Credits Info Card */}
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-amber-400" />
+              Lovable AI Credits
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                AI credits are managed by Lovable and cannot be accessed directly from this app. 
+                To check your remaining credits, go to <strong>Settings → Workspace → Usage</strong> in the Lovable dashboard.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a 
+                href="https://lovable.dev/projects" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
+              >
+                Open Lovable Dashboard <ExternalLink className="w-3 h-3" />
+              </a>
+              <a 
+                href="https://docs.lovable.dev/features/ai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+              >
+                Learn about AI Credits <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <div className="pt-2 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">
+                <strong>Tip:</strong> If you see a "Credits Exhausted" error in the logs below, add credits at Settings → Workspace → Usage.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-primary/30">
@@ -214,7 +256,7 @@ const AdminAIUsage = () => {
               <div className="text-3xl font-bold text-primary">
                 {requestsRemaining}/{rateLimitSettings.requests_per_hour}
               </div>
-              <p className="text-xs text-muted-foreground">This hour</p>
+              <p className="text-xs text-muted-foreground">This hour (local limit)</p>
             </CardContent>
           </Card>
 
