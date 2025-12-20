@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Calendar, Video, ArrowLeft, Trophy, XCircle, Crown, Medal, Award, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { z } from 'zod';
+import { useEventSEO } from '@/hooks/useEventSEO';
 
 interface Prize {
   position: number;
@@ -75,6 +76,14 @@ export default function ReelEventPage() {
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Set dynamic SEO for reel event pages
+  useEventSEO({
+    title: event?.title || 'Reel Competition',
+    description: event?.description?.substring(0, 160) || 'Join this reel competition and win exciting prizes!',
+    image: event?.featured_image_url,
+    url: `https://propscholar.space/reels/${slug}`
+  });
 
   useEffect(() => {
     if (slug) {

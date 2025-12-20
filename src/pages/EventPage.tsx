@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import ReactMarkdown from 'react-markdown';
 import { useCoinSound } from '@/hooks/useCoinSound';
+import { useEventSEO } from '@/hooks/useEventSEO';
 
 interface Prize {
   position: number;
@@ -108,6 +109,14 @@ export default function EventPage() {
   // Secret time tracking
   const [writingStartTime, setWritingStartTime] = useState<number | null>(null);
   const [totalTimeSpent, setTotalTimeSpent] = useState(0);
+
+  // Set dynamic SEO for event pages
+  useEventSEO({
+    title: event?.title || 'Blog Competition',
+    description: event?.description?.substring(0, 160) || 'Join this blog competition and win exciting prizes!',
+    image: event?.featured_image_url,
+    url: `https://propscholar.space/blog/${slug}`
+  });
 
   useEffect(() => {
     if (slug) {
