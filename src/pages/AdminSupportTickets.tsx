@@ -180,7 +180,7 @@ const AdminSupportTickets = () => {
                 <div>
                   <h3 className="font-semibold text-lg">Email Inbox Sync</h3>
                   <p className="text-sm text-muted-foreground">
-                    Sync emails from support@propscholar.com
+                    Sync emails from help.propscholar@gmail.com
                   </p>
                 </div>
               </div>
