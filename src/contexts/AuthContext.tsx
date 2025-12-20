@@ -94,6 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Send welcome email for new users
+  const sendWelcomeEmail = async (email: string, name?: string, provider?: string) => {
+    try {
+      console.log('Sending welcome email to:', email);
+      await supabase.functions.invoke('send-welcome-email', {
+        body: { email, name, provider }
+      });
+    } catch (err) {
+      console.error('Failed to send welcome email:', err);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -108,6 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Check if user was just created (within last 30 seconds)
               const createdAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
               const isNewSignup = Date.now() - createdAt < 30000;
+              
+              if (isNewSignup) {
+                // Send welcome email for new users
+                const provider = session.user.app_metadata?.provider || 'email';
+                const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name;
+                sendWelcomeEmail(session.user.email || '', name, provider);
+              }
+              
               applyReferralCode(session.user.id, session.user.email || '', isNewSignup);
             }
           }, 0);
