@@ -1,0 +1,423 @@
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Send,
+  User,
+  Headphones,
+  Clock,
+  Mail,
+  StickyNote,
+} from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
+import { toast } from "sonner";
+
+type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
+type TicketPriority = "low" | "medium" | "high" | "urgent";
+
+interface Ticket {
+  id: string;
+  ticket_number: number;
+  subject: string;
+  user_email: string;
+  user_id: string | null;
+  status: TicketStatus;
+  priority: TicketPriority;
+  created_at: string;
+  updated_at: string;
+  last_reply_at: string;
+  closed_at: string | null;
+}
+
+interface Message {
+  id: string;
+  ticket_id: string;
+  sender_email: string;
+  sender_name: string | null;
+  sender_type: string;
+  body: string;
+  body_html: string | null;
+  is_internal_note: boolean;
+  created_at: string;
+  attachments: any[];
+}
+
+const statusColors: Record<TicketStatus, string> = {
+  open: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  awaiting_support: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  awaiting_user: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  closed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+};
+
+const statusLabels: Record<TicketStatus, string> = {
+  open: "Open",
+  awaiting_support: "Awaiting Support",
+  awaiting_user: "Awaiting User",
+  closed: "Closed",
+};
+
+const priorityColors: Record<TicketPriority, string> = {
+  low: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  medium: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  high: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  urgent: "bg-red-500/20 text-red-400 border-red-500/30",
+};
+
+const AdminTicketDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const { adminNavigate } = useAdminNavigation();
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const [replyBody, setReplyBody] = useState("");
+  const [isInternalNote, setIsInternalNote] = useState(false);
+
+  const { data: ticket, isLoading: ticketLoading } = useQuery({
+    queryKey: ["admin-ticket", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data as Ticket;
+    },
+    enabled: !!id,
+  });
+
+  const { data: messages, isLoading: messagesLoading } = useQuery({
+    queryKey: ["admin-ticket-messages", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("support_messages")
+        .select("*")
+        .eq("ticket_id", id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as Message[];
+    },
+    enabled: !!id,
+  });
+
+  const sendReplyMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("send-support-email", {
+        body: {
+          ticketId: id,
+          body: replyBody,
+          isInternalNote,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(isInternalNote ? "Internal note added" : "Reply sent successfully");
+      setReplyBody("");
+      setIsInternalNote(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-ticket-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-ticket", id] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to send reply: " + error.message);
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (newStatus: TicketStatus) => {
+      const updates: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+      if (newStatus === "closed") {
+        updates.closed_at = new Date().toISOString();
+      }
+      const { error } = await supabase
+        .from("support_tickets")
+        .update(updates)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-ticket", id] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to update status: " + error.message);
+    },
+  });
+
+  const updatePriorityMutation = useMutation({
+    mutationFn: async (newPriority: TicketPriority) => {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ priority: newPriority, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Priority updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-ticket", id] });
+    },
+    onError: (error: any) => {
+      toast.error("Failed to update priority: " + error.message);
+    },
+  });
+
+  if (ticketLoading || messagesLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading ticket...</p>
+      </div>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Ticket not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => adminNavigate("/tickets")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground font-mono">
+                #{ticket.ticket_number}
+              </span>
+              <Badge variant="outline" className={statusColors[ticket.status]}>
+                {statusLabels[ticket.status]}
+              </Badge>
+              <Badge variant="outline" className={priorityColors[ticket.priority]}>
+                {ticket.priority}
+              </Badge>
+            </div>
+            <h1 className="text-2xl font-bold mt-1">{ticket.subject}</h1>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Messages Column */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Messages */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Conversation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {messages?.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`p-4 rounded-lg ${
+                      message.is_internal_note
+                        ? "bg-yellow-500/10 border border-yellow-500/30"
+                        : message.sender_type === "admin"
+                        ? "bg-primary/10 border border-primary/30"
+                        : "bg-muted border border-border"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className={`p-1.5 rounded-full ${
+                          message.is_internal_note
+                            ? "bg-yellow-500/20"
+                            : message.sender_type === "admin"
+                            ? "bg-primary/20"
+                            : "bg-muted-foreground/20"
+                        }`}
+                      >
+                        {message.is_internal_note ? (
+                          <StickyNote className="h-4 w-4 text-yellow-400" />
+                        ) : message.sender_type === "admin" ? (
+                          <Headphones className="h-4 w-4 text-primary" />
+                        ) : (
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-medium text-sm">
+                          {message.sender_name || message.sender_email}
+                        </span>
+                        {message.is_internal_note && (
+                          <span className="text-xs text-yellow-400 ml-2">
+                            Internal Note
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(message.created_at), "MMM d, yyyy h:mm a")}
+                      </span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap pl-8">
+                      {message.body}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Reply Box */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    variant={!isInternalNote ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsInternalNote(false)}
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    Reply
+                  </Button>
+                  <Button
+                    variant={isInternalNote ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsInternalNote(true)}
+                    className={isInternalNote ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                  >
+                    <StickyNote className="h-4 w-4 mr-1" />
+                    Internal Note
+                  </Button>
+                </div>
+                <Textarea
+                  placeholder={
+                    isInternalNote
+                      ? "Add an internal note (only visible to admins)..."
+                      : "Type your reply (will be sent via email)..."
+                  }
+                  value={replyBody}
+                  onChange={(e) => setReplyBody(e.target.value)}
+                  rows={4}
+                  className="mb-3"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => sendReplyMutation.mutate()}
+                    disabled={!replyBody.trim() || sendReplyMutation.isPending}
+                  >
+                    {sendReplyMutation.isPending
+                      ? "Sending..."
+                      : isInternalNote
+                      ? "Add Note"
+                      : "Send Reply"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Ticket Info */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Ticket Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wide">
+                    Status
+                  </label>
+                  <Select
+                    value={ticket.status}
+                    onValueChange={(value) =>
+                      updateStatusMutation.mutate(value as TicketStatus)
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="awaiting_support">Awaiting Support</SelectItem>
+                      <SelectItem value="awaiting_user">Awaiting User</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wide">
+                    Priority
+                  </label>
+                  <Select
+                    value={ticket.priority}
+                    onValueChange={(value) =>
+                      updatePriorityMutation.mutate(value as TicketPriority)
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Customer Info */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Customer</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{ticket.user_email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Created {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+                {ticket.closed_at && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Closed {formatDistanceToNow(new Date(ticket.closed_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminTicketDetail;

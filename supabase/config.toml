@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.send-admin-email]
 verify_jwt = false
+
+[functions.receive-support-email]
+verify_jwt = false
+
+[functions.send-support-email]
+verify_jwt = false
