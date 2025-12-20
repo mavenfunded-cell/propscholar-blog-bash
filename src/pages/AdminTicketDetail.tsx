@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,10 +28,21 @@ import {
   PanelRightClose,
   ChevronDown,
   ChevronUp,
+  Paperclip,
+  X,
+  Image as ImageIcon,
+  Download,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
+
+interface Attachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
 
 type TicketStatus = "open" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -89,9 +100,61 @@ const AdminTicketDetail = () => {
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [showAISidebar, setShowAISidebar] = useState(true);
   const [showFullConversation, setShowFullConversation] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInsertReply = (content: string) => {
     setReplyBody(content);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newAttachments: Attachment[] = [];
+
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 10MB)`);
+        continue;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('ticket-attachments')
+        .upload(fileName, file);
+
+      if (error) {
+        toast.error(`Failed to upload ${file.name}`);
+        console.error('Upload error:', error);
+        continue;
+      }
+
+      const { data: publicUrl } = supabase.storage
+        .from('ticket-attachments')
+        .getPublicUrl(fileName);
+
+      newAttachments.push({
+        url: publicUrl.publicUrl,
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
+    }
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+    setIsUploading(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const { data: ticket, isLoading: ticketLoading } = useQuery({
@@ -129,6 +192,7 @@ const AdminTicketDetail = () => {
           ticketId: id,
           body: replyBody,
           isInternalNote,
+          attachments: attachments.length > 0 ? attachments : undefined,
         },
       });
       if (error) throw error;
@@ -138,6 +202,7 @@ const AdminTicketDetail = () => {
       toast.success(isInternalNote ? "Internal note added" : "Reply sent successfully");
       setReplyBody("");
       setIsInternalNote(false);
+      setAttachments([]);
       queryClient.invalidateQueries({ queryKey: ["admin-ticket-messages", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-ticket", id] });
     },
@@ -347,6 +412,40 @@ const AdminTicketDetail = () => {
                     <p className="text-sm whitespace-pre-wrap pl-8">
                       {message.body}
                     </p>
+                    {/* Display attachments */}
+                    {message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0 && (
+                      <div className="pl-8 mt-3 space-y-2">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Paperclip className="h-3 w-3" />
+                          Attachments ({message.attachments.length})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {message.attachments.map((att: Attachment, idx: number) => (
+                            <div key={idx} className="relative group">
+                              {att.type?.startsWith('image/') ? (
+                                <a href={att.url} target="_blank" rel="noopener noreferrer">
+                                  <img 
+                                    src={att.url} 
+                                    alt={att.name}
+                                    className="h-24 w-24 object-cover rounded-lg border border-border hover:border-primary transition-colors"
+                                  />
+                                </a>
+                              ) : (
+                                <a 
+                                  href={att.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 p-2 bg-muted rounded-lg border border-border hover:border-primary transition-colors"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  <span className="text-xs truncate max-w-[120px]">{att.name}</span>
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -385,10 +484,79 @@ const AdminTicketDetail = () => {
                   rows={4}
                   className="mb-3"
                 />
-                <div className="flex justify-end">
+
+                {/* Attachments Preview */}
+                {attachments.length > 0 && (
+                  <div className="mb-3 p-3 bg-muted/50 rounded-lg border border-border">
+                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" />
+                      Attachments ({attachments.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {attachments.map((att, idx) => (
+                        <div key={idx} className="relative group">
+                          {att.type.startsWith('image/') ? (
+                            <div className="relative">
+                              <img 
+                                src={att.url} 
+                                alt={att.name}
+                                className="h-16 w-16 object-cover rounded-lg border border-border"
+                              />
+                              <button
+                                onClick={() => removeAttachment(idx)}
+                                className="absolute -top-1 -right-1 p-0.5 bg-destructive rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="relative flex items-center gap-1 p-2 bg-background rounded-lg border border-border">
+                              <Paperclip className="h-3 w-3" />
+                              <span className="text-xs truncate max-w-[80px]">{att.name}</span>
+                              <button
+                                onClick={() => removeAttachment(idx)}
+                                className="ml-1 p-0.5 bg-destructive rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      accept="image/*,.pdf,.doc,.docx"
+                      multiple
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>Uploading...</>
+                      ) : (
+                        <>
+                          <Paperclip className="h-4 w-4 mr-1" />
+                          Attach
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Button
                     onClick={() => sendReplyMutation.mutate()}
-                    disabled={!replyBody.trim() || sendReplyMutation.isPending}
+                    disabled={!replyBody.trim() || sendReplyMutation.isPending || isUploading}
                   >
                     {sendReplyMutation.isPending
                       ? "Sending..."
