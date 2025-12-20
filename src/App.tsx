@@ -117,9 +117,9 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <AdminTicketNotification />
           <BrowserRouter>
             <AppEffects />
+            <AdminTicketNotification />
             <Routes>
               {isAdminDomain ? (
                 // Admin subdomain: serve admin routes at root
