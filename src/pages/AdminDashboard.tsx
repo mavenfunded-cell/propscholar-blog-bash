@@ -34,7 +34,9 @@ import {
   ThumbsUp,
   Mail,
   Clock,
-  UserPlus
+  UserPlus,
+  Brain,
+  MessageSquare
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -490,6 +492,26 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-yellow-400" />
                     Ticket Reviews
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </AdminLink>
+            <AdminLink to="/admin/ai-knowledge">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-purple-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-purple-400" />
+                    Train AI
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </AdminLink>
+            <AdminLink to="/admin/canned-messages">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-teal-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-teal-400" />
+                    Canned Messages
                   </CardDescription>
                 </CardHeader>
               </Card>
