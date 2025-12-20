@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ export default function EventForm() {
   const isEditing = !!id;
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { getLoginPath, getDashboardPath } = useAdminNavigation();
 
   const [competitionType, setCompetitionType] = useState<'blog' | 'reel'>('blog');
   const [title, setTitle] = useState('');
@@ -46,9 +48,9 @@ export default function EventForm() {
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
-      navigate('/admin');
+      navigate(getLoginPath());
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [user, isAdmin, authLoading, navigate, getLoginPath]);
 
   useEffect(() => {
     if (isEditing && isAdmin) {
@@ -95,7 +97,7 @@ export default function EventForm() {
     } catch (err) {
       console.error('Error fetching event:', err);
       toast.error('Failed to load event');
-      navigate('/admin/dashboard');
+      navigate(getDashboardPath());
     } finally {
       setLoadingEvent(false);
     }
@@ -225,7 +227,7 @@ export default function EventForm() {
         toast.success('Event created successfully');
       }
 
-      navigate('/admin/dashboard');
+      navigate(getDashboardPath());
     } catch (err) {
       console.error('Error saving event:', err);
       toast.error('Failed to save event');
