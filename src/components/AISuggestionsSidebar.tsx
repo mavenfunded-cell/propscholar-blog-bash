@@ -45,6 +45,8 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
   const { adminNavigate } = useAdminNavigation();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [requestsRemaining, setRequestsRemaining] = useState<number | null>(null);
+  const [requestsPerHour, setRequestsPerHour] = useState<number>(10);
 
   // Fetch canned messages
   const { data: cannedMessages, isLoading: loadingCanned } = useQuery({
@@ -73,7 +75,26 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
     },
   });
 
+  // Get current user for rate limiting
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user-session"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    }
+  });
+
   const generateSuggestions = async () => {
+    if (!currentUser?.id) {
+      toast.error("Please log in to generate suggestions");
+      return;
+    }
+
+    if (requestsRemaining !== null && requestsRemaining <= 0) {
+      toast.error("Rate limit reached. Please wait before refreshing.");
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("suggest-ticket-reply", {
@@ -82,15 +103,31 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
           conversationHistory: messages.map(m => ({
             sender_type: m.sender_type,
             body: m.body
-          }))
+          })),
+          adminId: currentUser.id
         },
       });
 
       if (error) throw error;
       
+      if (data?.error) {
+        toast.error(data.error);
+        if (data.requests_remaining !== undefined) {
+          setRequestsRemaining(data.requests_remaining);
+        }
+        return;
+      }
+
       if (data?.suggestions) {
         setSuggestions(data.suggestions);
         toast.success("AI suggestions generated!");
+      }
+
+      if (data?.requests_remaining !== undefined) {
+        setRequestsRemaining(data.requests_remaining);
+      }
+      if (data?.requests_per_hour !== undefined) {
+        setRequestsPerHour(data.requests_per_hour);
       }
     } catch (error: any) {
       console.error("Error generating suggestions:", error);
@@ -183,12 +220,26 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
                 size="sm" 
                 variant="outline" 
                 onClick={generateSuggestions}
-                disabled={isGenerating}
+                disabled={isGenerating || (requestsRemaining !== null && requestsRemaining <= 0)}
               >
                 <RefreshCw className={`h-3 w-3 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
                 {isGenerating ? "..." : "Refresh"}
               </Button>
             </div>
+
+            {/* Rate Limit Status */}
+            {requestsRemaining !== null && (
+              <div className={`text-xs px-2 py-1 rounded flex items-center justify-between ${
+                requestsRemaining > 3 
+                  ? 'bg-green-500/10 text-green-400' 
+                  : requestsRemaining > 0 
+                    ? 'bg-yellow-500/10 text-yellow-400' 
+                    : 'bg-red-500/10 text-red-400'
+              }`}>
+                <span>Requests: {requestsRemaining}/{requestsPerHour}</span>
+                <span className="text-muted-foreground">per hour</span>
+              </div>
+            )}
 
             {suggestions.length === 0 && !isGenerating && (
               <Card className="border-dashed">

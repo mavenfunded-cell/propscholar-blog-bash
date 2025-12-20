@@ -36,7 +36,8 @@ import {
   Clock,
   UserPlus,
   Brain,
-  MessageSquare
+  MessageSquare,
+  BarChart3
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -512,6 +513,16 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-teal-400" />
                     Canned Messages
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </AdminLink>
+            <AdminLink to="/admin/ai-usage">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-cyan-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-cyan-400" />
+                    AI Usage
                   </CardDescription>
                 </CardHeader>
               </Card>

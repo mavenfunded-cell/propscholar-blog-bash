@@ -11,19 +11,65 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") || "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+  );
+
   try {
-    const { ticketId, conversationHistory } = await req.json();
-    console.log("Generating AI suggestions for ticket:", ticketId);
+    const { ticketId, conversationHistory, adminId } = await req.json();
+    console.log("Generating AI suggestions for ticket:", ticketId, "by admin:", adminId);
+
+    if (!adminId) {
+      throw new Error("Admin ID is required");
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-    );
+    // Get rate limit settings
+    const { data: rateLimitSettings } = await supabase
+      .from("reward_settings")
+      .select("setting_value")
+      .eq("setting_key", "ai_rate_limit")
+      .single();
+
+    const requestsPerHour = rateLimitSettings?.setting_value?.requests_per_hour || 10;
+    const rateLimitEnabled = rateLimitSettings?.setting_value?.enabled !== false;
+
+    // Check rate limit
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: requestCount } = await supabase
+      .from("ai_usage_logs")
+      .select("*", { count: "exact", head: true })
+      .eq("admin_id", adminId)
+      .gte("created_at", oneHourAgo);
+
+    const currentCount = requestCount || 0;
+    const requestsRemaining = Math.max(0, requestsPerHour - currentCount);
+
+    if (rateLimitEnabled && currentCount >= requestsPerHour) {
+      // Log rate limited request
+      await supabase.from("ai_usage_logs").insert({
+        admin_id: adminId,
+        ticket_id: ticketId,
+        request_type: "suggest-ticket-reply",
+        tokens_estimated: 0,
+        status: "rate_limited",
+        error_message: "Rate limit exceeded",
+      });
+
+      return new Response(JSON.stringify({ 
+        error: "Rate limit exceeded. Please wait before making more AI requests.",
+        requests_remaining: 0,
+        requests_per_hour: requestsPerHour
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch knowledge base entries
     const { data: knowledgeBase } = await supabase
@@ -76,6 +122,10 @@ Return ONLY a JSON array with exactly 3 suggestions in this format:
 
 Do not include any other text, just the JSON array.`;
 
+    // Estimate tokens (rough estimate: 4 chars per token)
+    const promptLength = systemPrompt.length + conversationContext.length;
+    const estimatedTokens = Math.ceil(promptLength / 4);
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -92,21 +142,38 @@ Do not include any other text, just the JSON array.`;
     });
 
     if (!response.ok) {
+      let status = "error";
+      let errorMessage = "AI gateway error";
+
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        status = "rate_limited";
+        errorMessage = "Rate limit exceeded. Please try again later.";
+      } else if (response.status === 402) {
+        status = "credits_exhausted";
+        errorMessage = "AI credits exhausted. Please add more credits.";
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add more credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+
+      // Log failed request
+      await supabase.from("ai_usage_logs").insert({
+        admin_id: adminId,
+        ticket_id: ticketId,
+        request_type: "suggest-ticket-reply",
+        tokens_estimated: estimatedTokens,
+        status,
+        error_message: errorMessage,
+      });
+
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      throw new Error("AI gateway error");
+
+      return new Response(JSON.stringify({ 
+        error: errorMessage,
+        requests_remaining: requestsRemaining - 1,
+        requests_per_hour: requestsPerHour
+      }), {
+        status: response.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
@@ -115,7 +182,6 @@ Do not include any other text, just the JSON array.`;
     // Parse the JSON response
     let suggestions;
     try {
-      // Extract JSON from the response (in case there's extra text)
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch (parseError) {
@@ -127,9 +193,22 @@ Do not include any other text, just the JSON array.`;
       ];
     }
 
+    // Log successful request
+    await supabase.from("ai_usage_logs").insert({
+      admin_id: adminId,
+      ticket_id: ticketId,
+      request_type: "suggest-ticket-reply",
+      tokens_estimated: estimatedTokens,
+      status: "success",
+    });
+
     console.log("Generated suggestions:", suggestions);
 
-    return new Response(JSON.stringify({ suggestions }), {
+    return new Response(JSON.stringify({ 
+      suggestions,
+      requests_remaining: requestsRemaining - 1,
+      requests_per_hour: requestsPerHour
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
