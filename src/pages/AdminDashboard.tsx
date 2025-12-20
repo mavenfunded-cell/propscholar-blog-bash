@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { AdminLink } from '@/components/AdminLink';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { 
   Plus, 
   Calendar, 
@@ -74,7 +76,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
+      navigate(isAdminSubdomain() ? '/' : '/admin');
     }
   }, [user, isAdmin, loading, navigate]);
 
@@ -163,7 +165,7 @@ export default function AdminDashboard() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/admin');
+    navigate(isAdminSubdomain() ? '/' : '/admin');
   };
 
   const isEventExpired = (endDate: string) => new Date(endDate) < new Date();
@@ -236,18 +238,18 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link to={`/admin/events/${event.id}/edit`}>
+            <AdminLink to={`/admin/events/${event.id}/edit`}>
               <Button variant="outline" size="sm">
                 <Edit2 className="w-4 h-4 mr-1" />
                 Edit
               </Button>
-            </Link>
-            <Link to={`/admin/events/${event.id}/submissions`}>
+            </AdminLink>
+            <AdminLink to={`/admin/events/${event.id}/submissions`}>
               <Button variant="outline" size="sm">
                 <Eye className="w-4 h-4 mr-1" />
                 Submissions
               </Button>
-            </Link>
+            </AdminLink>
             <a 
               href={event.competition_type === 'reel' ? `/reels/${event.slug}` : `/events/${event.slug}`} 
               target="_blank" 
@@ -318,9 +320,15 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/">
-            <Logo />
-          </Link>
+          {isAdminSubdomain() ? (
+            <AdminLink to="/admin/dashboard">
+              <Logo />
+            </AdminLink>
+          ) : (
+            <Link to="/">
+              <Logo />
+            </Link>
+          )}
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">
               {user?.email}
@@ -336,7 +344,7 @@ export default function AdminDashboard() {
       <main className="container mx-auto px-4 py-8">
         {/* Reward System Quick Links */}
           <div className="mb-8 grid grid-cols-2 md:grid-cols-6 gap-4">
-            <Link to="/admin/rewards">
+            <AdminLink to="/admin/rewards">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -345,8 +353,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/coupons">
+            </AdminLink>
+            <AdminLink to="/admin/coupons">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -355,8 +363,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/users-coins">
+            </AdminLink>
+            <AdminLink to="/admin/users-coins">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -365,8 +373,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/claims">
+            </AdminLink>
+            <AdminLink to="/admin/claims">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -375,8 +383,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/winner-claims">
+            </AdminLink>
+            <AdminLink to="/admin/winner-claims">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-yellow-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -385,8 +393,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/social-follows">
+            </AdminLink>
+            <AdminLink to="/admin/social-follows">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -395,8 +403,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/votes">
+            </AdminLink>
+            <AdminLink to="/admin/votes">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-pink-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -405,8 +413,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/add-votes">
+            </AdminLink>
+            <AdminLink to="/admin/add-votes">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-orange-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -415,8 +423,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/seo">
+            </AdminLink>
+            <AdminLink to="/admin/seo">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-green-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -425,8 +433,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/emails">
+            </AdminLink>
+            <AdminLink to="/admin/emails">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-cyan-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -435,8 +443,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/notifications">
+            </AdminLink>
+            <AdminLink to="/admin/notifications">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-blue-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -445,8 +453,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/analytics">
+            </AdminLink>
+            <AdminLink to="/admin/analytics">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-emerald-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -455,8 +463,8 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-            <Link to="/admin/referrals">
+            </AdminLink>
+            <AdminLink to="/admin/referrals">
               <Card className="hover:border-primary/50 transition-colors cursor-pointer border-indigo-500/30">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -465,7 +473,7 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
+            </AdminLink>
           </div>
 
         <Tabs defaultValue="blog" className="space-y-6">

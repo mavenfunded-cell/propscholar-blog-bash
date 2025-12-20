@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +50,7 @@ export default function EventSubmissions() {
   const { id } = useParams();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { getLoginPath, getDashboardPath } = useAdminNavigation();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -60,9 +62,9 @@ export default function EventSubmissions() {
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
-      navigate('/admin');
+      navigate(getLoginPath());
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [user, isAdmin, authLoading, navigate, getLoginPath]);
 
   useEffect(() => {
     if (isAdmin && id) {
@@ -106,7 +108,7 @@ export default function EventSubmissions() {
     } catch (err) {
       console.error('Error fetching data:', err);
       toast.error('Failed to load submissions');
-      navigate('/admin/dashboard');
+      navigate(getDashboardPath());
     } finally {
       setLoading(false);
     }

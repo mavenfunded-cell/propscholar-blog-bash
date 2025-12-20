@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Lock, Mail, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -55,7 +55,8 @@ export default function AdminLogin() {
         }
 
         toast.success('Welcome back!');
-        navigate('/admin/dashboard');
+        // Navigate to dashboard - use correct path based on hostname
+        navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard');
       }
     } catch (err) {
       toast.error('An unexpected error occurred');
@@ -71,10 +72,12 @@ export default function AdminLogin() {
       <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-blue-accent/10 rounded-full blur-3xl" />
       
       <div className="w-full max-w-md relative animate-scale-in">
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to home
-        </Link>
+        {!isAdminSubdomain() && (
+          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            Back to home
+          </Link>
+        )}
         
         <Card className="border-border/50 shadow-card">
           <CardHeader className="text-center pb-2">

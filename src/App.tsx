@@ -2,10 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
+import { isAdminSubdomain, useAdminSubdomainSEO } from "@/hooks/useAdminSubdomain";
 import Landing from "./pages/Landing";
 import BlogCompetitions from "./pages/BlogCompetitions";
 import ReelCompetitions from "./pages/ReelCompetitions";
@@ -45,6 +46,7 @@ const queryClient = new QueryClient();
 function AppEffects() {
   const { pathname } = useLocation();
   useSessionTracking();
+  useAdminSubdomainSEO();
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -53,54 +55,87 @@ function AppEffects() {
   return null;
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppEffects />
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/blog" element={<BlogCompetitions />} />
-            <Route path="/reels" element={<ReelCompetitions />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/verify" element={<AuthVerify />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            {/* Admin */}
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/events/new" element={<EventForm />} />
-            <Route path="/admin/events/:id/edit" element={<EventForm />} />
-            <Route path="/admin/events/:id/submissions" element={<EventSubmissions />} />
-            <Route path="/admin/rewards" element={<AdminRewardSettings />} />
-            <Route path="/admin/coupons" element={<AdminCoupons />} />
-            <Route path="/admin/users-coins" element={<AdminUserCoins />} />
-            <Route path="/admin/claims" element={<AdminRewardClaims />} />
-            <Route path="/admin/social-follows" element={<AdminSocialFollows />} />
-            <Route path="/admin/winner-claims" element={<AdminWinnerClaims />} />
-            <Route path="/admin/seo" element={<AdminSEO />} />
-            <Route path="/admin/votes" element={<AdminVotes />} />
-            <Route path="/admin/add-votes" element={<AdminAddVotes />} />
-            <Route path="/admin/emails" element={<AdminEmails />} />
-            <Route path="/admin/notifications" element={<AdminNotifications />} />
-            <Route path="/admin/analytics" element={<AdminUserAnalytics />} />
-            <Route path="/admin/referrals" element={<AdminReferrals />} />
-            <Route path="/blog/:slug" element={<EventPage />} />
-            <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
-            <Route path="/reels/:slug" element={<ReelEventPage />} />
-            <Route path="/reels/:slug/success" element={<ReelSubmissionSuccess />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+// Admin routes component - shared between subdomain and /admin path
+function AdminRoutes({ basePath = "" }: { basePath?: string }) {
+  return (
+    <>
+      <Route path={`${basePath}/`} element={<AdminLogin />} />
+      <Route path={`${basePath}/dashboard`} element={<AdminDashboard />} />
+      <Route path={`${basePath}/events/new`} element={<EventForm />} />
+      <Route path={`${basePath}/events/:id/edit`} element={<EventForm />} />
+      <Route path={`${basePath}/events/:id/submissions`} element={<EventSubmissions />} />
+      <Route path={`${basePath}/rewards`} element={<AdminRewardSettings />} />
+      <Route path={`${basePath}/coupons`} element={<AdminCoupons />} />
+      <Route path={`${basePath}/users-coins`} element={<AdminUserCoins />} />
+      <Route path={`${basePath}/claims`} element={<AdminRewardClaims />} />
+      <Route path={`${basePath}/social-follows`} element={<AdminSocialFollows />} />
+      <Route path={`${basePath}/winner-claims`} element={<AdminWinnerClaims />} />
+      <Route path={`${basePath}/seo`} element={<AdminSEO />} />
+      <Route path={`${basePath}/votes`} element={<AdminVotes />} />
+      <Route path={`${basePath}/add-votes`} element={<AdminAddVotes />} />
+      <Route path={`${basePath}/emails`} element={<AdminEmails />} />
+      <Route path={`${basePath}/notifications`} element={<AdminNotifications />} />
+      <Route path={`${basePath}/analytics`} element={<AdminUserAnalytics />} />
+      <Route path={`${basePath}/referrals`} element={<AdminReferrals />} />
+    </>
+  );
+}
+
+// Public routes component
+function PublicRoutes() {
+  return (
+    <>
+      <Route path="/" element={<Landing />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/rewards" element={<Rewards />} />
+      <Route path="/blog" element={<BlogCompetitions />} />
+      <Route path="/reels" element={<ReelCompetitions />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/verify" element={<AuthVerify />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/blog/:slug" element={<EventPage />} />
+      <Route path="/blog/:slug/success" element={<SubmissionSuccess />} />
+      <Route path="/reels/:slug" element={<ReelEventPage />} />
+      <Route path="/reels/:slug/success" element={<ReelSubmissionSuccess />} />
+    </>
+  );
+}
+
+const App = () => {
+  const isAdminDomain = isAdminSubdomain();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppEffects />
+            <Routes>
+              {isAdminDomain ? (
+                // Admin subdomain: serve admin routes at root
+                <>
+                  {AdminRoutes({ basePath: "" })}
+                  {/* Fallback for any unmatched route on admin subdomain */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              ) : (
+                // Main domain: serve public routes + admin at /admin
+                <>
+                  {PublicRoutes()}
+                  {AdminRoutes({ basePath: "/admin" })}
+                  <Route path="*" element={<NotFound />} />
+                </>
+              )}
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

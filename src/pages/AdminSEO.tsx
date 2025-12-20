@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,7 @@ interface SEOSetting {
 export default function AdminSEO() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { getLoginPath, getDashboardPath } = useAdminNavigation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [seoSettings, setSeoSettings] = useState<SEOSetting[]>([]);
@@ -68,9 +70,9 @@ export default function AdminSEO() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      navigate(getLoginPath());
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, getLoginPath]);
 
   useEffect(() => {
     if (user) {
@@ -89,7 +91,7 @@ export default function AdminSEO() {
       .maybeSingle();
 
     if (!roleData) {
-      navigate('/');
+      navigate(getLoginPath());
       return;
     }
 
@@ -286,7 +288,7 @@ Disallow: /admin/`;
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(getDashboardPath())}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
