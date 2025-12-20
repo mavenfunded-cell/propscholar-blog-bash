@@ -152,6 +152,18 @@ const AdminTicketDetail = () => {
         .update(updates)
         .eq("id", id);
       if (error) throw error;
+
+      // Send ticket closed email when status changes to closed
+      if (newStatus === "closed" && ticket) {
+        await supabase.functions.invoke("ticket-closed-email", {
+          body: {
+            to: ticket.user_email,
+            ticketNumber: ticket.ticket_number,
+            ticketId: ticket.id,
+            subject: ticket.subject,
+          },
+        });
+      }
     },
     onSuccess: () => {
       toast.success("Status updated");

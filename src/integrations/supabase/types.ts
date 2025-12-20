@@ -840,6 +840,38 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          rating: number
+          ticket_id: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rating: number
+          ticket_id: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rating?: number
+          ticket_id?: string
+          user_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_reviews_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_coins: {
         Row: {
           balance: number

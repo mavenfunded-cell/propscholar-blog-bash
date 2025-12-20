@@ -38,3 +38,12 @@ verify_jwt = false
 
 [functions.poll-imap-inbox]
 verify_jwt = false
+
+[functions.ticket-auto-reply]
+verify_jwt = false
+
+[functions.ticket-closed-email]
+verify_jwt = false
+
+[functions.submit-ticket-review]
+verify_jwt = false
