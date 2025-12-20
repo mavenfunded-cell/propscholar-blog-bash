@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.submit-ticket-review]
 verify_jwt = false
+
+[functions.suggest-ticket-reply]
+verify_jwt = true
