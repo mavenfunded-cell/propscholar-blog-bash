@@ -17,19 +17,23 @@ import {
   Send,
   Share2,
   ListTodo,
-  Pin
+  Pin,
+  BellRing
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications, Notification, TaskNotification } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useCoinSound } from '@/hooks/useCoinSound';
+import { useBrowserNotifications } from '@/hooks/useBrowserNotifications';
+import { toast } from 'sonner';
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { playClick } = useCoinSound();
+  const { permission, isSupported, requestPermission, isGranted, isDefault } = useBrowserNotifications();
 
   const cleanTitle = (t: string) => t.replace(/^📱\s*/, '');
   
@@ -83,6 +87,15 @@ export function NotificationBell() {
   const handleTaskClick = (task: TaskNotification) => {
     setIsOpen(false);
     navigate(task.action_url);
+  };
+
+  const handleEnableNotifications = async () => {
+    const granted = await requestPermission();
+    if (granted) {
+      toast.success('Browser notifications enabled! You\'ll now receive alerts for new notifications.');
+    } else {
+      toast.error('Notification permission denied. You can enable it from browser settings.');
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -154,16 +167,53 @@ export function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/30">
             <h3 className="text-sm font-medium text-foreground/90">Notifications</h3>
-            {hasUnreadRegular && (
-              <button
-                onClick={markAllAsRead}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground/80 transition-colors"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {isSupported && isDefault && (
+                <button
+                  onClick={handleEnableNotifications}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                  title="Enable browser notifications"
+                >
+                  <BellRing className="w-3.5 h-3.5" />
+                  Enable
+                </button>
+              )}
+              {hasUnreadRegular && (
+                <button
+                  onClick={markAllAsRead}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground/80 transition-colors"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Browser Notification Banner */}
+          {isSupported && isDefault && (
+            <div className="px-4 py-3 bg-primary/10 border-b border-primary/20">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary/20 text-primary">
+                  <BellRing className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground/90">Enable Browser Notifications</p>
+                  <p className="text-xs mt-0.5 text-muted-foreground">
+                    Get instant alerts when you receive new notifications, even when the tab is in background.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={handleEnableNotifications}
+                    className="mt-2 h-7 px-4 text-xs"
+                  >
+                    <BellRing className="w-3 h-3 mr-1.5" />
+                    Enable Now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Notifications List */}
           <div className="overflow-y-auto max-h-[50vh] custom-scrollbar">

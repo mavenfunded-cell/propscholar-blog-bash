@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBrowserNotifications } from '@/hooks/useBrowserNotifications';
 
 export interface Notification {
   id: string;
@@ -32,6 +33,8 @@ export function useNotifications() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const { user } = useAuth();
+  const { showNotification: showBrowserNotification, isGranted: browserNotificationsEnabled } = useBrowserNotifications();
+  const lastNotificationIdRef = useRef<string | null>(null);
 
   // Fetch task notifications (pending tasks)
   const fetchTaskNotifications = useCallback(async () => {
@@ -245,6 +248,16 @@ export function useNotifications() {
           const newNotification = payload.new as Notification;
           setNotifications(prev => [newNotification, ...prev.slice(0, 19)]);
           setUnreadCount(prev => prev + 1);
+          
+          // Show browser notification if permission granted
+          if (browserNotificationsEnabled && newNotification.id !== lastNotificationIdRef.current) {
+            lastNotificationIdRef.current = newNotification.id;
+            showBrowserNotification(newNotification.title.replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, ''), {
+              body: newNotification.message,
+              tag: newNotification.id,
+              data: { url: newNotification.action_url }
+            });
+          }
         }
       )
       .on(
