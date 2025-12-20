@@ -1,13 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Hostinger SMTP configuration - ONLY for support@propscholar.com
+const SMTP_HOST = "smtp.hostinger.com";
+const SMTP_PORT = 465;
+const SUPPORT_EMAIL = "support@propscholar.com";
+const FROM_NAME = "PropScholar Support";
 
 interface SendEmailRequest {
   ticketId: string;
@@ -16,7 +20,7 @@ interface SendEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Sending support email");
+  console.log("Sending support email via Hostinger SMTP");
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,12 +85,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Get admin email
-    const adminEmail = userData.user.email || "support@propscholar.com";
-    const adminName = userData.user.user_metadata?.full_name || "PropScholar Support";
-
     // Generate message ID for threading
-    const messageId = `<${crypto.randomUUID()}@propscholar.space>`;
+    const messageId = `<${crypto.randomUUID()}@propscholar.com>`;
 
     // Get the last message for threading headers
     const { data: lastMessage } = await supabase
@@ -97,13 +97,22 @@ const handler = async (req: Request): Promise<Response> => {
       .limit(1)
       .single();
 
+    // Build references chain for proper threading
+    const references: string[] = [];
+    if (ticket.original_message_id) {
+      references.push(ticket.original_message_id);
+    }
+    if (lastMessage?.message_id && lastMessage.message_id !== ticket.original_message_id) {
+      references.push(lastMessage.message_id);
+    }
+
     // Insert message into database
     const { data: newMessage, error: insertError } = await supabase
       .from("support_messages")
       .insert({
         ticket_id: ticketId,
-        sender_email: "support@propscholar.com",
-        sender_name: adminName,
+        sender_email: SUPPORT_EMAIL,
+        sender_name: FROM_NAME,
         sender_type: "admin",
         body: body,
         message_id: messageId,
@@ -120,16 +129,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Only send email if not an internal note
     if (!isInternalNote) {
+      // Get Hostinger SMTP credentials
+      const smtpUser = Deno.env.get("HOSTINGER_SUPPORT_EMAIL");
+      const smtpPassword = Deno.env.get("HOSTINGER_SUPPORT_PASSWORD");
+
+      if (!smtpUser || !smtpPassword) {
+        console.error("Hostinger SMTP credentials not configured");
+        return new Response(
+          JSON.stringify({ error: "Email service not configured" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
       const subject = `Re: [Ticket #${ticket.ticket_number}] ${ticket.subject}`;
-      
-      // Build references header
-      const references: string[] = [];
-      if (ticket.original_message_id) {
-        references.push(ticket.original_message_id);
-      }
-      if (lastMessage?.message_id) {
-        references.push(lastMessage.message_id);
-      }
 
       const emailHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -146,23 +158,61 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
       `;
 
-      const emailResponse = await resend.emails.send({
-        from: "PropScholar Support <support@propscholar.com>",
-        to: [ticket.user_email],
-        subject: subject,
-        html: emailHtml,
-        headers: {
-          "Message-ID": messageId,
-          ...(lastMessage?.message_id || ticket.original_message_id
-            ? { "In-Reply-To": lastMessage?.message_id || ticket.original_message_id }
-            : {}),
-          ...(references.length > 0
-            ? { References: references.join(" ") }
-            : {}),
+      console.log(`Sending email to ${ticket.user_email} via Hostinger SMTP`);
+
+      // Create SMTP client
+      const client = new SMTPClient({
+        connection: {
+          hostname: SMTP_HOST,
+          port: SMTP_PORT,
+          tls: true,
+          auth: {
+            username: smtpUser,
+            password: smtpPassword,
+          },
         },
       });
 
-      console.log("Email sent:", emailResponse);
+      try {
+        await client.send({
+          from: `${FROM_NAME} <${SUPPORT_EMAIL}>`,
+          to: ticket.user_email,
+          subject: subject,
+          content: body,
+          html: emailHtml,
+          headers: {
+            "Message-ID": messageId,
+            "Reply-To": SUPPORT_EMAIL,
+            ...(lastMessage?.message_id || ticket.original_message_id
+              ? { "In-Reply-To": lastMessage?.message_id || ticket.original_message_id }
+              : {}),
+            ...(references.length > 0
+              ? { "References": references.join(" ") }
+              : {}),
+          },
+        });
+
+        await client.close();
+        console.log("Email sent successfully via Hostinger SMTP");
+
+      } catch (smtpError: any) {
+        console.error("SMTP send error:", smtpError);
+        await client.close();
+        return new Response(
+          JSON.stringify({ error: "Failed to send email", details: smtpError.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Update ticket status to awaiting_user
+      await supabase
+        .from("support_tickets")
+        .update({
+          status: "awaiting_user",
+          last_reply_at: new Date().toISOString(),
+          last_reply_by: "admin",
+        })
+        .eq("id", ticketId);
     }
 
     return new Response(
