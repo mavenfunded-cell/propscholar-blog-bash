@@ -123,10 +123,9 @@ const App = () => {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </>
               ) : (
-                // Main domain: serve public routes + admin at /admin
+                // Main domain: serve public routes only (no admin)
                 <>
                   {PublicRoutes()}
-                  {AdminRoutes({ basePath: "/admin" })}
                   <Route path="*" element={<NotFound />} />
                 </>
               )}
