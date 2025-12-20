@@ -26,6 +26,8 @@ import {
   Bot,
   PanelRightOpen,
   PanelRightClose,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
@@ -86,6 +88,7 @@ const AdminTicketDetail = () => {
   const [replyBody, setReplyBody] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [showAISidebar, setShowAISidebar] = useState(true);
+  const [showFullConversation, setShowFullConversation] = useState(false);
 
   const handleInsertReply = (content: string) => {
     setReplyBody(content);
@@ -274,11 +277,31 @@ const AdminTicketDetail = () => {
           <div className="lg:col-span-2 space-y-4">
             {/* Messages */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Conversation</CardTitle>
+                {messages && messages.length > 2 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFullConversation(!showFullConversation)}
+                    className="text-xs"
+                  >
+                    {showFullConversation ? (
+                      <>
+                        <ChevronUp className="h-4 w-4 mr-1" />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        View Full ({messages.length} messages)
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
-                {messages?.map((message) => (
+                {(showFullConversation ? messages : messages?.slice(-2))?.map((message) => (
                   <div
                     key={message.id}
                     className={`p-4 rounded-lg ${
