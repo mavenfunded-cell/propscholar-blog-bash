@@ -27,7 +27,7 @@ import {
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 
-type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
+type TicketStatus = "open" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
 
 interface Ticket {
@@ -58,16 +58,12 @@ interface Message {
 }
 
 const statusColors: Record<TicketStatus, string> = {
-  open: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  awaiting_support: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  awaiting_user: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  open: "bg-green-500/20 text-green-400 border-green-500/30",
   closed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
 
 const statusLabels: Record<TicketStatus, string> = {
   open: "Open",
-  awaiting_support: "Awaiting Support",
-  awaiting_user: "Awaiting User",
   closed: "Closed",
 };
 
@@ -146,6 +142,8 @@ const AdminTicketDetail = () => {
       };
       if (newStatus === "closed") {
         updates.closed_at = new Date().toISOString();
+      } else {
+        updates.closed_at = null;
       }
       const { error } = await supabase
         .from("support_tickets")
@@ -155,14 +153,21 @@ const AdminTicketDetail = () => {
 
       // Send ticket closed email when status changes to closed
       if (newStatus === "closed" && ticket) {
-        await supabase.functions.invoke("ticket-closed-email", {
-          body: {
-            to: ticket.user_email,
-            ticketNumber: ticket.ticket_number,
-            ticketId: ticket.id,
-            subject: ticket.subject,
-          },
-        });
+        try {
+          const { error: emailError } = await supabase.functions.invoke("ticket-closed-email", {
+            body: {
+              to: ticket.user_email,
+              ticketNumber: ticket.ticket_number,
+              ticketId: ticket.id,
+              subject: ticket.subject,
+            },
+          });
+          if (emailError) {
+            console.error("Failed to send closed email:", emailError);
+          }
+        } catch (e) {
+          console.error("Error sending closed email:", e);
+        }
       }
     },
     onSuccess: () => {
@@ -358,7 +363,7 @@ const AdminTicketDetail = () => {
                     Status
                   </label>
                   <Select
-                    value={ticket.status}
+                    value={ticket.status === "closed" ? "closed" : "open"}
                     onValueChange={(value) =>
                       updateStatusMutation.mutate(value as TicketStatus)
                     }
@@ -368,8 +373,6 @@ const AdminTicketDetail = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="awaiting_support">Awaiting Support</SelectItem>
-                      <SelectItem value="awaiting_user">Awaiting User</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>

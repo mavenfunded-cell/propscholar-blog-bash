@@ -181,6 +181,8 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("email", senderEmail)
       .single();
 
+    let isNewTicket = false;
+
     if (!ticketId) {
       // Create new ticket
       const { data: newTicket, error: ticketError } = await supabase
@@ -201,6 +203,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       ticketId = newTicket.id;
+      isNewTicket = true;
       console.log("Created new ticket:", ticketId, "Number:", newTicket.ticket_number);
     }
 
@@ -224,24 +227,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Successfully processed email into ticket:", ticketId);
 
-    // Get the ticket number for the auto-reply
+    // Get the ticket data
     const { data: ticketData } = await supabase
       .from("support_tickets")
       .select("ticket_number, subject")
       .eq("id", ticketId)
       .single();
 
-    // Send auto-reply email for new tickets
-    if (ticketData) {
+    // Update ticket status to open when user replies
+    await supabase
+      .from("support_tickets")
+      .update({
+        status: "open",
+        last_reply_at: new Date().toISOString(),
+        last_reply_by: "user",
+      })
+      .eq("id", ticketId);
+
+    // Send auto-reply email ONLY for new tickets
+    if (isNewTicket && ticketData) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
         
-        await fetch(`${supabaseUrl}/functions/v1/ticket-auto-reply`, {
+        console.log("Triggering auto-reply for new ticket:", ticketData.ticket_number);
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/ticket-auto-reply`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${anonKey}`,
+            "Authorization": `Bearer ${serviceRoleKey}`,
           },
           body: JSON.stringify({
             to: senderEmail,
@@ -250,7 +265,9 @@ const handler = async (req: Request): Promise<Response> => {
             ticketId: ticketId,
           }),
         });
-        console.log("Auto-reply email triggered for ticket:", ticketData.ticket_number);
+        
+        const result = await response.json();
+        console.log("Auto-reply response:", result);
       } catch (autoReplyError) {
         console.error("Failed to send auto-reply:", autoReplyError);
         // Don't fail the main request if auto-reply fails
