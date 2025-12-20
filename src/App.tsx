@@ -43,6 +43,8 @@ import AdminReferrals from "./pages/AdminReferrals";
 import AdminSupportTickets from "./pages/AdminSupportTickets";
 import AdminTicketDetail from "./pages/AdminTicketDetail";
 import AdminTicketReviews from "./pages/AdminTicketReviews";
+import AdminCannedMessages from "./pages/AdminCannedMessages";
+import AdminAIKnowledge from "./pages/AdminAIKnowledge";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +86,8 @@ function AdminRoutes({ basePath = "" }: { basePath?: string }) {
       <Route path={`${basePath}/tickets`} element={<AdminSupportTickets />} />
       <Route path={`${basePath}/tickets/:id`} element={<AdminTicketDetail />} />
       <Route path={`${basePath}/reviews`} element={<AdminTicketReviews />} />
+      <Route path={`${basePath}/canned-messages`} element={<AdminCannedMessages />} />
+      <Route path={`${basePath}/ai-knowledge`} element={<AdminAIKnowledge />} />
     </>
   );
 }

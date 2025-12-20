@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   Bot, 
@@ -16,10 +15,12 @@ import {
   Sparkles, 
   MessageSquare, 
   BookOpen,
-  Plus,
   Zap,
   Heart,
-  FileText
+  FileText,
+  Settings,
+  Brain,
+  ExternalLink
 } from "lucide-react";
 
 interface Message {
@@ -41,10 +42,9 @@ interface AISuggestionsSidebarProps {
 }
 
 const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestionsSidebarProps) => {
+  const { adminNavigate } = useAdminNavigation();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [newKnowledge, setNewKnowledge] = useState({ title: "", content: "", category: "general" });
-  const [isAddingKnowledge, setIsAddingKnowledge] = useState(false);
 
   // Fetch canned messages
   const { data: cannedMessages, isLoading: loadingCanned } = useQuery({
@@ -110,40 +110,9 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
     toast.success("Inserted into reply box!");
   };
 
-  const addKnowledge = async () => {
-    if (!newKnowledge.title || !newKnowledge.content) {
-      toast.error("Please fill in title and content");
-      return;
-    }
-
-    setIsAddingKnowledge(true);
-    try {
-      const { error } = await supabase
-        .from("ai_knowledge_base")
-        .insert({
-          title: newKnowledge.title,
-          content: newKnowledge.content,
-          category: newKnowledge.category,
-          source: "manual"
-        });
-
-      if (error) throw error;
-      
-      setNewKnowledge({ title: "", content: "", category: "general" });
-      refetchKnowledge();
-      toast.success("Knowledge added! AI will use this in future suggestions.");
-    } catch (error: any) {
-      console.error("Error adding knowledge:", error);
-      toast.error("Failed to add knowledge");
-    } finally {
-      setIsAddingKnowledge(false);
-    }
-  };
-
   const learnFromConversation = async () => {
-    // Extract the last user message and create a knowledge entry
     const lastUserMessage = [...messages].reverse().find(m => m.sender_type === "user");
-    const lastSupportMessage = [...messages].reverse().find(m => m.sender_type === "support");
+    const lastSupportMessage = [...messages].reverse().find(m => m.sender_type === "support" || m.sender_type === "admin");
 
     if (!lastUserMessage || !lastSupportMessage) {
       toast.error("Need both customer and support messages to learn from");
@@ -336,47 +305,26 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
                 Learn from this conversation
               </Button>
 
-              <Card>
-                <CardHeader className="p-3 pb-2">
-                  <CardTitle className="text-xs flex items-center gap-2">
-                    <Plus className="h-3 w-3" />
-                    Add Knowledge
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0 space-y-2">
-                  <Input 
-                    placeholder="Title (e.g., Refund Policy)"
-                    value={newKnowledge.title}
-                    onChange={(e) => setNewKnowledge(prev => ({ ...prev, title: e.target.value }))}
-                    className="h-8 text-sm"
-                  />
-                  <Textarea 
-                    placeholder="Content the AI should know..."
-                    value={newKnowledge.content}
-                    onChange={(e) => setNewKnowledge(prev => ({ ...prev, content: e.target.value }))}
-                    className="text-sm min-h-[80px]"
-                  />
-                  <select 
-                    className="w-full h-8 text-sm border rounded-md px-2 bg-background"
-                    value={newKnowledge.category}
-                    onChange={(e) => setNewKnowledge(prev => ({ ...prev, category: e.target.value }))}
-                  >
-                    <option value="general">General</option>
-                    <option value="competition">Competitions</option>
-                    <option value="rewards">Rewards</option>
-                    <option value="account">Account</option>
-                    <option value="technical">Technical</option>
-                  </select>
-                  <Button 
-                    size="sm" 
-                    className="w-full"
-                    onClick={addKnowledge}
-                    disabled={isAddingKnowledge}
-                  >
-                    {isAddingKnowledge ? "Adding..." : "Add to Knowledge Base"}
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => adminNavigate("/ai-knowledge")}
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  Manage AI Knowledge
+                  <ExternalLink className="h-3 w-3 ml-auto" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => adminNavigate("/canned-messages")}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage Canned Messages
+                  <ExternalLink className="h-3 w-3 ml-auto" />
+                </Button>
+              </div>
             </div>
 
             <div>
@@ -395,6 +343,11 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
                     <p className="text-muted-foreground line-clamp-2">{kb.content}</p>
                   </div>
                 ))}
+                {(!knowledgeBase || knowledgeBase.length === 0) && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    No knowledge entries yet
+                  </p>
+                )}
               </div>
             </div>
           </TabsContent>
