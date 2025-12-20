@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
+import { AdminTicketNotification } from "@/components/AdminTicketNotification";
 import { isAdminSubdomain, useAdminSubdomainSEO } from "@/hooks/useAdminSubdomain";
 import Landing from "./pages/Landing";
 import BlogCompetitions from "./pages/BlogCompetitions";
@@ -116,6 +117,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <AdminTicketNotification />
           <BrowserRouter>
             <AppEffects />
             <Routes>
