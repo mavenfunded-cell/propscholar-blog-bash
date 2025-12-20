@@ -77,7 +77,7 @@ const priorityColors: Record<TicketPriority, string> = {
 const AdminSupportTickets = () => {
   const { adminNavigate } = useAdminNavigation();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("open");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSyncResult, setLastSyncResult] = useState<{
@@ -244,8 +244,8 @@ const AdminSupportTickets = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { key: "all", label: "All Tickets", count: ticketCounts.all, icon: MessageSquare },
             { key: "open", label: "Open", count: ticketCounts.open, icon: Mail },
+            { key: "all", label: "All Tickets", count: ticketCounts.all, icon: MessageSquare },
             { key: "closed", label: "Closed", count: ticketCounts.closed, icon: CheckCircle2 },
           ].map((stat) => (
             <Card
