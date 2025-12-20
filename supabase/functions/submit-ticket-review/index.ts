@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const htmlHeaders = {
+  "Content-Type": "text/html; charset=utf-8",
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!ticketId || !email || rating < 1 || rating > 5) {
       return new Response(getErrorHtml("Invalid review parameters"), {
         status: 400,
-        headers: { "Content-Type": "text/html", ...corsHeaders },
+        headers: htmlHeaders,
       });
     }
 
@@ -40,7 +44,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (existingReview) {
       return new Response(getAlreadyReviewedHtml(), {
         status: 200,
-        headers: { "Content-Type": "text/html", ...corsHeaders },
+        headers: htmlHeaders,
       });
     }
 
@@ -58,13 +62,13 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Review submitted successfully");
     return new Response(getSuccessHtml(rating), {
       status: 200,
-      headers: { "Content-Type": "text/html", ...corsHeaders },
+      headers: htmlHeaders,
     });
   } catch (error: any) {
     console.error("Error submitting review:", error);
     return new Response(getErrorHtml(error.message), {
       status: 500,
-      headers: { "Content-Type": "text/html", ...corsHeaders },
+      headers: htmlHeaders,
     });
   }
 };
