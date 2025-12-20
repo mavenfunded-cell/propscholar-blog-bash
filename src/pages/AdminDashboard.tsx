@@ -474,6 +474,16 @@ export default function AdminDashboard() {
                 </CardHeader>
               </Card>
             </AdminLink>
+            <AdminLink to="/admin/tickets">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-cyan-500/30">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-cyan-400" />
+                    Support Tickets
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </AdminLink>
           </div>
 
         <Tabs defaultValue="blog" className="space-y-6">
