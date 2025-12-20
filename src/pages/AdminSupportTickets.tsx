@@ -172,7 +172,7 @@ const AdminSupportTickets = () => {
         {/* Email Sync Section */}
         <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-full bg-primary/10">
                   <Inbox className="h-6 w-6 text-primary" />
@@ -185,16 +185,26 @@ const AdminSupportTickets = () => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Auto-sync status indicator */}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                  <div className="relative">
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <div className="absolute inset-0 h-2 w-2 rounded-full bg-green-500 animate-ping opacity-75" />
+                  </div>
+                  <span className="text-xs font-medium text-green-400">Auto-sync active</span>
+                  <span className="text-xs text-muted-foreground">(every 1 min)</span>
+                </div>
+
                 {lastSyncResult && (
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-muted/50">
                     {lastSyncResult.success ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     ) : (
                       <AlertCircle className="h-4 w-4 text-red-500" />
                     )}
                     <span className="text-muted-foreground">
-                      Last sync: {format(new Date(lastSyncResult.timestamp), "MMM d, h:mm a")}
+                      Last: {format(new Date(lastSyncResult.timestamp), "h:mm a")}
                     </span>
                     {lastSyncResult.processed > 0 && (
                       <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/30">
@@ -207,6 +217,8 @@ const AdminSupportTickets = () => {
                 <Button
                   onClick={() => syncInboxMutation.mutate()}
                   disabled={syncInboxMutation.isPending}
+                  size="sm"
+                  variant="outline"
                   className="gap-2"
                 >
                   {syncInboxMutation.isPending ? (
