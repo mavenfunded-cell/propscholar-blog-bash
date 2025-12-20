@@ -1,0 +1,267 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Mail, Search, RefreshCw, MessageSquare } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+
+type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
+type TicketPriority = "low" | "medium" | "high" | "urgent";
+
+interface Ticket {
+  id: string;
+  ticket_number: number;
+  subject: string;
+  user_email: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  created_at: string;
+  updated_at: string;
+  last_reply_at: string;
+  last_reply_by: string;
+}
+
+const statusColors: Record<TicketStatus, string> = {
+  open: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  awaiting_support: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  awaiting_user: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  closed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+};
+
+const statusLabels: Record<TicketStatus, string> = {
+  open: "Open",
+  awaiting_support: "Awaiting Support",
+  awaiting_user: "Awaiting User",
+  closed: "Closed",
+};
+
+const priorityColors: Record<TicketPriority, string> = {
+  low: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  medium: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  high: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  urgent: "bg-red-500/20 text-red-400 border-red-500/30",
+};
+
+const AdminSupportTickets = () => {
+  const { adminNavigate, getAdminPath } = useAdminNavigation();
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: tickets, isLoading, refetch } = useQuery({
+    queryKey: ["admin-support-tickets", statusFilter, priorityFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("support_tickets")
+        .select("*")
+        .order("last_reply_at", { ascending: false });
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter as TicketStatus);
+      }
+      if (priorityFilter !== "all") {
+        query = query.eq("priority", priorityFilter as TicketPriority);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Ticket[];
+    },
+  });
+
+  const filteredTickets = tickets?.filter((ticket) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      ticket.subject.toLowerCase().includes(query) ||
+      ticket.user_email.toLowerCase().includes(query) ||
+      ticket.ticket_number.toString().includes(query)
+    );
+  });
+
+  const ticketCounts = {
+    all: tickets?.length || 0,
+    open: tickets?.filter((t) => t.status === "open").length || 0,
+    awaiting_support: tickets?.filter((t) => t.status === "awaiting_support").length || 0,
+    awaiting_user: tickets?.filter((t) => t.status === "awaiting_user").length || 0,
+    closed: tickets?.filter((t) => t.status === "closed").length || 0,
+  };
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => adminNavigate("/dashboard")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Mail className="h-8 w-8 text-primary" />
+              Support Tickets
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage customer support requests
+            </p>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          {[
+            { key: "all", label: "All Tickets", count: ticketCounts.all },
+            { key: "open", label: "Open", count: ticketCounts.open },
+            { key: "awaiting_support", label: "Needs Response", count: ticketCounts.awaiting_support },
+            { key: "awaiting_user", label: "Awaiting User", count: ticketCounts.awaiting_user },
+            { key: "closed", label: "Closed", count: ticketCounts.closed },
+          ].map((stat) => (
+            <Card
+              key={stat.key}
+              className={`cursor-pointer transition-all hover:border-primary/50 ${
+                statusFilter === stat.key ? "border-primary bg-primary/5" : ""
+              }`}
+              onClick={() => setStatusFilter(stat.key)}
+            >
+              <CardContent className="p-4">
+                <p className="text-2xl font-bold">{stat.count}</p>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by subject, email, or ticket #"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-full md:w-40">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tickets Table */}
+        <Card>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-8 text-center text-muted-foreground">
+                Loading tickets...
+              </div>
+            ) : filteredTickets?.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No tickets found</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-20">#</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead className="w-40">Status</TableHead>
+                    <TableHead className="w-28">Priority</TableHead>
+                    <TableHead className="w-40">Last Reply</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTickets?.map((ticket) => (
+                    <TableRow
+                      key={ticket.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
+                    >
+                      <TableCell className="font-mono text-muted-foreground">
+                        #{ticket.ticket_number}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {ticket.subject}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {ticket.user_email}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={statusColors[ticket.status]}
+                        >
+                          {statusLabels[ticket.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={priorityColors[ticket.priority]}
+                        >
+                          {ticket.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        <div>
+                          {formatDistanceToNow(new Date(ticket.last_reply_at), {
+                            addSuffix: true,
+                          })}
+                        </div>
+                        <div className="text-xs opacity-70">
+                          by {ticket.last_reply_by}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AdminSupportTickets;

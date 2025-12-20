@@ -739,6 +739,107 @@ export type Database = {
           },
         ]
       }
+      support_messages: {
+        Row: {
+          attachments: Json | null
+          body: string
+          body_html: string | null
+          created_at: string
+          id: string
+          in_reply_to: string | null
+          is_internal_note: boolean | null
+          message_id: string | null
+          sender_email: string
+          sender_name: string | null
+          sender_type: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          body: string
+          body_html?: string | null
+          created_at?: string
+          id?: string
+          in_reply_to?: string | null
+          is_internal_note?: boolean | null
+          message_id?: string | null
+          sender_email: string
+          sender_name?: string | null
+          sender_type?: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          body?: string
+          body_html?: string | null
+          created_at?: string
+          id?: string
+          in_reply_to?: string | null
+          is_internal_note?: boolean | null
+          message_id?: string | null
+          sender_email?: string
+          sender_name?: string | null
+          sender_type?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          id: string
+          last_reply_at: string | null
+          last_reply_by: string | null
+          original_message_id: string | null
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: number
+          updated_at: string
+          user_email: string
+          user_id: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_reply_at?: string | null
+          last_reply_by?: string | null
+          original_message_id?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number?: number
+          updated_at?: string
+          user_email: string
+          user_id?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_reply_at?: string | null
+          last_reply_by?: string | null
+          original_message_id?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          ticket_number?: number
+          updated_at?: string
+          user_email?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_coins: {
         Row: {
           balance: number
@@ -978,6 +1079,10 @@ export type Database = {
         Returns: string
       }
       current_user_email: { Args: never; Returns: string }
+      find_ticket_by_message_ref: {
+        Args: { _in_reply_to: string; _message_id: string; _references: string }
+        Returns: string
+      }
       generate_slug: { Args: { title: string }; Returns: string }
       get_event_submissions: {
         Args: { _event_id: string }
@@ -1052,6 +1157,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      ticket_priority: "low" | "medium" | "high" | "urgent"
+      ticket_status: "open" | "awaiting_support" | "awaiting_user" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1180,6 +1287,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      ticket_priority: ["low", "medium", "high", "urgent"],
+      ticket_status: ["open", "awaiting_support", "awaiting_user", "closed"],
     },
   },
 } as const
