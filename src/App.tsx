@@ -42,6 +42,7 @@ import AdminUserAnalytics from "./pages/AdminUserAnalytics";
 import AdminReferrals from "./pages/AdminReferrals";
 import AdminSupportTickets from "./pages/AdminSupportTickets";
 import AdminTicketDetail from "./pages/AdminTicketDetail";
+import AdminTicketReviews from "./pages/AdminTicketReviews";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ function AdminRoutes({ basePath = "" }: { basePath?: string }) {
       <Route path={`${basePath}/referrals`} element={<AdminReferrals />} />
       <Route path={`${basePath}/tickets`} element={<AdminSupportTickets />} />
       <Route path={`${basePath}/tickets/:id`} element={<AdminTicketDetail />} />
+      <Route path={`${basePath}/reviews`} element={<AdminTicketReviews />} />
     </>
   );
 }
