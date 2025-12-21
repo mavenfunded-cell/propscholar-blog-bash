@@ -63,37 +63,35 @@ function AppEffects() {
   return null;
 }
 
-// Admin routes component - shared between subdomain and /admin path
-function AdminRoutes({ basePath = "" }: { basePath?: string }) {
-  return (
-    <>
-      <Route path={`${basePath}/`} element={<AdminLogin />} />
-      <Route path={`${basePath}/dashboard`} element={<AdminDashboard />} />
-      <Route path={`${basePath}/events/new`} element={<EventForm />} />
-      <Route path={`${basePath}/events/:id/edit`} element={<EventForm />} />
-      <Route path={`${basePath}/events/:id/submissions`} element={<EventSubmissions />} />
-      <Route path={`${basePath}/rewards`} element={<AdminRewardSettings />} />
-      <Route path={`${basePath}/coupons`} element={<AdminCoupons />} />
-      <Route path={`${basePath}/users-coins`} element={<AdminUserCoins />} />
-      <Route path={`${basePath}/claims`} element={<AdminRewardClaims />} />
-      <Route path={`${basePath}/social-follows`} element={<AdminSocialFollows />} />
-      <Route path={`${basePath}/winner-claims`} element={<AdminWinnerClaims />} />
-      <Route path={`${basePath}/seo`} element={<AdminSEO />} />
-      <Route path={`${basePath}/votes`} element={<AdminVotes />} />
-      <Route path={`${basePath}/add-votes`} element={<AdminAddVotes />} />
-      <Route path={`${basePath}/emails`} element={<AdminEmails />} />
-      <Route path={`${basePath}/notifications`} element={<AdminNotifications />} />
-      <Route path={`${basePath}/analytics`} element={<AdminUserAnalytics />} />
-      <Route path={`${basePath}/referrals`} element={<AdminReferrals />} />
-      <Route path={`${basePath}/tickets`} element={<AdminSupportTickets />} />
-      <Route path={`${basePath}/tickets/:id`} element={<AdminTicketDetail />} />
-      <Route path={`${basePath}/reviews`} element={<AdminTicketReviews />} />
-      <Route path={`${basePath}/canned-messages`} element={<AdminCannedMessages />} />
-      <Route path={`${basePath}/ai-knowledge`} element={<AdminAIKnowledge />} />
-      <Route path={`${basePath}/ai-usage`} element={<AdminAIUsage />} />
-      <Route path={`${basePath}/og-images`} element={<AdminOGImages />} />
-    </>
-  );
+// Admin routes - returns array of Route elements
+function getAdminRoutes(basePath = "") {
+  return [
+    <Route key="login" path={`${basePath}/`} element={<AdminLogin />} />,
+    <Route key="dashboard" path={`${basePath}/dashboard`} element={<AdminDashboard />} />,
+    <Route key="events-new" path={`${basePath}/events/new`} element={<EventForm />} />,
+    <Route key="events-edit" path={`${basePath}/events/:id/edit`} element={<EventForm />} />,
+    <Route key="events-submissions" path={`${basePath}/events/:id/submissions`} element={<EventSubmissions />} />,
+    <Route key="rewards" path={`${basePath}/rewards`} element={<AdminRewardSettings />} />,
+    <Route key="coupons" path={`${basePath}/coupons`} element={<AdminCoupons />} />,
+    <Route key="users-coins" path={`${basePath}/users-coins`} element={<AdminUserCoins />} />,
+    <Route key="claims" path={`${basePath}/claims`} element={<AdminRewardClaims />} />,
+    <Route key="social-follows" path={`${basePath}/social-follows`} element={<AdminSocialFollows />} />,
+    <Route key="winner-claims" path={`${basePath}/winner-claims`} element={<AdminWinnerClaims />} />,
+    <Route key="seo" path={`${basePath}/seo`} element={<AdminSEO />} />,
+    <Route key="votes" path={`${basePath}/votes`} element={<AdminVotes />} />,
+    <Route key="add-votes" path={`${basePath}/add-votes`} element={<AdminAddVotes />} />,
+    <Route key="emails" path={`${basePath}/emails`} element={<AdminEmails />} />,
+    <Route key="notifications" path={`${basePath}/notifications`} element={<AdminNotifications />} />,
+    <Route key="analytics" path={`${basePath}/analytics`} element={<AdminUserAnalytics />} />,
+    <Route key="referrals" path={`${basePath}/referrals`} element={<AdminReferrals />} />,
+    <Route key="tickets" path={`${basePath}/tickets`} element={<AdminSupportTickets />} />,
+    <Route key="ticket-detail" path={`${basePath}/tickets/:id`} element={<AdminTicketDetail />} />,
+    <Route key="reviews" path={`${basePath}/reviews`} element={<AdminTicketReviews />} />,
+    <Route key="canned-messages" path={`${basePath}/canned-messages`} element={<AdminCannedMessages />} />,
+    <Route key="ai-knowledge" path={`${basePath}/ai-knowledge`} element={<AdminAIKnowledge />} />,
+    <Route key="ai-usage" path={`${basePath}/ai-usage`} element={<AdminAIUsage />} />,
+    <Route key="og-images" path={`${basePath}/og-images`} element={<AdminOGImages />} />,
+  ];
 }
 
 // Public routes component
@@ -134,12 +132,11 @@ const App = () => {
               {isAdminDomain ? (
                 // Admin subdomain: serve admin routes at root
                 <>
-                  {AdminRoutes({ basePath: "" })}
-                  {/* Fallback for any unmatched route on admin subdomain */}
+                  {getAdminRoutes("")}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </>
               ) : (
-                // Main domain: serve public routes only (no admin)
+                // Main domain: serve public routes only
                 <>
                   {PublicRoutes()}
                   <Route path="*" element={<NotFound />} />

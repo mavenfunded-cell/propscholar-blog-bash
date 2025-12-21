@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 const ADMIN_SUBDOMAIN = 'admin.propscholar.space';
 
 export function isAdminSubdomain(): boolean {
-  return window.location.hostname === ADMIN_SUBDOMAIN;
+  const hostname = window.location.hostname;
+  // Check for both production and potential preview URLs
+  return hostname === ADMIN_SUBDOMAIN || hostname.startsWith('admin.');
 }
 
 export function useAdminSubdomainSEO() {
