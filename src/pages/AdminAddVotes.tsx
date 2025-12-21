@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, ThumbsUp, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 interface Event {
   id: string;
@@ -25,6 +26,7 @@ interface Submission {
 
 export default function AdminAddVotes() {
   const navigate = useNavigate();
+  const { getLoginPath, getDashboardPath } = useAdminNavigation();
   const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   
   const [events, setEvents] = useState<Event[]>([]);
@@ -42,9 +44,9 @@ export default function AdminAddVotes() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin', { replace: true });
+      navigate(getLoginPath(), { replace: true });
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   useEffect(() => {
     fetchEvents();
@@ -59,21 +61,20 @@ export default function AdminAddVotes() {
 
   const fetchEvents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, title, status')
-        .eq('competition_type', 'blog')
-        .order('created_at', { ascending: false });
+      // Use RPC function to bypass RLS
+      const { data, error } = await supabase.rpc('get_all_events');
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      const blogEvents = (data || []).filter((e: any) => e.competition_type === 'blog');
+      setEvents(blogEvents);
       
       // Auto-select first active event
-      const activeEvent = data?.find(e => e.status === 'active');
+      const activeEvent = blogEvents.find((e: any) => e.status === 'active');
       if (activeEvent) {
         setSelectedEventId(activeEvent.id);
-      } else if (data && data.length > 0) {
-        setSelectedEventId(data[0].id);
+      } else if (blogEvents.length > 0) {
+        setSelectedEventId(blogEvents[0].id);
       }
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -85,14 +86,17 @@ export default function AdminAddVotes() {
 
   const fetchSubmissions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('submissions')
-        .select('id, name, blog_title')
-        .eq('event_id', selectedEventId)
-        .order('name', { ascending: true });
+      // Use RPC function to get submissions for the event
+      const { data, error } = await supabase.rpc('get_all_submissions_for_event', {
+        _event_id: selectedEventId
+      });
 
       if (error) throw error;
-      setSubmissions(data || []);
+      setSubmissions((data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        blog_title: s.blog_title
+      })));
     } catch (err) {
       console.error('Error fetching submissions:', err);
       toast.error('Failed to load submissions');
@@ -162,14 +166,15 @@ export default function AdminAddVotes() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
-            className="text-white/60 hover:text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+          <AdminLink to="/dashboard">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white/60 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </AdminLink>
           <div>
             <h1 className="text-2xl font-bold text-white">Add Manual Votes</h1>
             <p className="text-white/50">Add votes to blog competition submissions</p>
@@ -354,13 +359,14 @@ export default function AdminAddVotes() {
 
         {/* Link to View All Votes */}
         <div className="mt-6 text-center">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(isAdminSubdomain() ? '/votes' : '/admin/votes')}
-            className="text-white/60 hover:text-white"
-          >
-            View All Votes →
-          </Button>
+          <AdminLink to="/votes">
+            <Button
+              variant="ghost"
+              className="text-white/60 hover:text-white"
+            >
+              View All Votes →
+            </Button>
+          </AdminLink>
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ interface ReferralLog {
 
 export default function AdminReferrals() {
   const navigate = useNavigate();
+  const { getLoginPath } = useAdminNavigation();
   const [referrals, setReferrals] = useState<ReferralLog[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,11 +35,11 @@ export default function AdminReferrals() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath());
       return;
     }
     fetchReferrals();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const fetchReferrals = async () => {
     try {
@@ -99,15 +101,15 @@ export default function AdminReferrals() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/">
+          <AdminLink to="/dashboard">
             <Logo />
-          </Link>
-          <Link to="/admin/dashboard">
+          </AdminLink>
+          <AdminLink to="/dashboard">
             <Button variant="outline" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
-          </Link>
+          </AdminLink>
         </div>
       </header>
 
