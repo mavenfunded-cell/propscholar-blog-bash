@@ -102,7 +102,16 @@ const AdminTicketDetail = () => {
   const [showFullConversation, setShowFullConversation] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedMod, setSelectedMod] = useState("Chirag C");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const moderators = [
+    { name: "Chirag C", isDefault: true },
+    { name: "Ben K", isDefault: false },
+    { name: "Harris", isDefault: false },
+    { name: "Sikha", isDefault: false },
+    { name: "Rose", isDefault: false },
+  ];
 
   const handleInsertReply = (content: string) => {
     setReplyBody(content);
@@ -187,12 +196,18 @@ const AdminTicketDetail = () => {
 
   const sendReplyMutation = useMutation({
     mutationFn: async () => {
+      // Add signature to reply body (not for internal notes)
+      const bodyWithSignature = isInternalNote 
+        ? replyBody 
+        : `${replyBody}\n\nBest Regards,\n${selectedMod}\nPropScholar Support`;
+
       const { data, error } = await supabase.functions.invoke("send-support-email", {
         body: {
           ticketId: id,
-          body: replyBody,
+          body: bodyWithSignature,
           isInternalNote,
           attachments: attachments.length > 0 ? attachments : undefined,
+          senderName: selectedMod,
         },
       });
       if (error) throw error;
@@ -524,6 +539,30 @@ const AdminTicketDetail = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Moderator Selector - only show for replies, not internal notes */}
+                {!isInternalNote && (
+                  <div className="mb-3 p-3 bg-muted/30 rounded-lg border border-border">
+                    <label className="text-xs text-muted-foreground uppercase tracking-wide block mb-2">
+                      Reply From
+                    </label>
+                    <Select value={selectedMod} onValueChange={setSelectedMod}>
+                      <SelectTrigger className="w-full md:w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {moderators.map((mod) => (
+                          <SelectItem key={mod.name} value={mod.name}>
+                            {mod.name} {mod.isDefault && "(Default)"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Signature: Best Regards, {selectedMod} - PropScholar Support
+                    </p>
                   </div>
                 )}
 
