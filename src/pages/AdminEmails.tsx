@@ -68,11 +68,7 @@ export default function AdminEmails() {
 
   const fetchEmailLogs = async () => {
     try {
-      const { data, error } = await supabase
-        .from('email_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(500);
+      const { data, error } = await supabase.rpc('get_all_email_logs');
 
       if (error) throw error;
       
@@ -94,14 +90,11 @@ export default function AdminEmails() {
 
   const fetchUserEmails = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_coins')
-        .select('email, created_at')
-        .not('email', 'is', null)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_all_user_coins');
 
       if (error) throw error;
-      setUserEmails((data || []) as UserEmail[]);
+      const emails = (data || []).map((u: any) => ({ email: u.email, created_at: u.created_at }));
+      setUserEmails(emails as UserEmail[]);
     } catch (error) {
       console.error('Error fetching user emails:', error);
     }

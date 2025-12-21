@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
@@ -47,6 +48,7 @@ interface KnowledgeEntry {
 const categories = ["general", "competition", "rewards", "account", "technical", "support", "learned"];
 
 const AdminAIKnowledge = () => {
+  const navigate = useNavigate();
   const { adminNavigate } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -58,16 +60,22 @@ const AdminAIKnowledge = () => {
     category: "general",
   });
 
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/admin');
+    }
+  }, [isLoggedIn, navigate]);
+
   const { data: entries, isLoading } = useQuery({
     queryKey: ["ai-knowledge-admin"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ai_knowledge_base")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc('get_all_ai_knowledge');
       if (error) throw error;
       return data as KnowledgeEntry[];
     },
+    enabled: isLoggedIn,
   });
 
   const saveMutation = useMutation({
