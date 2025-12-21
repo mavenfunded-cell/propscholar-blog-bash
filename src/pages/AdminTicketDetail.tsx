@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,7 @@ import {
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Attachment {
   url: string;
@@ -96,14 +97,29 @@ const AdminTicketDetail = () => {
   const { adminNavigate } = useAdminNavigation();
   const { session } = useAuth();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [replyBody, setReplyBody] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
-  const [showAISidebar, setShowAISidebar] = useState(true);
+  const [showAISidebar, setShowAISidebar] = useState(false); // Start closed on mobile
   const [showFullConversation, setShowFullConversation] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMod, setSelectedMod] = useState("Chirag C");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Listen for close event from AI sidebar
+  useEffect(() => {
+    const handleCloseAISidebar = () => setShowAISidebar(false);
+    window.addEventListener('close-ai-sidebar', handleCloseAISidebar);
+    return () => window.removeEventListener('close-ai-sidebar', handleCloseAISidebar);
+  }, []);
+
+  // On desktop, show AI sidebar by default
+  useEffect(() => {
+    if (!isMobile) {
+      setShowAISidebar(true);
+    }
+  }, [isMobile]);
 
   const moderators = [
     { name: "Chirag C", isDefault: true },
@@ -308,48 +324,52 @@ const AdminTicketDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row">
       <div className="flex-1 overflow-auto">
-        <div className="container mx-auto py-8 px-4">
+        <div className="container mx-auto py-4 lg:py-8 px-3 lg:px-4">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => adminNavigate("/tickets")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <span className="text-muted-foreground font-mono">
-                #{ticket.ticket_number}
-              </span>
-              <Badge variant="outline" className={statusColors[ticket.status]}>
-                {statusLabels[ticket.status]}
-              </Badge>
-              <Badge variant="outline" className={priorityColors[ticket.priority]}>
-                {ticket.priority}
-              </Badge>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 lg:mb-6">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => adminNavigate("/tickets")}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-muted-foreground font-mono text-sm">
+                  #{ticket.ticket_number}
+                </span>
+                <Badge variant="outline" className={`${statusColors[ticket.status]} text-xs`}>
+                  {statusLabels[ticket.status]}
+                </Badge>
+                <Badge variant="outline" className={`${priorityColors[ticket.priority]} text-xs`}>
+                  {ticket.priority}
+                </Badge>
+              </div>
+              <h1 className="text-lg sm:text-2xl font-bold mt-1 line-clamp-2">{ticket.subject}</h1>
             </div>
-            <h1 className="text-2xl font-bold mt-1">{ticket.subject}</h1>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowAISidebar(!showAISidebar)}
-            className="ml-auto"
+            className="shrink-0 self-start sm:self-auto"
           >
             {showAISidebar ? (
               <>
                 <PanelRightClose className="h-4 w-4 mr-2" />
-                Hide AI
+                <span className="hidden sm:inline">Hide AI</span>
+                <span className="sm:hidden">AI</span>
               </>
             ) : (
               <>
                 <Bot className="h-4 w-4 mr-2" />
-                Show AI
+                <span className="hidden sm:inline">Show AI</span>
+                <span className="sm:hidden">AI</span>
               </>
             )}
           </Button>
@@ -547,22 +567,22 @@ const AdminTicketDetail = () => {
 
                 {/* Moderator Selector - only show for replies, not internal notes */}
                 {!isInternalNote && (
-                  <div className="mb-3 flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">Reply as:</span>
-                    <div className="flex items-center gap-2">
+                  <div className="mb-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <span className="text-xs text-muted-foreground shrink-0">Reply as:</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       {moderators.map((mod) => (
                         <button
                           key={mod.name}
                           type="button"
                           onClick={() => setSelectedMod(mod.name)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium transition-all ${
                             selectedMod === mod.name
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted/50 text-muted-foreground hover:bg-muted"
                           }`}
                         >
                           <span 
-                            className={`w-2 h-2 rounded-full ${
+                            className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
                               selectedMod === mod.name 
                                 ? "bg-primary-foreground" 
                                 : "bg-muted-foreground/50"

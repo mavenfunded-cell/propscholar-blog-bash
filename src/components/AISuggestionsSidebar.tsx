@@ -187,8 +187,26 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
   // Removed auto-generation - AI suggestions now only trigger on button click
 
   return (
-    <div className="w-80 border-l bg-muted/30 flex flex-col h-full">
+    <div className="
+      fixed inset-0 z-50 bg-background/95 backdrop-blur-sm
+      lg:static lg:inset-auto lg:z-auto lg:bg-transparent lg:backdrop-blur-none
+      w-full lg:w-80 border-l lg:flex flex-col h-full
+    ">
       <Tabs defaultValue="ai" className="flex flex-col h-full">
+        <div className="flex items-center justify-between p-2 lg:hidden border-b">
+          <span className="font-semibold text-sm">AI Assistant</span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              // This will be handled by parent component
+              const event = new CustomEvent('close-ai-sidebar');
+              window.dispatchEvent(event);
+            }}
+          >
+            Close
+          </Button>
+        </div>
         <TabsList className="grid w-full grid-cols-3 m-2">
           <TabsTrigger value="ai" className="text-xs">
             <Bot className="h-3 w-3 mr-1" />

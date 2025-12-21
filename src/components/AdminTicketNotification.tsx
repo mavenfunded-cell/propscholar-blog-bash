@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, Headset, ExternalLink } from 'lucide-react';
+import { Bell, X, Headset, ExternalLink, BellRing, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface TicketNotification {
   id: string;
@@ -17,6 +18,9 @@ interface TicketNotification {
   created_at: string;
 }
 
+// Brand name for notifications
+const NOTIFICATION_BRAND = "Physics Lective Is Live";
+
 export function AdminTicketNotification() {
   const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
@@ -24,6 +28,75 @@ export function AdminTicketNotification() {
   const [notifications, setNotifications] = useState<TicketNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio for notification sound
+  useEffect(() => {
+    audioRef.current = new Audio('/notification-sound.mp3');
+    audioRef.current.volume = 0.5;
+    
+    // Check notification permission on mount
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  // Request notification permission
+  const requestNotificationPermission = useCallback(async () => {
+    if (!('Notification' in window)) {
+      toast.error('Browser notifications are not supported');
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        toast.success('Notifications enabled! You will receive alerts for new tickets.');
+        // Show a test notification
+        new Notification(NOTIFICATION_BRAND, {
+          body: 'Notifications are now enabled!',
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: 'test-notification'
+        });
+      } else if (permission === 'denied') {
+        toast.error('Notifications blocked. Please enable in browser settings.');
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      toast.error('Failed to request notification permission');
+    }
+  }, []);
+
+  // Show browser notification
+  const showBrowserNotification = useCallback((ticket: TicketNotification) => {
+    // Play sound
+    if (audioRef.current) {
+      audioRef.current.play().catch(console.error);
+    }
+
+    // Show browser notification if permitted
+    if (notificationPermission === 'granted') {
+      const notification = new Notification(NOTIFICATION_BRAND, {
+        body: `New Ticket #${ticket.ticket_number}: ${ticket.subject}`,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: `ticket-${ticket.id}`,
+        requireInteraction: true
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        navigate(`/admin/tickets/${ticket.id}`);
+        notification.close();
+      };
+
+      // Auto close after 10 seconds
+      setTimeout(() => notification.close(), 10000);
+    }
+  }, [notificationPermission, navigate]);
 
   useEffect(() => {
     if (!isAdmin || !user) {
@@ -51,8 +124,20 @@ export function AdminTicketNotification() {
           setNotifications(prev => [ticket, ...prev].slice(0, 20));
           setUnreadCount(prev => prev + 1);
           
+          // Show browser notification
+          showBrowserNotification(ticket);
+          
           // Auto-open panel on new ticket
           setIsOpen(true);
+          
+          // Also show a toast
+          toast.info(`New Ticket #${ticket.ticket_number}`, {
+            description: ticket.subject,
+            action: {
+              label: 'View',
+              onClick: () => navigate(`/admin/tickets/${ticket.id}`)
+            }
+          });
         }
       )
       .subscribe((status) => {
@@ -67,7 +152,7 @@ export function AdminTicketNotification() {
         supabase.removeChannel(subscriptionRef.current);
       }
     };
-  }, [isAdmin, user]);
+  }, [isAdmin, user, showBrowserNotification, navigate]);
 
   const handleTicketClick = (ticketId: string) => {
     navigate(`/admin/tickets/${ticketId}`);
@@ -138,8 +223,8 @@ export function AdminTicketNotification() {
               <Headset className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold text-lg">Support Tickets</h2>
-              <p className="text-xs text-muted-foreground">Live notifications</p>
+              <h2 className="font-semibold text-lg">{NOTIFICATION_BRAND}</h2>
+              <p className="text-xs text-muted-foreground">Support Tickets • Live</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -163,6 +248,27 @@ export function AdminTicketNotification() {
             </Button>
           </div>
         </div>
+
+        {/* Notification Permission Banner */}
+        {notificationPermission !== 'granted' && (
+          <div className="p-3 bg-primary/10 border-b border-border">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <BellRing className="h-4 w-4 text-primary animate-pulse" />
+                <span className="text-xs">Enable notifications to never miss a ticket</span>
+              </div>
+              <Button 
+                size="sm" 
+                variant="default"
+                onClick={requestNotificationPermission}
+                className="h-7 text-xs"
+              >
+                <Volume2 className="h-3 w-3 mr-1" />
+                Enable
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Notifications List */}
         <ScrollArea className="h-[calc(100%-80px)]">
