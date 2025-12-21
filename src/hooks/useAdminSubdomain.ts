@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const ADMIN_SUBDOMAIN = 'admin.propscholar.space';
+const ADMIN_SUBDOMAIN = 'admin.propscholar.com';
 
 export function isAdminSubdomain(): boolean {
   const hostname = window.location.hostname;
