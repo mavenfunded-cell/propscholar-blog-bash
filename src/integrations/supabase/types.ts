@@ -428,6 +428,42 @@ export type Database = {
         }
         Relationships: []
       }
+      og_images: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string
+          is_default: boolean | null
+          page_identifier: string | null
+          page_type: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url: string
+          is_default?: boolean | null
+          page_identifier?: string | null
+          page_type: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+          is_default?: boolean | null
+          page_identifier?: string | null
+          page_type?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
