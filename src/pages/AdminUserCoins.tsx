@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,7 +53,6 @@ interface RewardClaim {
 }
 
 export default function AdminUserCoins() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserCoin[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -68,25 +67,20 @@ export default function AdminUserCoins() {
   const [adjustReason, setAdjustReason] = useState<string>('');
   const [adjusting, setAdjusting] = useState(false);
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchUsers();
+  }, [isLoggedIn, navigate]);
 
   const fetchUsers = async () => {
     try {
-      const { data } = await supabase
-        .from('user_coins')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      // Use RPC function to bypass RLS
+      const { data } = await supabase.rpc('get_all_user_coins');
       setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -189,7 +183,7 @@ export default function AdminUserCoins() {
   const totalCoinsIssued = users.reduce((sum, u) => sum + u.total_earned, 0);
   const totalCoinsSpent = users.reduce((sum, u) => sum + u.total_spent, 0);
 
-  if (loading || loadingData) {
+  if (loadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -68,26 +68,20 @@ export default function AdminSocialFollows() {
 
   const fetchFollows = async () => {
     try {
-      // Fetch social follows with user info
-      const { data: followsData } = await supabase
-        .from('social_follows')
-        .select('*')
-        .order('claimed_at', { ascending: false });
+      // Use RPC function to bypass RLS
+      const { data: followsData } = await supabase.rpc('get_all_social_follows');
 
       if (followsData) {
-        // Get user emails
-        const userIds = [...new Set(followsData.map(f => f.user_id))];
-        const { data: usersData } = await supabase
-          .from('user_coins')
-          .select('user_id, email')
-          .in('user_id', userIds);
+        // Get user emails using RPC
+        const userIds = [...new Set(followsData.map((f: any) => f.user_id))];
+        const { data: usersData } = await supabase.rpc('get_all_user_coins');
 
         const userEmailMap: Record<string, string> = {};
-        usersData?.forEach(u => {
+        (usersData || []).forEach((u: any) => {
           userEmailMap[u.user_id] = u.email;
         });
 
-        setFollows(followsData.map(f => ({
+        setFollows(followsData.map((f: any) => ({
           ...f,
           user_email: userEmailMap[f.user_id] || 'Unknown'
         })));

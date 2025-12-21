@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,7 +36,6 @@ interface SubmissionVotes {
 
 export default function AdminVotes() {
   const navigate = useNavigate();
-  const { isAdmin, loading: authLoading } = useAuth();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
@@ -45,15 +44,15 @@ export default function AdminVotes() {
   const [deleteVoteId, setDeleteVoteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      navigate('/admin');
-    }
-  }, [isAdmin, authLoading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchEvents();
-  }, []);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
     if (selectedEventId) {
@@ -150,7 +149,7 @@ export default function AdminVotes() {
 
   const totalVotes = submissionVotes.reduce((sum, s) => sum + s.votes.length, 0);
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>

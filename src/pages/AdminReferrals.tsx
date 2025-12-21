@@ -41,26 +41,20 @@ export default function AdminReferrals() {
 
   const fetchReferrals = async () => {
     try {
-      // First get all referrals
+      // Use RPC function to bypass RLS
       const { data: referralsData, error: referralsError } = await supabase
-        .from('referrals')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_all_referrals');
 
       if (referralsError) throw referralsError;
 
       // Get all user emails for referrer lookup
-      const { data: usersData, error: usersError } = await supabase
-        .from('user_coins')
-        .select('user_id, email');
-
-      if (usersError) throw usersError;
+      const { data: usersData } = await supabase.rpc('get_all_user_coins');
 
       // Create a map of user_id to email
-      const userEmailMap = new Map(usersData?.map(u => [u.user_id, u.email]) || []);
+      const userEmailMap = new Map((usersData || []).map((u: any) => [u.user_id, u.email]));
 
       // Combine referrals with referrer emails
-      const referralsWithEmails = (referralsData || []).map(ref => ({
+      const referralsWithEmails = (referralsData || []).map((ref: any) => ({
         ...ref,
         referrer_email: userEmailMap.get(ref.referrer_id) || 'Unknown'
       }));
