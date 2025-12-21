@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { AdminTicketNotification } from "@/components/AdminTicketNotification";
@@ -126,31 +125,29 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppEffects />
-            <AdminTicketNotification />
-            <Routes>
-              {isAdminDomain ? (
-                // Admin subdomain: serve admin routes at root
-                <>
-                  {getAdminRoutes("")}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </>
-              ) : (
-                // Main domain: serve public routes only
-                <>
-                  {PublicRoutes()}
-                  <Route path="*" element={<NotFound />} />
-                </>
-              )}
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppEffects />
+          <AdminTicketNotification />
+          <Routes>
+            {isAdminDomain ? (
+              // Admin subdomain: serve admin routes at root
+              <>
+                {getAdminRoutes("")}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            ) : (
+              // Main domain: serve public routes only
+              <>
+                {PublicRoutes()}
+                <Route path="*" element={<NotFound />} />
+              </>
+            )}
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 };
