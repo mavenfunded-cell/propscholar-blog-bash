@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,30 +113,8 @@ const AdminTicketDetail = () => {
     { name: "Rose", isDefault: false },
   ];
 
-  // Default message template
-  const getDefaultMessage = (modName: string) => `
-
-Best Regards,
-${modName}
-PropScholar Support`;
-
-  // Initialize reply with default message when switching to reply mode
-  useEffect(() => {
-    if (!isInternalNote && !replyBody) {
-      setReplyBody(getDefaultMessage(selectedMod));
-    }
-  }, [isInternalNote]);
-
-  // Update signature when mod changes
-  useEffect(() => {
-    if (!isInternalNote && replyBody) {
-      // Replace existing signature with new one
-      const signaturePattern = /\n\nBest Regards,\n.*\nPropScholar Support$/;
-      if (signaturePattern.test(replyBody)) {
-        setReplyBody(replyBody.replace(signaturePattern, getDefaultMessage(selectedMod)));
-      }
-    }
-  }, [selectedMod]);
+  // Signature template - appended when sending, not shown in textarea
+  const getSignature = (modName: string) => `\n\nBest Regards,\n${modName}\nPropScholar Support`;
 
   const handleInsertReply = (content: string) => {
     setReplyBody(content);
@@ -221,12 +199,15 @@ PropScholar Support`;
 
   const sendReplyMutation = useMutation({
     mutationFn: async () => {
-      // Reply body already contains the signature from the default template
+      // Append signature to reply body for non-internal notes
+      const bodyWithSignature = isInternalNote 
+        ? replyBody 
+        : replyBody + getSignature(selectedMod);
 
       const { data, error } = await supabase.functions.invoke("send-support-email", {
         body: {
           ticketId: id,
-          body: replyBody,
+          body: bodyWithSignature,
           isInternalNote,
           attachments: attachments.length > 0 ? attachments : undefined,
           senderName: selectedMod,
@@ -237,8 +218,7 @@ PropScholar Support`;
     },
     onSuccess: () => {
       toast.success(isInternalNote ? "Internal note added" : "Reply sent successfully");
-      // Reset to default message with signature for next reply
-      setReplyBody(getDefaultMessage(selectedMod));
+      setReplyBody("");
       setIsInternalNote(false);
       setAttachments([]);
       queryClient.invalidateQueries({ queryKey: ["admin-ticket-messages", id] });
@@ -567,25 +547,31 @@ PropScholar Support`;
 
                 {/* Moderator Selector - only show for replies, not internal notes */}
                 {!isInternalNote && (
-                  <div className="mb-3 p-3 bg-muted/30 rounded-lg border border-border">
-                    <label className="text-xs text-muted-foreground uppercase tracking-wide block mb-2">
-                      Reply From
-                    </label>
-                    <Select value={selectedMod} onValueChange={setSelectedMod}>
-                      <SelectTrigger className="w-full md:w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {moderators.map((mod) => (
-                          <SelectItem key={mod.name} value={mod.name}>
-                            {mod.name} {mod.isDefault && "(Default)"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Signature: Best Regards, {selectedMod} - PropScholar Support
-                    </p>
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">Reply as:</span>
+                    <div className="flex items-center gap-2">
+                      {moderators.map((mod) => (
+                        <button
+                          key={mod.name}
+                          type="button"
+                          onClick={() => setSelectedMod(mod.name)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            selectedMod === mod.name
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span 
+                            className={`w-2 h-2 rounded-full ${
+                              selectedMod === mod.name 
+                                ? "bg-primary-foreground" 
+                                : "bg-muted-foreground/50"
+                            }`}
+                          />
+                          {mod.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
