@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -71,23 +70,20 @@ interface EventWithCount extends Event {
 }
 
 export default function AdminDashboard() {
-  const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventWithCount[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchEvents();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchEvents();
+  }, [isLoggedIn, navigate]);
 
   const fetchEvents = async () => {
     try {
@@ -166,14 +162,14 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    sessionStorage.removeItem('admin_logged_in');
     navigate(isAdminSubdomain() ? '/' : '/admin');
   };
 
   const isEventExpired = (endDate: string) => new Date(endDate) < new Date();
 
-  if (loading || loadingEvents) {
+  if (loadingEvents) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -334,7 +330,7 @@ export default function AdminDashboard() {
           )}
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden md:block">
-              {user?.email}
+              propscholars@gmail.com
             </span>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,23 +24,20 @@ interface ReferralLog {
 }
 
 export default function AdminReferrals() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [referrals, setReferrals] = useState<ReferralLog[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchReferrals();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchReferrals();
+  }, [isLoggedIn, navigate]);
 
   const fetchReferrals = async () => {
     try {

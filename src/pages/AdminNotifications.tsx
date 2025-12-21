@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +46,6 @@ interface UserOption {
 }
 
 export default function AdminNotifications() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   
   const [title, setTitle] = useState('');
@@ -60,17 +59,15 @@ export default function AdminNotifications() {
   const [sending, setSending] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchData();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchData();
+  }, [isLoggedIn, navigate]);
 
   const fetchData = async () => {
     try {
@@ -147,7 +144,7 @@ export default function AdminNotifications() {
     }
   };
 
-  if (loading || loadingData) {
+  if (loadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>

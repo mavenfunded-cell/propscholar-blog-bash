@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,23 +51,20 @@ const platformIcons: Record<string, React.ElementType> = {
 };
 
 export default function AdminSocialFollows() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [follows, setFollows] = useState<SocialFollow[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchFollows();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchFollows();
+  }, [isLoggedIn, navigate]);
 
   const fetchFollows = async () => {
     try {
