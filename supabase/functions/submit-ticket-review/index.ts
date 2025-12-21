@@ -60,7 +60,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log("Review submitted successfully");
-    return new Response(getSuccessHtml(rating), {
+    
+    // Determine redirect URL based on rating
+    // 1, 2, 3 stars → Discord for feedback
+    // 4, 5 stars → PropScholar website
+    const redirectUrl = rating <= 3 
+      ? "https://discord.com/invite/propscholar"
+      : "https://www.propscholar.com";
+    
+    return new Response(getSuccessHtml(rating, redirectUrl), {
       status: 200,
       headers: htmlHeaders,
     });
@@ -73,10 +81,43 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-function getSuccessHtml(rating: number): string {
+function getSuccessHtml(rating: number, redirectUrl: string): string {
   const stars = "⭐".repeat(rating);
   const logoUrl = "https://res.cloudinary.com/dzozyqlqr/image/upload/v1763325013/d0d1d9_dthfiq.jpg";
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Thank You - PropScholar</title></head><body style="margin:0;padding:0;background-color:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;"><div style="text-align:center;padding:40px;max-width:500px;"><img src="${logoUrl}" alt="PropScholar" style="height:60px;margin-bottom:30px;border-radius:8px;"/><div style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 100%);border-radius:20px;border:1px solid rgba(16,185,129,0.3);padding:40px;"><div style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);width:80px;height:80px;border-radius:50%;margin-bottom:20px;line-height:80px;"><span style="font-size:40px;color:#fff;">✓</span></div><h1 style="color:#f8fafc;font-size:28px;margin:0 0 15px 0;">Thank You For Your Review!</h1><p style="color:#94a3b8;font-size:16px;margin:0 0 20px 0;">Your feedback has been recorded</p><p style="font-size:32px;margin:0;">${stars}</p></div></div></body></html>`;
+  
+  const isLowRating = rating <= 3;
+  const ctaText = isLowRating 
+    ? "We'd love to hear more about how we can improve. Join our community!"
+    : "We're glad you had a great experience!";
+  const buttonText = isLowRating ? "Share Feedback on Discord" : "Visit PropScholar";
+  const buttonColor = isLowRating 
+    ? "background:linear-gradient(135deg,#5865F2,#4752C4);" 
+    : "background:linear-gradient(135deg,#10b981,#059669);";
+  
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Thank You - PropScholar</title>
+  <meta http-equiv="refresh" content="5;url=${redirectUrl}">
+</head>
+<body style="margin:0;padding:0;background-color:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;">
+  <div style="text-align:center;padding:40px;max-width:500px;">
+    <img src="${logoUrl}" alt="PropScholar" style="height:60px;margin-bottom:30px;border-radius:8px;"/>
+    <div style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 100%);border-radius:20px;border:1px solid rgba(16,185,129,0.3);padding:40px;">
+      <div style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);width:80px;height:80px;border-radius:50%;margin-bottom:20px;line-height:80px;">
+        <span style="font-size:40px;color:#fff;">✓</span>
+      </div>
+      <h1 style="color:#f8fafc;font-size:28px;margin:0 0 15px 0;">Thank You For Your Review!</h1>
+      <p style="font-size:32px;margin:0 0 15px 0;">${stars}</p>
+      <p style="color:#94a3b8;font-size:16px;margin:0 0 25px 0;">${ctaText}</p>
+      <a href="${redirectUrl}" style="display:inline-block;${buttonColor}color:#fff;text-decoration:none;padding:14px 40px;border-radius:12px;font-weight:600;font-size:14px;">${buttonText}</a>
+      <p style="color:#64748b;font-size:12px;margin-top:20px;">Redirecting automatically in 5 seconds...</p>
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 function getAlreadyReviewedHtml(): string {
