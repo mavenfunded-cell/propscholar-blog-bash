@@ -1283,6 +1283,85 @@ export type Database = {
         Returns: string
       }
       generate_slug: { Args: { title: string }; Returns: string }
+      get_all_reel_submissions_for_event: {
+        Args: { _event_id: string }
+        Returns: {
+          description: string
+          email: string
+          event_id: string
+          id: string
+          name: string
+          phone: string
+          submitted_at: string
+          thumbnail_url: string
+          title: string
+          video_url: string
+        }[]
+      }
+      get_all_referrals: {
+        Args: never
+        Returns: {
+          coins_rewarded: number
+          created_at: string
+          id: string
+          qualified_at: string
+          referred_email: string
+          referred_id: string
+          referrer_id: string
+          rewarded_at: string
+          status: string
+        }[]
+      }
+      get_all_social_follows: {
+        Args: never
+        Returns: {
+          claimed_at: string
+          coins_earned: number
+          id: string
+          platform: string
+          screenshot_url: string
+          status: string
+          user_id: string
+        }[]
+      }
+      get_all_submissions_for_event: {
+        Args: { _event_id: string }
+        Returns: {
+          blog: string
+          blog_title: string
+          email: string
+          event_id: string
+          id: string
+          name: string
+          phone: string
+          submitted_at: string
+          time_spent_seconds: number
+          word_count: number
+        }[]
+      }
+      get_all_user_coins: {
+        Args: never
+        Returns: {
+          balance: number
+          created_at: string
+          email: string
+          id: string
+          referral_code: string
+          referred_by: string
+          signup_coins_claimed: boolean
+          total_earned: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      get_event_submission_counts: {
+        Args: never
+        Returns: {
+          count: number
+          event_id: string
+        }[]
+      }
       get_event_submissions: {
         Args: { _event_id: string }
         Returns: {
@@ -1310,7 +1389,49 @@ export type Database = {
           vote_count: number
         }[]
       }
+      get_reel_event_submission_counts: {
+        Args: never
+        Returns: {
+          count: number
+          event_id: string
+        }[]
+      }
+      get_submissions_with_votes: {
+        Args: { _event_id: string }
+        Returns: {
+          blog_title: string
+          email: string
+          id: string
+          name: string
+          vote_count: number
+        }[]
+      }
       get_task_notifications: { Args: { _user_id: string }; Returns: Json }
+      get_user_coin_transactions: {
+        Args: { _user_id: string }
+        Returns: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          source: string
+          source_id: string
+          transaction_type: string
+          user_id: string
+        }[]
+      }
+      get_votes_for_event: {
+        Args: { _event_id: string }
+        Returns: {
+          blog_title: string
+          created_at: string
+          submission_id: string
+          submission_name: string
+          vote_id: string
+          voter_email: string
+          voter_name: string
+        }[]
+      }
       grant_participation_coins: {
         Args: { _email: string; _participation_type: string }
         Returns: Json

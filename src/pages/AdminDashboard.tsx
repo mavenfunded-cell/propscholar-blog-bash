@@ -94,21 +94,21 @@ export default function AdminDashboard() {
 
       if (eventsError) throw eventsError;
 
-      // Fetch submission counts for each event
-      const eventsWithCounts = await Promise.all(
-        (eventsData || []).map(async (event) => {
-          const table = event.competition_type === 'reel' ? 'reel_submissions' : 'submissions';
-          const { count } = await supabase
-            .from(table)
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', event.id);
+      // Fetch submission counts using RPC functions (bypasses RLS)
+      const { data: blogCounts } = await supabase.rpc('get_event_submission_counts');
+      const { data: reelCounts } = await supabase.rpc('get_reel_event_submission_counts');
 
-          return {
-            ...event,
-            submission_count: count || 0
-          };
-        })
-      );
+      // Create maps for quick lookup
+      const blogCountMap = new Map((blogCounts || []).map((c: any) => [c.event_id, Number(c.count)]));
+      const reelCountMap = new Map((reelCounts || []).map((c: any) => [c.event_id, Number(c.count)]));
+
+      const eventsWithCounts = (eventsData || []).map((event) => {
+        const countMap = event.competition_type === 'reel' ? reelCountMap : blogCountMap;
+        return {
+          ...event,
+          submission_count: countMap.get(event.id) || 0
+        };
+      });
 
       setEvents(eventsWithCounts);
     } catch (err) {

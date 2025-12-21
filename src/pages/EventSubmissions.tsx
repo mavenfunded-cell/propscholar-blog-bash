@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,9 +47,7 @@ interface Winner {
 
 export default function EventSubmissions() {
   const { id } = useParams();
-  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { getLoginPath, getDashboardPath } = useAdminNavigation();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -60,17 +57,17 @@ export default function EventSubmissions() {
   const [savingWinners, setSavingWinners] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
-      navigate(getLoginPath());
-    }
-  }, [user, isAdmin, authLoading, navigate, getLoginPath]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin && id) {
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
+    if (id) {
       fetchEventAndSubmissions();
     }
-  }, [isAdmin, id]);
+  }, [isLoggedIn, id, navigate]);
 
   const fetchEventAndSubmissions = async () => {
     try {
@@ -84,12 +81,9 @@ export default function EventSubmissions() {
       if (eventError) throw eventError;
       setEvent(eventData);
 
-      // Fetch submissions
+      // Fetch submissions using RPC function (bypasses RLS)
       const { data: submissionsData, error: submissionsError } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('event_id', id)
-        .order('submitted_at', { ascending: false });
+        .rpc('get_all_submissions_for_event', { _event_id: id });
 
       if (submissionsError) throw submissionsError;
       setSubmissions(submissionsData || []);
@@ -108,7 +102,7 @@ export default function EventSubmissions() {
     } catch (err) {
       console.error('Error fetching data:', err);
       toast.error('Failed to load submissions');
-      navigate(getDashboardPath());
+      navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard');
     } finally {
       setLoading(false);
     }
@@ -227,7 +221,7 @@ export default function EventSubmissions() {
     toast.success('Exported successfully');
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
