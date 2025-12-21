@@ -50,6 +50,13 @@ interface SEOSetting {
   updated_at: string;
 }
 
+interface SitemapUrl {
+  id: string;
+  url: string;
+  changefreq: string;
+  priority: string;
+}
+
 export default function AdminSEO() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +74,12 @@ export default function AdminSEO() {
   const [loadingSitemap, setLoadingSitemap] = useState(false);
   const [robotsTxt, setRobotsTxt] = useState<string>('');
   const [savingRobots, setSavingRobots] = useState(false);
+  
+  // Sitemap URLs management
+  const [sitemapUrls, setSitemapUrls] = useState<SitemapUrl[]>([]);
+  const [addSitemapDialogOpen, setAddSitemapDialogOpen] = useState(false);
+  const [newSitemapUrl, setNewSitemapUrl] = useState({ url: '', changefreq: 'weekly', priority: '0.8' });
+  const [editingSitemapUrl, setEditingSitemapUrl] = useState<SitemapUrl | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -98,6 +111,81 @@ export default function AdminSEO() {
     setIsAdmin(true);
     fetchSEOSettings();
     fetchRobotsTxt();
+    fetchSitemapUrls();
+  };
+
+  const fetchSitemapUrls = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sitemap_urls')
+        .select('*')
+        .order('priority', { ascending: false });
+
+      if (error) throw error;
+      setSitemapUrls(data || []);
+    } catch (error: any) {
+      toast.error('Failed to fetch sitemap URLs');
+    }
+  };
+
+  const addSitemapUrl = async () => {
+    if (!newSitemapUrl.url) {
+      toast.error('Please enter a URL');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('sitemap_urls')
+        .insert(newSitemapUrl);
+
+      if (error) throw error;
+      toast.success('URL added!');
+      setAddSitemapDialogOpen(false);
+      setNewSitemapUrl({ url: '', changefreq: 'weekly', priority: '0.8' });
+      fetchSitemapUrls();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add URL');
+    }
+  };
+
+  const updateSitemapUrl = async () => {
+    if (!editingSitemapUrl) return;
+
+    try {
+      const { error } = await supabase
+        .from('sitemap_urls')
+        .update({
+          url: editingSitemapUrl.url,
+          changefreq: editingSitemapUrl.changefreq,
+          priority: editingSitemapUrl.priority
+        })
+        .eq('id', editingSitemapUrl.id);
+
+      if (error) throw error;
+      toast.success('URL updated!');
+      setEditingSitemapUrl(null);
+      fetchSitemapUrls();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update URL');
+    }
+  };
+
+  const deleteSitemapUrl = async (id: string) => {
+    if (!confirm('Delete this URL from sitemap?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('sitemap_urls')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('URL deleted!');
+      fetchSitemapUrls();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete URL');
+    }
   };
 
   const fetchSEOSettings = async () => {
@@ -516,49 +604,173 @@ Disallow: /admin/`;
           </TabsContent>
 
           {/* Sitemap Tab */}
-          <TabsContent value="sitemap" className="mt-6">
+          <TabsContent value="sitemap" className="mt-6 space-y-6">
+            {/* Static Sitemap File Info */}
             <Card className="p-4 md:p-6 bg-card/50 border-border/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <Map className="w-5 h-5" />
-                  Sitemap.xml
+                  Static Sitemap
                 </h3>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={copySitemapUrl}>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy URL
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={fetchSitemapPreview} disabled={loadingSitemap}>
-                    {loadingSitemap ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                    Preview
-                  </Button>
-                  <Button size="sm" asChild>
-                    <a href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Open
-                    </a>
-                  </Button>
-                </div>
+                <Button size="sm" asChild>
+                  <a href="https://propscholar.space/sitemap.xml" target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Live
+                  </a>
+                </Button>
+              </div>
+              <div className="bg-background/50 rounded-lg p-4 border border-border/30">
+                <code className="text-sm text-primary">https://propscholar.space/sitemap.xml</code>
+              </div>
+            </Card>
+
+            {/* Manage Sitemap URLs */}
+            <Card className="p-4 md:p-6 bg-card/50 border-border/50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Sitemap URLs ({sitemapUrls.length})
+                </h3>
+                <Dialog open={addSitemapDialogOpen} onOpenChange={setAddSitemapDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add URL
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Sitemap URL</DialogTitle>
+                      <DialogDescription>Add a new URL to sitemap.xml</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Full URL</Label>
+                        <Input 
+                          placeholder="https://propscholar.space/page" 
+                          value={newSitemapUrl.url}
+                          onChange={(e) => setNewSitemapUrl({ ...newSitemapUrl, url: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Change Frequency</Label>
+                          <select 
+                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                            value={newSitemapUrl.changefreq}
+                            onChange={(e) => setNewSitemapUrl({ ...newSitemapUrl, changefreq: e.target.value })}
+                          >
+                            <option value="always">Always</option>
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="never">Never</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label>Priority</Label>
+                          <select 
+                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                            value={newSitemapUrl.priority}
+                            onChange={(e) => setNewSitemapUrl({ ...newSitemapUrl, priority: e.target.value })}
+                          >
+                            <option value="1.0">1.0 (Highest)</option>
+                            <option value="0.9">0.9</option>
+                            <option value="0.8">0.8</option>
+                            <option value="0.7">0.7</option>
+                            <option value="0.6">0.6</option>
+                            <option value="0.5">0.5 (Default)</option>
+                            <option value="0.4">0.4</option>
+                            <option value="0.3">0.3</option>
+                            <option value="0.2">0.2</option>
+                            <option value="0.1">0.1 (Lowest)</option>
+                          </select>
+                        </div>
+                      </div>
+                      <Button onClick={addSitemapUrl} className="w-full">Add URL</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
-              <div className="bg-background/50 rounded-lg p-4 border border-border/30 mb-4">
-                <p className="text-sm text-muted-foreground mb-2">
-                  <strong>Sitemap URL:</strong>
-                </p>
-                <code className="text-sm text-primary break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap</code>
-                <p className="text-xs text-muted-foreground mt-2">
-                  This sitemap is dynamically generated from your SEO settings and active events.
-                </p>
+              {/* URL List */}
+              <div className="space-y-2">
+                {sitemapUrls.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30">
+                    {editingSitemapUrl?.id === item.id ? (
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2 mr-2">
+                        <Input 
+                          className="md:col-span-2"
+                          value={editingSitemapUrl.url}
+                          onChange={(e) => setEditingSitemapUrl({ ...editingSitemapUrl, url: e.target.value })}
+                        />
+                        <select 
+                          className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                          value={editingSitemapUrl.changefreq}
+                          onChange={(e) => setEditingSitemapUrl({ ...editingSitemapUrl, changefreq: e.target.value })}
+                        >
+                          <option value="always">Always</option>
+                          <option value="hourly">Hourly</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="yearly">Yearly</option>
+                          <option value="never">Never</option>
+                        </select>
+                        <select 
+                          className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                          value={editingSitemapUrl.priority}
+                          onChange={(e) => setEditingSitemapUrl({ ...editingSitemapUrl, priority: e.target.value })}
+                        >
+                          <option value="1.0">1.0</option>
+                          <option value="0.9">0.9</option>
+                          <option value="0.8">0.8</option>
+                          <option value="0.7">0.7</option>
+                          <option value="0.6">0.6</option>
+                          <option value="0.5">0.5</option>
+                          <option value="0.4">0.4</option>
+                          <option value="0.3">0.3</option>
+                          <option value="0.2">0.2</option>
+                          <option value="0.1">0.1</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{item.url}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.changefreq} · Priority: {item.priority}
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 ml-2">
+                      {editingSitemapUrl?.id === item.id ? (
+                        <>
+                          <Button size="sm" onClick={updateSitemapUrl}>
+                            <Save className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingSitemapUrl(null)}>
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingSitemapUrl(item)}>
+                            <Settings className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteSitemapUrl(item.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {sitemapUrls.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">No URLs added yet</p>
+                )}
               </div>
-
-              {sitemapPreview && (
-                <div className="mt-4">
-                  <Label className="mb-2 block">Preview:</Label>
-                  <pre className="bg-background/80 p-4 rounded-lg overflow-x-auto text-xs text-foreground/80 max-h-[400px] overflow-y-auto">
-                    {sitemapPreview}
-                  </pre>
-                </div>
-              )}
             </Card>
           </TabsContent>
 

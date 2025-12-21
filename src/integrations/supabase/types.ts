@@ -784,6 +784,33 @@ export type Database = {
         }
         Relationships: []
       }
+      sitemap_urls: {
+        Row: {
+          changefreq: string
+          created_at: string
+          id: string
+          priority: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          changefreq?: string
+          created_at?: string
+          id?: string
+          priority?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          changefreq?: string
+          created_at?: string
+          id?: string
+          priority?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       social_follows: {
         Row: {
           claimed_at: string
