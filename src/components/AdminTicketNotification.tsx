@@ -29,18 +29,28 @@ export function AdminTicketNotification() {
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [hasRequestedPermission, setHasRequestedPermission] = useState(false);
 
-  // Initialize audio for notification sound
+  // Check notification permission on mount
   useEffect(() => {
-    audioRef.current = new Audio('/notification-sound.mp3');
-    audioRef.current.volume = 0.5;
-    
-    // Check notification permission on mount
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
+    // Check localStorage if we've already asked
+    const asked = localStorage.getItem('notification-permission-asked');
+    if (asked) setHasRequestedPermission(true);
   }, []);
+
+  // Auto-request permission on first admin visit (once)
+  useEffect(() => {
+    if (isAdmin && user && !hasRequestedPermission && notificationPermission === 'default') {
+      // Auto-request after 2 seconds
+      const timer = setTimeout(() => {
+        requestNotificationPermission();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isAdmin, user, hasRequestedPermission, notificationPermission]);
 
   // Request notification permission
   const requestNotificationPermission = useCallback(async () => {
@@ -50,51 +60,77 @@ export function AdminTicketNotification() {
     }
 
     try {
+      localStorage.setItem('notification-permission-asked', 'true');
+      setHasRequestedPermission(true);
+      
       const permission = await Notification.requestPermission();
       setNotificationPermission(permission);
+      
       if (permission === 'granted') {
-        toast.success('Notifications enabled! You will receive alerts for new tickets.');
-        // Show a test notification
-        new Notification(NOTIFICATION_BRAND, {
-          body: 'Notifications are now enabled!',
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          tag: 'test-notification'
+        toast.success('Notifications enabled!', {
+          description: 'You will receive alerts for new support tickets.'
         });
+        // Show a test notification
+        const testNotification = new Notification(NOTIFICATION_BRAND, {
+          body: '✅ Notifications are now enabled!',
+          icon: '/favicon.ico',
+          tag: 'test-notification',
+          silent: true
+        });
+        setTimeout(() => testNotification.close(), 3000);
       } else if (permission === 'denied') {
-        toast.error('Notifications blocked. Please enable in browser settings.');
+        toast.error('Notifications blocked', {
+          description: 'Enable in browser settings to receive ticket alerts.'
+        });
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
-      toast.error('Failed to request notification permission');
     }
   }, []);
 
-  // Show browser notification
+  // Show browser notification with better handling
   const showBrowserNotification = useCallback((ticket: TicketNotification) => {
-    // Play sound
-    if (audioRef.current) {
-      audioRef.current.play().catch(console.error);
+    console.log('Showing notification for ticket:', ticket.ticket_number);
+    
+    // Try to play a beep sound (Web Audio API fallback)
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+      console.log('Audio not available');
     }
 
     // Show browser notification if permitted
     if (notificationPermission === 'granted') {
-      const notification = new Notification(NOTIFICATION_BRAND, {
-        body: `New Ticket #${ticket.ticket_number}: ${ticket.subject}`,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: `ticket-${ticket.id}`,
-        requireInteraction: true
-      });
+      try {
+        const notification = new Notification(NOTIFICATION_BRAND, {
+          body: `🎫 New Ticket #${ticket.ticket_number}\n${ticket.subject}`,
+          icon: '/favicon.ico',
+          tag: `ticket-${ticket.id}`,
+          requireInteraction: true,
+          vibrate: [200, 100, 200]
+        } as NotificationOptions);
 
-      notification.onclick = () => {
-        window.focus();
-        navigate(`/admin/tickets/${ticket.id}`);
-        notification.close();
-      };
+        notification.onclick = () => {
+          window.focus();
+          navigate(`/admin/tickets/${ticket.id}`);
+          notification.close();
+        };
 
-      // Auto close after 10 seconds
-      setTimeout(() => notification.close(), 10000);
+        // Auto close after 15 seconds
+        setTimeout(() => notification.close(), 15000);
+      } catch (e) {
+        console.error('Failed to show notification:', e);
+      }
     }
   }, [notificationPermission, navigate]);
 
@@ -251,20 +287,23 @@ export function AdminTicketNotification() {
 
         {/* Notification Permission Banner */}
         {notificationPermission !== 'granted' && (
-          <div className="p-3 bg-primary/10 border-b border-border">
-            <div className="flex items-center justify-between gap-2">
+          <div className="p-4 bg-gradient-to-r from-primary/20 to-violet-600/20 border-b border-border">
+            <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <BellRing className="h-4 w-4 text-primary animate-pulse" />
-                <span className="text-xs">Enable notifications to never miss a ticket</span>
+                <BellRing className="h-5 w-5 text-primary animate-pulse" />
+                <span className="text-sm font-medium">Enable Notifications</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Get instant alerts when new support tickets arrive
+              </p>
               <Button 
                 size="sm" 
                 variant="default"
                 onClick={requestNotificationPermission}
-                className="h-7 text-xs"
+                className="w-full mt-1"
               >
-                <Volume2 className="h-3 w-3 mr-1" />
-                Enable
+                <Volume2 className="h-4 w-4 mr-2" />
+                Allow Notifications
               </Button>
             </div>
           </div>

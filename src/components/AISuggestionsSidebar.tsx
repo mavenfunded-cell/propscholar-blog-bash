@@ -20,7 +20,8 @@ import {
   FileText,
   Settings,
   Brain,
-  ExternalLink
+  ExternalLink,
+  X
 } from "lucide-react";
 
 interface Message {
@@ -188,43 +189,45 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
 
   return (
     <div className="
-      fixed inset-0 z-50 bg-background/95 backdrop-blur-sm
-      lg:static lg:inset-auto lg:z-auto lg:bg-transparent lg:backdrop-blur-none
-      w-full lg:w-80 border-l lg:flex flex-col h-full
+      fixed inset-0 z-50 bg-background
+      lg:static lg:inset-auto lg:z-auto
+      w-full lg:w-80 border-l flex flex-col h-full overflow-hidden
     ">
-      <Tabs defaultValue="ai" className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-2 lg:hidden border-b">
-          <span className="font-semibold text-sm">AI Assistant</span>
+      <Tabs defaultValue="ai" className="flex flex-col h-full overflow-hidden">
+        {/* Mobile header */}
+        <div className="flex items-center justify-between p-3 lg:hidden border-b bg-muted/50 shrink-0">
+          <span className="font-semibold">AI Assistant</span>
           <Button 
             variant="ghost" 
-            size="sm" 
+            size="icon"
+            className="h-8 w-8"
             onClick={() => {
-              // This will be handled by parent component
               const event = new CustomEvent('close-ai-sidebar');
               window.dispatchEvent(event);
             }}
           >
-            Close
+            <X className="h-4 w-4" />
           </Button>
         </div>
-        <TabsList className="grid w-full grid-cols-3 m-2">
-          <TabsTrigger value="ai" className="text-xs">
-            <Bot className="h-3 w-3 mr-1" />
-            AI
+        
+        <TabsList className="grid w-full grid-cols-3 mx-2 mt-2 shrink-0 max-w-[calc(100%-16px)]">
+          <TabsTrigger value="ai" className="text-xs gap-1">
+            <Bot className="h-3 w-3" />
+            <span className="hidden xs:inline">AI</span>
           </TabsTrigger>
-          <TabsTrigger value="canned" className="text-xs">
-            <MessageSquare className="h-3 w-3 mr-1" />
-            Canned
+          <TabsTrigger value="canned" className="text-xs gap-1">
+            <MessageSquare className="h-3 w-3" />
+            <span className="hidden xs:inline">Canned</span>
           </TabsTrigger>
-          <TabsTrigger value="learn" className="text-xs">
-            <BookOpen className="h-3 w-3 mr-1" />
-            Learn
+          <TabsTrigger value="learn" className="text-xs gap-1">
+            <BookOpen className="h-3 w-3" />
+            <span className="hidden xs:inline">Learn</span>
           </TabsTrigger>
         </TabsList>
 
         <ScrollArea className="flex-1">
-          <TabsContent value="ai" className="m-0 p-3 space-y-3">
-            <div className="flex items-center justify-between">
+          <TabsContent value="ai" className="m-0 p-3 space-y-3 overflow-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
                 AI Suggestions
@@ -234,9 +237,10 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
                 variant="default" 
                 onClick={generateSuggestions}
                 disabled={isGenerating || (requestsRemaining !== null && requestsRemaining <= 0)}
+                className="w-full sm:w-auto"
               >
                 <Sparkles className={`h-3 w-3 mr-1 ${isGenerating ? 'animate-pulse' : ''}`} />
-                {isGenerating ? "Generating..." : suggestions.length > 0 ? "Refresh" : "Get AI Suggestions"}
+                {isGenerating ? "..." : suggestions.length > 0 ? "Refresh" : "Get AI Suggestions"}
               </Button>
             </div>
 
