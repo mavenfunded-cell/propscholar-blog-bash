@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { AdminTicketNotification } from "@/components/AdminTicketNotification";
 import { isAdminSubdomain, useAdminSubdomainSEO } from "@/hooks/useAdminSubdomain";
+import RedirectToAdminSubdomain from "@/components/RedirectToAdminSubdomain";
 import Landing from "./pages/Landing";
 import BlogCompetitions from "./pages/BlogCompetitions";
 import ReelCompetitions from "./pages/ReelCompetitions";
@@ -98,6 +99,10 @@ function getAdminRoutes(basePath = "") {
 function PublicRoutes() {
   return (
     <>
+      {/* Forward any /admin access on main domain to the admin subdomain */}
+      <Route path="/admin" element={<RedirectToAdminSubdomain />} />
+      <Route path="/admin/*" element={<RedirectToAdminSubdomain />} />
+
       <Route path="/" element={<Landing />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/rewards" element={<Rewards />} />
