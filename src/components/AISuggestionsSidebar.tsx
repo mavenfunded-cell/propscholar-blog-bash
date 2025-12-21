@@ -184,12 +184,7 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
     }
   };
 
-  // Auto-generate suggestions when messages change
-  useEffect(() => {
-    if (messages.length > 0 && suggestions.length === 0) {
-      generateSuggestions();
-    }
-  }, [messages.length]);
+  // Removed auto-generation - AI suggestions now only trigger on button click
 
   return (
     <div className="w-80 border-l bg-muted/30 flex flex-col h-full">
@@ -218,12 +213,12 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
               </h3>
               <Button 
                 size="sm" 
-                variant="outline" 
+                variant="default" 
                 onClick={generateSuggestions}
                 disabled={isGenerating || (requestsRemaining !== null && requestsRemaining <= 0)}
               >
-                <RefreshCw className={`h-3 w-3 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-                {isGenerating ? "..." : "Refresh"}
+                <Sparkles className={`h-3 w-3 mr-1 ${isGenerating ? 'animate-pulse' : ''}`} />
+                {isGenerating ? "Generating..." : suggestions.length > 0 ? "Refresh" : "Get AI Suggestions"}
               </Button>
             </div>
 
@@ -242,9 +237,12 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
             )}
 
             {suggestions.length === 0 && !isGenerating && (
-              <Card className="border-dashed">
-                <CardContent className="p-4 text-center text-muted-foreground text-sm">
-                  Click refresh to generate AI suggestions based on the conversation
+              <Card className="border-dashed border-primary/30 bg-primary/5">
+                <CardContent className="p-4 text-center">
+                  <Bot className="h-8 w-8 mx-auto mb-2 text-primary/60" />
+                  <p className="text-sm text-muted-foreground">
+                    Click "Get AI Suggestions" to generate reply recommendations
+                  </p>
                 </CardContent>
               </Card>
             )}
