@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, CheckCircle, Clock, Trophy, Crown, Medal } from 'lucide-react';
-import { format } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +43,7 @@ interface WinnerClaim {
 
 export default function AdminWinnerClaims() {
   const navigate = useNavigate();
+  const { getLoginPath } = useAdminNavigation();
   const [claims, setClaims] = useState<WinnerClaim[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [notes, setNotes] = useState('');
@@ -51,11 +52,11 @@ export default function AdminWinnerClaims() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath(), { replace: true });
       return;
     }
     fetchClaims();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const fetchClaims = async () => {
     try {
@@ -155,12 +156,12 @@ export default function AdminWinnerClaims() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Link to="/admin/dashboard">
+          <AdminLink to="/admin/dashboard">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-          </Link>
+          </AdminLink>
           <Logo />
         </div>
       </header>

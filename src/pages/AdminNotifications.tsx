@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { 
   ArrowLeft, 
   Send, 
@@ -47,6 +47,7 @@ interface UserOption {
 
 export default function AdminNotifications() {
   const navigate = useNavigate();
+  const { getLoginPath } = useAdminNavigation();
   
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -63,11 +64,11 @@ export default function AdminNotifications() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath(), { replace: true });
       return;
     }
     fetchData();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const fetchData = async () => {
     try {
@@ -151,12 +152,12 @@ export default function AdminNotifications() {
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/admin/dashboard">
+            <AdminLink to="/admin/dashboard">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-            </Link>
+            </AdminLink>
             <Logo />
           </div>
         </div>
