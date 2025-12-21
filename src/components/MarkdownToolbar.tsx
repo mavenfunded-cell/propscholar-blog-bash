@@ -1,18 +1,4 @@
-import { 
-  Bold, 
-  Italic, 
-  Code, 
-  Quote, 
-  List, 
-  ListOrdered, 
-  Link, 
-  Image, 
-  Minus, 
-  Eye,
-  Heading1,
-  Heading2,
-  Heading3,
-} from "lucide-react";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -31,8 +17,8 @@ interface MarkdownToolbarProps {
 }
 
 interface ToolbarButton {
-  icon: React.ComponentType<{ className?: string }>;
   label: string;
+  displayLabel: string;
   prefix: string;
   suffix: string;
   block?: boolean;
@@ -40,24 +26,24 @@ interface ToolbarButton {
 
 const toolbarButtons: ToolbarButton[][] = [
   [
-    { icon: Heading1, label: "Heading 1", prefix: "# ", suffix: "", block: true },
-    { icon: Heading2, label: "Heading 2", prefix: "## ", suffix: "", block: true },
-    { icon: Heading3, label: "Heading 3", prefix: "### ", suffix: "", block: true },
+    { label: "Heading 1", displayLabel: "H₁", prefix: "# ", suffix: "", block: true },
+    { label: "Heading 2", displayLabel: "H₂", prefix: "## ", suffix: "", block: true },
+    { label: "Heading 3", displayLabel: "H₃", prefix: "### ", suffix: "", block: true },
   ],
   [
-    { icon: Bold, label: "Bold", prefix: "**", suffix: "**" },
-    { icon: Italic, label: "Italic", prefix: "*", suffix: "*" },
-    { icon: Code, label: "Code", prefix: "`", suffix: "`" },
+    { label: "Bold", displayLabel: "B", prefix: "**", suffix: "**" },
+    { label: "Italic", displayLabel: "𝐼", prefix: "*", suffix: "*" },
+    { label: "Code", displayLabel: "<>", prefix: "`", suffix: "`" },
   ],
   [
-    { icon: Quote, label: "Quote", prefix: "> ", suffix: "", block: true },
-    { icon: List, label: "Bullet List", prefix: "- ", suffix: "", block: true },
-    { icon: ListOrdered, label: "Numbered List", prefix: "1. ", suffix: "", block: true },
+    { label: "Quote", displayLabel: "❝", prefix: "> ", suffix: "", block: true },
+    { label: "Bullet List", displayLabel: "☰", prefix: "- ", suffix: "", block: true },
+    { label: "Numbered List", displayLabel: "≡", prefix: "1. ", suffix: "", block: true },
   ],
   [
-    { icon: Link, label: "Link", prefix: "[", suffix: "](url)" },
-    { icon: Image, label: "Image", prefix: "![alt](", suffix: ")" },
-    { icon: Minus, label: "Divider", prefix: "\n---\n", suffix: "", block: true },
+    { label: "Link", displayLabel: "🔗", prefix: "[", suffix: "](url)" },
+    { label: "Image", displayLabel: "🖼", prefix: "![alt](", suffix: ")" },
+    { label: "Divider", displayLabel: "—", prefix: "\n---\n", suffix: "", block: true },
   ],
 ];
 
@@ -71,7 +57,6 @@ export function MarkdownToolbar({
   const insertMarkdown = (prefix: string, suffix: string, block?: boolean) => {
     const textarea = textareaRef?.current;
     if (!textarea) {
-      // If no textarea ref, just append at the end
       const newValue = block 
         ? value + (value && !value.endsWith('\n') ? '\n' : '') + prefix + suffix
         : value + prefix + suffix;
@@ -87,7 +72,6 @@ export function MarkdownToolbar({
     let newCursorPos: number;
 
     if (block && start > 0 && value[start - 1] !== '\n') {
-      // For block elements, ensure we're on a new line
       const linePrefix = '\n' + prefix;
       newValue = value.substring(0, start) + linePrefix + selectedText + suffix + value.substring(end);
       newCursorPos = start + linePrefix.length + selectedText.length + suffix.length;
@@ -98,13 +82,11 @@ export function MarkdownToolbar({
 
     onChange(newValue);
 
-    // Restore focus and set cursor position
     setTimeout(() => {
       textarea.focus();
       if (selectedText) {
         textarea.setSelectionRange(newCursorPos, newCursorPos);
       } else {
-        // If no selection, put cursor between prefix and suffix
         const cursorPos = start + prefix.length;
         textarea.setSelectionRange(cursorPos, cursorPos);
       }
@@ -113,22 +95,22 @@ export function MarkdownToolbar({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-0.5 p-1.5 bg-muted/50 rounded-t-lg border border-b-0 border-border flex-wrap">
+      <div className="flex items-center gap-1 px-3 py-2 bg-muted/80 rounded-t-lg border border-b-0 border-border">
         {toolbarButtons.map((group, groupIndex) => (
-          <div key={groupIndex} className="flex items-center">
+          <div key={groupIndex} className="flex items-center gap-0.5">
             {group.map((button) => (
               <Tooltip key={button.label}>
                 <TooltipTrigger asChild>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                    className={`px-2 py-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-background/50 rounded transition-colors ${
+                      button.displayLabel === "B" ? "font-bold" : ""
+                    } ${button.displayLabel === "𝐼" ? "italic" : ""}`}
                     onClick={() => insertMarkdown(button.prefix, button.suffix, button.block)}
                     disabled={showPreview}
                   >
-                    <button.icon className="h-4 w-4" />
-                  </Button>
+                    {button.displayLabel}
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
                   {button.label}
@@ -136,7 +118,7 @@ export function MarkdownToolbar({
               </Tooltip>
             ))}
             {groupIndex < toolbarButtons.length - 1 && (
-              <Separator orientation="vertical" className="h-5 mx-1" />
+              <Separator orientation="vertical" className="h-5 mx-2" />
             )}
           </div>
         ))}
@@ -145,15 +127,17 @@ export function MarkdownToolbar({
         
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
+            <button
               type="button"
-              variant={showPreview ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 w-8 p-0"
+              className={`px-2 py-1 text-sm rounded transition-colors ${
+                showPreview 
+                  ? "text-primary bg-primary/10" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+              }`}
               onClick={onTogglePreview}
             >
-              <Eye className="h-4 w-4" />
-            </Button>
+              👁
+            </button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
             {showPreview ? "Edit" : "Preview"}
