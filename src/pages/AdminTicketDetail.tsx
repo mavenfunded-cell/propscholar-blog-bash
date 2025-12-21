@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
+import { useAdminNavigation, isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -93,6 +93,7 @@ const priorityColors: Record<TicketPriority, string> = {
 
 const AdminTicketDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { adminNavigate } = useAdminNavigation();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -104,6 +105,14 @@ const AdminTicketDetail = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMod, setSelectedMod] = useState("Chirag C");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+    }
+  }, [isLoggedIn, navigate]);
 
   // Listen for close event from AI sidebar
   useEffect(() => {
@@ -186,29 +195,21 @@ const AdminTicketDetail = () => {
   const { data: ticket, isLoading: ticketLoading } = useQuery({
     queryKey: ["admin-ticket", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("support_tickets")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await supabase.rpc('get_ticket_details', { _ticket_id: id });
       if (error) throw error;
-      return data as Ticket;
+      return data?.[0] as Ticket;
     },
-    enabled: !!id,
+    enabled: !!id && isLoggedIn,
   });
 
   const { data: messages, isLoading: messagesLoading } = useQuery({
     queryKey: ["admin-ticket-messages", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("support_messages")
-        .select("*")
-        .eq("ticket_id", id)
-        .order("created_at", { ascending: true });
+      const { data, error } = await supabase.rpc('get_ticket_messages', { _ticket_id: id });
       if (error) throw error;
       return data as Message[];
     },
-    enabled: !!id,
+    enabled: !!id && isLoggedIn,
   });
 
   const sendReplyMutation = useMutation({

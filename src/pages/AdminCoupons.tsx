@@ -72,11 +72,7 @@ export default function AdminCoupons() {
 
   const fetchCoupons = async () => {
     try {
-      const { data } = await supabase
-        .from('coupon_pools')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const { data } = await supabase.rpc('get_all_coupons');
       setCoupons(data || []);
     } catch (error) {
       console.error('Error fetching coupons:', error);

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
@@ -44,6 +45,7 @@ interface CannedMessage {
 const categories = ["greeting", "closing", "info", "escalation", "account", "competition", "technical", "general"];
 
 const AdminCannedMessages = () => {
+  const navigate = useNavigate();
   const { adminNavigate } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,16 +57,22 @@ const AdminCannedMessages = () => {
     shortcut: "",
   });
 
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/admin');
+    }
+  }, [isLoggedIn, navigate]);
+
   const { data: messages, isLoading } = useQuery({
     queryKey: ["canned-messages-admin"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("canned_messages")
-        .select("*")
-        .order("category", { ascending: true });
+      const { data, error } = await supabase.rpc('get_all_canned_messages');
       if (error) throw error;
       return data as CannedMessage[];
     },
+    enabled: isLoggedIn,
   });
 
   const saveMutation = useMutation({

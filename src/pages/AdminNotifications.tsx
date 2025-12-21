@@ -71,22 +71,15 @@ export default function AdminNotifications() {
 
   const fetchData = async () => {
     try {
-      // Fetch users
-      const { data: usersData } = await supabase
-        .from('user_coins')
-        .select('user_id, email')
-        .order('email');
+      // Fetch users using RPC
+      const { data: usersData } = await supabase.rpc('get_all_user_coins');
 
       if (usersData) {
-        setUsers(usersData);
+        setUsers(usersData.map((u: any) => ({ user_id: u.user_id, email: u.email })));
       }
 
-      // Fetch notification logs
-      const { data: logsData } = await supabase
-        .from('admin_notifications')
-        .select('*')
-        .order('sent_at', { ascending: false })
-        .limit(50);
+      // Fetch notification logs using RPC
+      const { data: logsData } = await supabase.rpc('get_admin_notifications_log');
 
       if (logsData) {
         setLogs(logsData as AdminNotificationLog[]);

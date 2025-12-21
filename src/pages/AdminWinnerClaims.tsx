@@ -59,22 +59,17 @@ export default function AdminWinnerClaims() {
 
   const fetchClaims = async () => {
     try {
-      const { data: claimsData } = await supabase
-        .from('winner_claims')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: claimsData } = await supabase.rpc('get_all_winner_claims');
 
       if (claimsData && claimsData.length > 0) {
         // Get event titles
-        const eventIds = [...new Set(claimsData.map(c => c.event_id))];
-        const { data: events } = await supabase
-          .from('events')
-          .select('id, title')
-          .in('id', eventIds);
+        const eventIds = [...new Set(claimsData.map((c: any) => c.event_id))];
+        const { data: events } = await supabase.rpc('get_all_events');
 
-        const enrichedClaims = claimsData.map(claim => ({
+        const enrichedClaims = claimsData.map((claim: any) => ({
           ...claim,
-          event_title: events?.find(e => e.id === claim.event_id)?.title
+          position: claim.claim_position, // Map from RPC result
+          event_title: events?.find((e: any) => e.id === claim.event_id)?.title
         }));
 
         setClaims(enrichedClaims);

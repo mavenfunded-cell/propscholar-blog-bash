@@ -1283,6 +1283,106 @@ export type Database = {
         Returns: string
       }
       generate_slug: { Args: { title: string }; Returns: string }
+      get_admin_notifications_log: {
+        Args: never
+        Returns: {
+          action_url: string
+          admin_id: string
+          cta_text: string
+          id: string
+          message: string
+          recipient_count: number
+          sent_at: string
+          target_type: string
+          title: string
+        }[]
+      }
+      get_all_ai_knowledge: {
+        Args: never
+        Returns: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          source: string
+          title: string
+        }[]
+      }
+      get_all_canned_messages: {
+        Args: never
+        Returns: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          shortcut: string
+          title: string
+        }[]
+      }
+      get_all_coupons: {
+        Args: never
+        Returns: {
+          assigned_at: string
+          assigned_email: string
+          assigned_to: string
+          coupon_code: string
+          created_at: string
+          expires_at: string
+          id: string
+          revoke_reason: string
+          reward_type: string
+          status: string
+          used_at: string
+        }[]
+      }
+      get_all_email_logs: {
+        Args: never
+        Returns: {
+          created_at: string
+          email_type: string
+          error_message: string
+          event_id: string
+          id: string
+          message_body: string
+          recipient_email: string
+          status: string
+          subject: string
+        }[]
+      }
+      get_all_events: {
+        Args: never
+        Returns: {
+          competition_type: string
+          created_at: string
+          description: string
+          end_date: string
+          featured_image_url: string
+          id: string
+          min_words: number
+          prizes: Json
+          rewards: string
+          slug: string
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_all_og_images: {
+        Args: never
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          is_default: boolean
+          page_identifier: string
+          page_type: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_all_reel_submissions_for_event: {
         Args: { _event_id: string }
         Returns: {
@@ -1312,6 +1412,40 @@ export type Database = {
           status: string
         }[]
       }
+      get_all_reward_claims: {
+        Args: never
+        Returns: {
+          coins_spent: number
+          coupon_code: string
+          coupon_id: string
+          created_at: string
+          expires_at: string
+          fulfilled_at: string
+          id: string
+          notes: string
+          reward_id: string
+          status: string
+          user_id: string
+        }[]
+      }
+      get_all_seo_settings: {
+        Args: never
+        Returns: {
+          canonical_url: string
+          created_at: string
+          description: string
+          id: string
+          keywords: string
+          og_description: string
+          og_image: string
+          og_title: string
+          page_name: string
+          page_path: string
+          robots: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_all_social_follows: {
         Args: never
         Returns: {
@@ -1339,6 +1473,31 @@ export type Database = {
           word_count: number
         }[]
       }
+      get_all_support_tickets: {
+        Args: { _priority_filter?: string; _status_filter?: string }
+        Returns: {
+          created_at: string
+          id: string
+          last_reply_at: string
+          last_reply_by: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: number
+          updated_at: string
+          user_email: string
+        }[]
+      }
+      get_all_ticket_reviews: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          rating: number
+          ticket_id: string
+          user_email: string
+        }[]
+      }
       get_all_user_coins: {
         Args: never
         Returns: {
@@ -1353,6 +1512,25 @@ export type Database = {
           total_spent: number
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_all_winner_claims: {
+        Args: never
+        Returns: {
+          admin_notes: string
+          claim_email: string
+          claim_name: string
+          claim_position: number
+          claimed_at: string
+          created_at: string
+          event_id: string
+          id: string
+          issued_at: string
+          status: string
+          submission_id: string
+          user_email: string
+          winner_id: string
+          winner_type: string
         }[]
       }
       get_event_submission_counts: {
@@ -1407,6 +1585,38 @@ export type Database = {
         }[]
       }
       get_task_notifications: { Args: { _user_id: string }; Returns: Json }
+      get_ticket_details: {
+        Args: { _ticket_id: string }
+        Returns: {
+          closed_at: string
+          created_at: string
+          id: string
+          last_reply_at: string
+          last_reply_by: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          ticket_number: number
+          updated_at: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      get_ticket_messages: {
+        Args: { _ticket_id: string }
+        Returns: {
+          attachments: Json
+          body: string
+          body_html: string
+          created_at: string
+          id: string
+          is_internal_note: boolean
+          sender_email: string
+          sender_name: string
+          sender_type: string
+          ticket_id: string
+        }[]
+      }
       get_user_coin_transactions: {
         Args: { _user_id: string }
         Returns: {

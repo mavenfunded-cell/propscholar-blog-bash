@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const PAGE_TYPES = [
 ];
 
 export default function AdminOGImages() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingImage, setEditingImage] = useState<OGImage | null>(null);
@@ -49,28 +51,32 @@ export default function AdminOGImages() {
     is_default: false,
   });
 
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/admin');
+    }
+  }, [isLoggedIn, navigate]);
+
   const { data: ogImages, isLoading } = useQuery({
     queryKey: ["og-images"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("og_images")
-        .select("*")
-        .order("page_type", { ascending: true });
+      const { data, error } = await supabase.rpc('get_all_og_images');
       if (error) throw error;
       return data as OGImage[];
     },
+    enabled: isLoggedIn,
   });
 
   const { data: events } = useQuery({
     queryKey: ["events-for-og"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("events")
-        .select("slug, title, competition_type")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc('get_all_events');
       if (error) throw error;
       return data;
     },
+    enabled: isLoggedIn,
   });
 
   const saveMutation = useMutation({

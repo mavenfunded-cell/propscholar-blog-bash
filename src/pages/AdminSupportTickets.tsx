@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
@@ -75,6 +76,7 @@ const priorityColors: Record<TicketPriority, string> = {
 };
 
 const AdminSupportTickets = () => {
+  const navigate = useNavigate();
   const { adminNavigate } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("open");
@@ -87,29 +89,25 @@ const AdminSupportTickets = () => {
     timestamp: string;
   } | null>(null);
 
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/admin');
+    }
+  }, [isLoggedIn, navigate]);
+
   const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-support-tickets", statusFilter, priorityFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("support_tickets")
-        .select("*")
-        .order("last_reply_at", { ascending: false });
-
-      // Filter by simplified status
-      if (statusFilter === "open") {
-        query = query.in("status", ["open", "awaiting_support", "awaiting_user"]);
-      } else if (statusFilter === "closed") {
-        query = query.eq("status", "closed");
-      }
-      
-      if (priorityFilter !== "all") {
-        query = query.eq("priority", priorityFilter as TicketPriority);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc('get_all_support_tickets', {
+        _status_filter: statusFilter,
+        _priority_filter: priorityFilter
+      });
       if (error) throw error;
       return data as Ticket[];
     },
+    enabled: isLoggedIn,
   });
 
   const syncInboxMutation = useMutation({
