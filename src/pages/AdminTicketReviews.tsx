@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { AdminLink } from '@/components/AdminLink';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { ArrowLeft, Star, TrendingUp, MessageSquare, Calendar, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -26,6 +26,7 @@ interface TicketReview {
 
 export default function AdminTicketReviews() {
   const navigate = useNavigate();
+  const { getLoginPath } = useAdminNavigation();
   const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   const [reviews, setReviews] = useState<TicketReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -34,9 +35,9 @@ export default function AdminTicketReviews() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath());
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -46,16 +47,28 @@ export default function AdminTicketReviews() {
 
   const fetchReviews = async () => {
     try {
-      const { data, error } = await supabase
-        .from('ticket_reviews')
-        .select(`
-          *,
-          ticket:support_tickets(ticket_number, subject)
-        `)
-        .order('created_at', { ascending: false });
+      // Use RPC function to bypass RLS
+      const { data: reviewsData, error } = await supabase.rpc('get_all_ticket_reviews');
 
       if (error) throw error;
-      setReviews(data || []);
+      
+      // Fetch ticket details for each review
+      const reviewsWithTickets = await Promise.all(
+        (reviewsData || []).map(async (review: any) => {
+          const { data: ticketData } = await supabase.rpc('get_ticket_details', {
+            _ticket_id: review.ticket_id
+          });
+          return {
+            ...review,
+            ticket: ticketData?.[0] ? {
+              ticket_number: ticketData[0].ticket_number,
+              subject: ticketData[0].subject
+            } : null
+          };
+        })
+      );
+      
+      setReviews(reviewsWithTickets);
     } catch (err) {
       console.error('Error fetching reviews:', err);
       toast.error('Failed to load reviews');
@@ -120,21 +133,15 @@ export default function AdminTicketReviews() {
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <AdminLink to="/admin/dashboard">
+            <AdminLink to="/dashboard">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
             </AdminLink>
-            {isAdminSubdomain() ? (
-              <AdminLink to="/admin/dashboard">
-                <Logo />
-              </AdminLink>
-            ) : (
-              <Link to="/">
-                <Logo />
-              </Link>
-            )}
+            <AdminLink to="/dashboard">
+              <Logo />
+            </AdminLink>
           </div>
         </div>
       </header>

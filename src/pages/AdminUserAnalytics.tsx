@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,7 @@ interface SessionAnalytics {
 
 export default function AdminUserAnalytics() {
   const navigate = useNavigate();
+  const { getLoginPath, getDashboardPath } = useAdminNavigation();
   const [submissions, setSubmissions] = useState<SubmissionAnalytics[]>([]);
   const [sessions, setSessions] = useState<SessionAnalytics[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -75,57 +77,50 @@ export default function AdminUserAnalytics() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath());
       return;
     }
     fetchData();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const handleSignOut = () => {
     sessionStorage.removeItem('admin_logged_in');
-    navigate(isAdminSubdomain() ? '/' : '/admin');
+    navigate(getLoginPath());
   };
 
   const fetchData = async () => {
     try {
-      // Fetch events
-      const { data: eventsData } = await supabase
-        .from('events')
-        .select('id, title')
-        .eq('competition_type', 'blog')
-        .order('created_at', { ascending: false });
+      // Fetch events using RPC
+      const { data: eventsData } = await supabase.rpc('get_all_events');
 
-      setEvents(eventsData || []);
+      const blogEvents = (eventsData || []).filter((e: any) => e.competition_type === 'blog');
+      setEvents(blogEvents.map((e: any) => ({ id: e.id, title: e.title })));
 
-      // Fetch submissions with time spent
-      const { data: submissionsData, error } = await supabase
-        .from('submissions')
-        .select(`
-          id,
-          name,
-          email,
-          time_spent_seconds,
-          word_count,
-          submitted_at,
-          event_id,
-          events!inner(title)
-        `)
-        .order('time_spent_seconds', { ascending: false, nullsFirst: false });
-
-      if (error) throw error;
-
-      const formatted = (submissionsData || []).map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        email: s.email,
-        time_spent_seconds: s.time_spent_seconds,
-        word_count: s.word_count,
-        submitted_at: s.submitted_at,
-        event_title: s.events?.title || 'Unknown Event',
-        event_id: s.event_id
-      }));
-
-      setSubmissions(formatted);
+      // Fetch all submissions from all events
+      let allSubmissions: SubmissionAnalytics[] = [];
+      for (const event of blogEvents) {
+        const { data: submissionsData } = await supabase.rpc('get_all_submissions_for_event', {
+          _event_id: event.id
+        });
+        
+        if (submissionsData) {
+          const formatted = submissionsData.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            email: s.email,
+            time_spent_seconds: s.time_spent_seconds,
+            word_count: s.word_count,
+            submitted_at: s.submitted_at,
+            event_title: event.title,
+            event_id: event.id
+          }));
+          allSubmissions = [...allSubmissions, ...formatted];
+        }
+      }
+      
+      // Sort by time spent
+      allSubmissions.sort((a, b) => (b.time_spent_seconds || 0) - (a.time_spent_seconds || 0));
+      setSubmissions(allSubmissions);
 
       // Fetch sessions
       const { data: sessionsData } = await supabase
@@ -268,15 +263,15 @@ export default function AdminUserAnalytics() {
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/admin/dashboard">
+            <AdminLink to="/dashboard">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-            </Link>
-            <Link to="/">
+            </AdminLink>
+            <AdminLink to="/dashboard">
               <Logo />
-            </Link>
+            </AdminLink>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={handleSignOut}>

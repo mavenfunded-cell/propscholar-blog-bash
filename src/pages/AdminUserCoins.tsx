@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,7 @@ interface RewardClaim {
 
 export default function AdminUserCoins() {
   const navigate = useNavigate();
+  const { getLoginPath } = useAdminNavigation();
   const [users, setUsers] = useState<UserCoin[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [search, setSearch] = useState('');
@@ -71,11 +73,11 @@ export default function AdminUserCoins() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath());
       return;
     }
     fetchUsers();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const fetchUsers = async () => {
     try {
@@ -195,12 +197,12 @@ export default function AdminUserCoins() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Link to="/admin/dashboard">
+          <AdminLink to="/dashboard">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-          </Link>
+          </AdminLink>
           <Logo />
         </div>
       </header>
