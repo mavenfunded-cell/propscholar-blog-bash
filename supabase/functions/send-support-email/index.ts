@@ -25,6 +25,7 @@ interface SendEmailRequest {
   body: string;
   isInternalNote?: boolean;
   attachments?: Attachment[];
+  senderName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -76,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    const { ticketId, body, isInternalNote, attachments }: SendEmailRequest = await req.json();
+    const { ticketId, body, isInternalNote, attachments, senderName }: SendEmailRequest = await req.json();
 
     // Get ticket details
     const { data: ticket, error: ticketError } = await supabase
@@ -114,13 +115,16 @@ const handler = async (req: Request): Promise<Response> => {
       references.push(lastMessage.message_id);
     }
 
+    // Use the sender name from request, or default to FROM_NAME
+    const displaySenderName = senderName ? `${senderName} - PropScholar Support` : FROM_NAME;
+
     // Insert message into database with attachments
     const { data: newMessage, error: insertError } = await supabase
       .from("support_messages")
       .insert({
         ticket_id: ticketId,
         sender_email: SUPPORT_EMAIL,
-        sender_name: FROM_NAME,
+        sender_name: displaySenderName,
         sender_type: "admin",
         body: body,
         message_id: messageId,
@@ -283,7 +287,7 @@ ${attachmentsHtml}
 
       try {
         await client.send({
-          from: `${FROM_NAME} <${SUPPORT_EMAIL}>`,
+          from: `${displaySenderName} <${SUPPORT_EMAIL}>`,
           to: ticket.user_email,
           subject: subject,
           content: body,
