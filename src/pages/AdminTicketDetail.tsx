@@ -31,11 +31,15 @@ import {
   X,
   Image as ImageIcon,
   Download,
+  FileText,
+  Eye,
+  Edit3,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import ReactMarkdown from "react-markdown";
 
 interface Attachment {
   url: string;
@@ -104,6 +108,7 @@ const AdminTicketDetail = () => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedMod, setSelectedMod] = useState("Chirag C");
+  const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
@@ -446,10 +451,32 @@ const AdminTicketDetail = () => {
                         {format(new Date(message.created_at), "MMM d, yyyy h:mm a")}
                       </span>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap pl-8">
-                      {message.body}
-                    </p>
-                    {/* Display attachments */}
+                    <div className="text-sm whitespace-pre-wrap pl-8 prose prose-sm prose-invert max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          a: ({ href, children }) => (
+                            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {children}
+                            </a>
+                          ),
+                          ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          em: ({ children }) => <em className="italic">{children}</em>,
+                          code: ({ children }) => (
+                            <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                          ),
+                          pre: ({ children }) => (
+                            <pre className="bg-muted p-2 rounded text-xs overflow-x-auto mb-2">{children}</pre>
+                          ),
+                        }}
+                      >
+                        {message.body}
+                      </ReactMarkdown>
+                    </div>
+                    {/* Display attachments - handle both URL format and object format */}
                     {message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0 && (
                       <div className="pl-8 mt-3 space-y-2">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -457,29 +484,65 @@ const AdminTicketDetail = () => {
                           Attachments ({message.attachments.length})
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {message.attachments.map((att: Attachment, idx: number) => (
-                            <div key={idx} className="relative group">
-                              {att.type?.startsWith('image/') ? (
-                                <a href={att.url} target="_blank" rel="noopener noreferrer">
-                                  <img 
-                                    src={att.url} 
-                                    alt={att.name}
-                                    className="h-24 w-24 object-cover rounded-lg border border-border hover:border-primary transition-colors"
-                                  />
-                                </a>
-                              ) : (
-                                <a 
-                                  href={att.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 p-2 bg-muted rounded-lg border border-border hover:border-primary transition-colors"
-                                >
-                                  <Download className="h-4 w-4" />
-                                  <span className="text-xs truncate max-w-[120px]">{att.name}</span>
-                                </a>
-                              )}
-                            </div>
-                          ))}
+                          {message.attachments.map((att: any, idx: number) => {
+                            // Handle different attachment formats
+                            const attachmentUrl = typeof att === 'string' ? att : att.url;
+                            const attachmentName = typeof att === 'string' ? `Attachment ${idx + 1}` : (att.filename || att.name || `Attachment ${idx + 1}`);
+                            const attachmentType = typeof att === 'string' 
+                              ? (att.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image/' : 'file')
+                              : (att.contentType || att.type || '');
+                            const isImage = attachmentType.startsWith('image/') || 
+                              attachmentName.match(/\.(jpg|jpeg|png|gif|webp)$/i) ||
+                              (typeof attachmentUrl === 'string' && attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+                            
+                            if (!attachmentUrl) return null;
+                            
+                            return (
+                              <div key={idx} className="relative group">
+                                {isImage ? (
+                                  <a 
+                                    href={attachmentUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="block"
+                                  >
+                                    <img 
+                                      src={attachmentUrl} 
+                                      alt={attachmentName}
+                                      className="h-32 w-32 object-cover rounded-lg border border-border hover:border-primary transition-colors cursor-pointer"
+                                      onError={(e) => {
+                                        // If image fails to load, show placeholder
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                      }}
+                                    />
+                                    <div className="hidden items-center gap-2 p-2 bg-muted rounded-lg border border-border">
+                                      <ImageIcon className="h-4 w-4" />
+                                      <span className="text-xs truncate max-w-[100px]">{attachmentName}</span>
+                                    </div>
+                                  </a>
+                                ) : (
+                                  <a 
+                                    href={attachmentUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-3 bg-muted rounded-lg border border-border hover:border-primary transition-colors"
+                                  >
+                                    <FileText className="h-5 w-5 text-muted-foreground" />
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-medium truncate max-w-[120px]">{attachmentName}</span>
+                                      {att.size && (
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {(att.size / 1024).toFixed(1)} KB
+                                        </span>
+                                      )}
+                                    </div>
+                                    <Download className="h-4 w-4 ml-1" />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -491,36 +554,91 @@ const AdminTicketDetail = () => {
             {/* Reply Box */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Button
-                    variant={!isInternalNote ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setIsInternalNote(false)}
-                  >
-                    <Send className="h-4 w-4 mr-1" />
-                    Reply
-                  </Button>
-                  <Button
-                    variant={isInternalNote ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setIsInternalNote(true)}
-                    className={isInternalNote ? "bg-yellow-600 hover:bg-yellow-700" : ""}
-                  >
-                    <StickyNote className="h-4 w-4 mr-1" />
-                    Internal Note
-                  </Button>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={!isInternalNote ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIsInternalNote(false)}
+                    >
+                      <Send className="h-4 w-4 mr-1" />
+                      Reply
+                    </Button>
+                    <Button
+                      variant={isInternalNote ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIsInternalNote(true)}
+                      className={isInternalNote ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                    >
+                      <StickyNote className="h-4 w-4 mr-1" />
+                      Internal Note
+                    </Button>
+                  </div>
+                  {!isInternalNote && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
+                      className="text-xs"
+                    >
+                      {showMarkdownPreview ? (
+                        <>
+                          <Edit3 className="h-3 w-3 mr-1" />
+                          Edit
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-3 w-3 mr-1" />
+                          Preview
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
-                <Textarea
-                  placeholder={
-                    isInternalNote
-                      ? "Add an internal note (only visible to admins)..."
-                      : "Type your reply (will be sent via email)..."
-                  }
-                  value={replyBody}
-                  onChange={(e) => setReplyBody(e.target.value)}
-                  rows={4}
-                  className="mb-3"
-                />
+                
+                {showMarkdownPreview && !isInternalNote ? (
+                  <div className="mb-3 p-4 bg-muted/50 rounded-lg border border-border min-h-[100px] prose prose-sm prose-invert max-w-none">
+                    {replyBody ? (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          a: ({ href, children }) => (
+                            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {children}
+                            </a>
+                          ),
+                          ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          em: ({ children }) => <em className="italic">{children}</em>,
+                          code: ({ children }) => (
+                            <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                          ),
+                          pre: ({ children }) => (
+                            <pre className="bg-muted p-2 rounded text-xs overflow-x-auto mb-2">{children}</pre>
+                          ),
+                        }}
+                      >
+                        {replyBody}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="text-muted-foreground italic">Nothing to preview</p>
+                    )}
+                  </div>
+                ) : (
+                  <Textarea
+                    placeholder={
+                      isInternalNote
+                        ? "Add an internal note (only visible to admins)..."
+                        : "Type your reply (supports **bold**, *italic*, [links](url), - lists)..."
+                    }
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    rows={4}
+                    className="mb-3 font-mono text-sm"
+                  />
+                )}
 
                 {/* Attachments Preview */}
                 {attachments.length > 0 && (
