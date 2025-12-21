@@ -1252,6 +1252,53 @@ export type Database = {
         }
         Returns: boolean
       }
+      admin_create_reward: {
+        Args: {
+          _coin_cost: number
+          _description: string
+          _expiry_days: number
+          _is_enabled: boolean
+          _max_claims_per_user: number
+          _name: string
+          _reward_type: string
+        }
+        Returns: {
+          coin_cost: number
+          created_at: string
+          description: string | null
+          expiry_days: number | null
+          id: string
+          is_enabled: boolean | null
+          max_claims_per_user: number | null
+          name: string
+          reward_type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rewards"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_delete_reward: { Args: { _id: string }; Returns: boolean }
+      admin_update_reward: {
+        Args: {
+          _coin_cost: number
+          _description: string
+          _expiry_days: number
+          _id: string
+          _is_enabled: boolean
+          _max_claims_per_user: number
+          _name: string
+          _reward_type: string
+        }
+        Returns: boolean
+      }
+      admin_update_reward_setting: {
+        Args: { _id: string; _setting_value: Json }
+        Returns: boolean
+      }
       apply_referral_code: { Args: { _referral_code: string }; Returns: Json }
       approve_social_follow: { Args: { _follow_id: string }; Returns: boolean }
       can_claim_winner: {
@@ -1427,6 +1474,43 @@ export type Database = {
           status: string
           user_id: string
         }[]
+      }
+      get_all_reward_settings: {
+        Args: never
+        Returns: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "reward_settings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_all_rewards: {
+        Args: never
+        Returns: {
+          coin_cost: number
+          created_at: string
+          description: string | null
+          expiry_days: number | null
+          id: string
+          is_enabled: boolean | null
+          max_claims_per_user: number | null
+          name: string
+          reward_type: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rewards"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_all_seo_settings: {
         Args: never
