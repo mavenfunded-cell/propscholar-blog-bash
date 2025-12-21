@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +54,11 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     try {
       await client.send({
         from: `${FROM_NAME} <${SUPPORT_EMAIL}>`,
@@ -63,9 +69,28 @@ const handler = async (req: Request): Promise<Response> => {
       });
       await client.close();
       console.log("Auto-reply sent successfully");
+
+      // Log the email to email_logs table
+      await supabase.from("email_logs").insert({
+        recipient_email: to,
+        subject: `Ticket #${ticketNumber} Received - We'll respond within 4 hours`,
+        email_type: "ticket_auto_reply",
+        status: "sent",
+      });
+      console.log("Email logged to database");
     } catch (smtpError: any) {
       console.error("SMTP error:", smtpError);
       await client.close();
+      
+      // Log failed email
+      await supabase.from("email_logs").insert({
+        recipient_email: to,
+        subject: `Ticket #${ticketNumber} Received - We'll respond within 4 hours`,
+        email_type: "ticket_auto_reply",
+        status: "failed",
+        error_message: smtpError.message || "SMTP error",
+      });
+      
       throw smtpError;
     }
 
