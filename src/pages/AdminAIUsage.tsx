@@ -86,21 +86,18 @@ const AdminAIUsage = () => {
     }
   }, [settings]);
 
-  // Calculate current hour usage for logged-in admin
+  // Calculate current hour usage
   const { data: currentHourUsage } = useQuery({
-    queryKey: ['current-hour-usage', user?.id],
+    queryKey: ['current-hour-usage'],
     queryFn: async () => {
-      if (!user?.id) return { count: 0 };
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { count, error } = await supabase
         .from('ai_usage_logs')
         .select('*', { count: 'exact', head: true })
-        .eq('admin_id', user.id)
         .gte('created_at', oneHourAgo);
       if (error) throw error;
       return { count: count || 0 };
     },
-    enabled: !!user?.id,
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
@@ -123,8 +120,7 @@ const AdminAIUsage = () => {
         const { error } = await supabase
           .from('reward_settings')
           .update({
-            setting_value: settingValueJson,
-            updated_by: user?.id
+            setting_value: settingValueJson
           })
           .eq('setting_key', 'ai_rate_limit');
         if (error) throw error;
@@ -133,8 +129,7 @@ const AdminAIUsage = () => {
           .from('reward_settings')
           .insert([{
             setting_key: 'ai_rate_limit',
-            setting_value: settingValueJson,
-            updated_by: user?.id
+            setting_value: settingValueJson
           }]);
         if (error) throw error;
       }
