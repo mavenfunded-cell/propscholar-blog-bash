@@ -29,17 +29,16 @@ import {
   ChevronUp,
   Paperclip,
   X,
-  Image as ImageIcon,
+  ImageIcon,
   Download,
   FileText,
-  Eye,
-  Edit3,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ReactMarkdown from "react-markdown";
+import { MarkdownToolbar } from "@/components/MarkdownToolbar";
 
 interface Attachment {
   url: string;
@@ -110,6 +109,7 @@ const AdminTicketDetail = () => {
   const [selectedMod, setSelectedMod] = useState("Chirag C");
   const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
@@ -554,50 +554,39 @@ const AdminTicketDetail = () => {
             {/* Reply Box */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={!isInternalNote ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setIsInternalNote(false)}
-                    >
-                      <Send className="h-4 w-4 mr-1" />
-                      Reply
-                    </Button>
-                    <Button
-                      variant={isInternalNote ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setIsInternalNote(true)}
-                      className={isInternalNote ? "bg-yellow-600 hover:bg-yellow-700" : ""}
-                    >
-                      <StickyNote className="h-4 w-4 mr-1" />
-                      Internal Note
-                    </Button>
-                  </div>
-                  {!isInternalNote && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
-                      className="text-xs"
-                    >
-                      {showMarkdownPreview ? (
-                        <>
-                          <Edit3 className="h-3 w-3 mr-1" />
-                          Edit
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-3 w-3 mr-1" />
-                          Preview
-                        </>
-                      )}
-                    </Button>
-                  )}
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    variant={!isInternalNote ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsInternalNote(false)}
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    Reply
+                  </Button>
+                  <Button
+                    variant={isInternalNote ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsInternalNote(true)}
+                    className={isInternalNote ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                  >
+                    <StickyNote className="h-4 w-4 mr-1" />
+                    Internal Note
+                  </Button>
                 </div>
                 
+                {/* Markdown Toolbar - only for replies */}
+                {!isInternalNote && (
+                  <MarkdownToolbar
+                    textareaRef={replyTextareaRef}
+                    value={replyBody}
+                    onChange={setReplyBody}
+                    showPreview={showMarkdownPreview}
+                    onTogglePreview={() => setShowMarkdownPreview(!showMarkdownPreview)}
+                  />
+                )}
+                
                 {showMarkdownPreview && !isInternalNote ? (
-                  <div className="mb-3 p-4 bg-muted/50 rounded-lg border border-border min-h-[100px] prose prose-sm prose-invert max-w-none">
+                  <div className="p-4 bg-muted/50 rounded-b-lg border border-t-0 border-border min-h-[120px] prose prose-sm prose-invert max-w-none mb-3">
                     {replyBody ? (
                       <ReactMarkdown
                         components={{
@@ -618,6 +607,13 @@ const AdminTicketDetail = () => {
                           pre: ({ children }) => (
                             <pre className="bg-muted p-2 rounded text-xs overflow-x-auto mb-2">{children}</pre>
                           ),
+                          h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-lg font-bold mb-2">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-base font-bold mb-2">{children}</h3>,
+                          blockquote: ({ children }) => (
+                            <blockquote className="border-l-2 border-primary pl-3 italic text-muted-foreground">{children}</blockquote>
+                          ),
+                          hr: () => <hr className="my-3 border-border" />,
                         }}
                       >
                         {replyBody}
@@ -627,16 +623,19 @@ const AdminTicketDetail = () => {
                     )}
                   </div>
                 ) : (
-                  <Textarea
+                  <textarea
+                    ref={replyTextareaRef}
                     placeholder={
                       isInternalNote
                         ? "Add an internal note (only visible to admins)..."
-                        : "Type your reply (supports **bold**, *italic*, [links](url), - lists)..."
+                        : "Write your reply in Markdown..."
                     }
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}
-                    rows={4}
-                    className="mb-3 font-mono text-sm"
+                    rows={6}
+                    className={`w-full p-3 bg-background text-foreground resize-y min-h-[120px] font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary mb-3 ${
+                      !isInternalNote ? "rounded-b-lg border border-t-0 border-border" : "rounded-lg border border-border"
+                    }`}
                   />
                 )}
 
