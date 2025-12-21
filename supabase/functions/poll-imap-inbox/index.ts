@@ -456,6 +456,9 @@ const handler = async (req: Request): Promise<Response> => {
           .maybeSingle();
 
         // Create new ticket if needed
+        let isNewTicket = false;
+        let ticketNumber: number | null = null;
+        
         if (!ticketId) {
           const { data: newTicket, error: ticketError } = await supabase
             .from("support_tickets")
@@ -476,6 +479,8 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           ticketId = newTicket.id;
+          ticketNumber = newTicket.ticket_number;
+          isNewTicket = true;
           console.log(`Created new ticket #${newTicket.ticket_number}`);
         }
 
@@ -496,6 +501,46 @@ const handler = async (req: Request): Promise<Response> => {
           console.error("Error inserting message:", messageError);
           errorCount++;
           continue;
+        }
+
+        // Update ticket with last reply info
+        await supabase
+          .from("support_tickets")
+          .update({
+            status: "open",
+            last_reply_at: new Date().toISOString(),
+            last_reply_by: "user",
+          })
+          .eq("id", ticketId);
+
+        // Send auto-reply for NEW tickets only
+        if (isNewTicket && ticketNumber) {
+          try {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+            const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+            
+            console.log(`Sending auto-reply for new ticket #${ticketNumber} to ${senderEmail}`);
+            
+            const autoReplyResponse = await fetch(`${supabaseUrl}/functions/v1/ticket-auto-reply`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${serviceRoleKey}`,
+              },
+              body: JSON.stringify({
+                to: senderEmail,
+                ticketNumber: ticketNumber,
+                subject: subject,
+                ticketId: ticketId,
+              }),
+            });
+            
+            const autoReplyResult = await autoReplyResponse.json();
+            console.log("Auto-reply result:", autoReplyResult);
+          } catch (autoReplyError) {
+            console.error("Failed to send auto-reply:", autoReplyError);
+            // Don't fail the main process if auto-reply fails
+          }
         }
 
         // Mark as seen ONLY after successful processing
