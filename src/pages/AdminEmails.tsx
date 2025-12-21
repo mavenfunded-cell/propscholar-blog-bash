@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowLeft, Download, Mail, CheckCircle, XCircle, Clock, RefreshCw, Users, Send, Loader2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 interface EmailLog {
   id: string;
@@ -55,7 +56,7 @@ export default function AdminEmails() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(isAdminSubdomain() ? '/' : '/admin');
     }
   }, [isLoggedIn, navigate]);
 
@@ -211,7 +212,11 @@ export default function AdminEmails() {
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" onClick={() => navigate('/admin')} className="text-white/70 hover:text-white">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
+            className="text-white/70 hover:text-white"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Admin
           </Button>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 interface RewardClaim {
   id: string;
@@ -51,7 +53,7 @@ export default function AdminRewardClaims() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(isAdminSubdomain() ? '/' : '/admin', { replace: true });
     }
   }, [isLoggedIn, navigate]);
 
@@ -151,12 +153,12 @@ export default function AdminRewardClaims() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Link to="/admin/dashboard">
+          <AdminLink to="/admin/dashboard">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-          </Link>
+          </AdminLink>
           <Logo />
         </div>
       </header>

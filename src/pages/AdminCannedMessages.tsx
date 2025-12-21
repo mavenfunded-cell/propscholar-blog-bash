@@ -46,7 +46,7 @@ const categories = ["greeting", "closing", "info", "escalation", "account", "com
 
 const AdminCannedMessages = () => {
   const navigate = useNavigate();
-  const { adminNavigate } = useAdminNavigation();
+  const { adminNavigate, getLoginPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<CannedMessage | null>(null);
@@ -61,9 +61,9 @@ const AdminCannedMessages = () => {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(getLoginPath(), { replace: true });
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["canned-messages-admin"],

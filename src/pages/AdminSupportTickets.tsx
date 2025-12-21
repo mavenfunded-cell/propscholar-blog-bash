@@ -77,7 +77,7 @@ const priorityColors: Record<TicketPriority, string> = {
 
 const AdminSupportTickets = () => {
   const navigate = useNavigate();
-  const { adminNavigate } = useAdminNavigation();
+  const { adminNavigate, getLoginPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -93,9 +93,9 @@ const AdminSupportTickets = () => {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(getLoginPath(), { replace: true });
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-support-tickets", statusFilter, priorityFilter],

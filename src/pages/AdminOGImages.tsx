@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Image, ExternalLink } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 
 interface OGImage {
   id: string;
@@ -55,7 +56,7 @@ export default function AdminOGImages() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(isAdminSubdomain() ? '/' : '/admin', { replace: true });
     }
   }, [isLoggedIn, navigate]);
 

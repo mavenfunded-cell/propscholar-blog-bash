@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, ThumbsUp, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 interface Event {
   id: string;
@@ -41,7 +42,7 @@ export default function AdminAddVotes() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(isAdminSubdomain() ? '/' : '/admin', { replace: true });
     }
   }, [isLoggedIn, navigate]);
 
@@ -164,7 +165,7 @@ export default function AdminAddVotes() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/admin/dashboard')}
+            onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
             className="text-white/60 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -355,7 +356,7 @@ export default function AdminAddVotes() {
         <div className="mt-6 text-center">
           <Button
             variant="ghost"
-            onClick={() => navigate('/admin/votes')}
+            onClick={() => navigate(isAdminSubdomain() ? '/votes' : '/admin/votes')}
             className="text-white/60 hover:text-white"
           >
             View All Votes →
