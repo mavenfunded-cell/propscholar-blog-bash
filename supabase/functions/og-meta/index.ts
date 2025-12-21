@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         ogData = {
           title: blogOG?.title || `${event.title} | PropScholar Space - The Giveaway Hub`,
           description: blogOG?.description || event.description?.substring(0, 160) || DEFAULT_OG.description,
-          image: blogOG?.image_url || event.featured_image_url || DEFAULT_OG.image,
+          image: blogOG?.image_url || event.featured_image_url || '',
           url: `https://propscholar.space/blog/${event.slug}`
         }
       } else if (blogOG) {
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
         ogData = {
           title: blogOG.title || DEFAULT_OG.title,
           description: blogOG.description || DEFAULT_OG.description,
-          image: blogOG.image_url,
+          image: blogOG.image_url || '',
           url: `https://propscholar.space/blog/${slug}`
         }
       }
@@ -121,14 +121,14 @@ Deno.serve(async (req) => {
         ogData = {
           title: reelOG?.title || `${event.title} | PropScholar Space - The Giveaway Hub`,
           description: reelOG?.description || event.description?.substring(0, 160) || DEFAULT_OG.description,
-          image: reelOG?.image_url || event.featured_image_url || DEFAULT_OG.image,
+          image: reelOG?.image_url || event.featured_image_url || '',
           url: `https://propscholar.space/reel/${event.slug}`
         }
       } else if (reelOG) {
         ogData = {
           title: reelOG.title || DEFAULT_OG.title,
           description: reelOG.description || DEFAULT_OG.description,
-          image: reelOG.image_url,
+          image: reelOG.image_url || '',
           url: `https://propscholar.space/reel/${slug}`
         }
       }
