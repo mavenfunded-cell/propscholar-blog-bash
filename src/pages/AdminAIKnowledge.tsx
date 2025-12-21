@@ -49,7 +49,7 @@ const categories = ["general", "competition", "rewards", "account", "technical",
 
 const AdminAIKnowledge = () => {
   const navigate = useNavigate();
-  const { adminNavigate } = useAdminNavigation();
+  const { adminNavigate, getLoginPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<KnowledgeEntry | null>(null);
@@ -64,9 +64,9 @@ const AdminAIKnowledge = () => {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(getLoginPath(), { replace: true });
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const { data: entries, isLoading } = useQuery({
     queryKey: ["ai-knowledge-admin"],

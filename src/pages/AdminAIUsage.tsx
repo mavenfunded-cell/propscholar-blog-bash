@@ -194,7 +194,11 @@ const AdminAIUsage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>

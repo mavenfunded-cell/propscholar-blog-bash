@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -21,9 +21,14 @@ export default function AdminLogin() {
 
   // Check if already logged in
   const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-  
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard', { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
+
   if (isLoggedIn) {
-    navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard', { replace: true });
     return null;
   }
 
