@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -44,23 +43,23 @@ interface RewardClaim {
 }
 
 export default function AdminRewardClaims() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   const [claims, setClaims] = useState<RewardClaim[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!isLoggedIn) {
       navigate('/admin');
     }
-  }, [user, isAdmin, loading, navigate]);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isLoggedIn) {
       fetchClaims();
     }
-  }, [isAdmin]);
+  }, [isLoggedIn]);
 
   const fetchClaims = async () => {
     try {
@@ -136,7 +135,7 @@ export default function AdminRewardClaims() {
     }
   };
 
-  if (loading || loadingData) {
+  if (loadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
