@@ -152,18 +152,46 @@ const handler = async (req: Request): Promise<Response> => {
 
       const subject = `Re: [Ticket #${ticket.ticket_number}] ${ticket.subject}`;
 
-      // Build attachments HTML section
+      // HTML escape function to prevent XSS attacks
+      const escapeHtml = (unsafe: string): string => {
+        return unsafe
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
+      // URL validation to prevent javascript: and other malicious schemes
+      const isSafeUrl = (url: string): boolean => {
+        try {
+          const parsed = new URL(url);
+          return ['http:', 'https:'].includes(parsed.protocol);
+        } catch {
+          return false;
+        }
+      };
+
+      // Build attachments HTML section with sanitization
       let attachmentsHtml = "";
       if (attachments && attachments.length > 0) {
-        const attachmentItems = attachments.map(att => {
+        // Filter out attachments with unsafe URLs
+        const safeAttachments = attachments.filter(att => isSafeUrl(att.url));
+        
+        const attachmentItems = safeAttachments.map(att => {
+          const safeName = escapeHtml(att.name || 'attachment');
+          const safeUrl = escapeHtml(att.url);
+          
           if (att.type?.startsWith('image/')) {
-            return `<div style="margin-bottom:12px;"><a href="${att.url}" target="_blank" style="text-decoration:none;"><img src="${att.url}" alt="${att.name}" style="max-width:200px;max-height:200px;border-radius:8px;border:1px solid rgba(59,130,246,0.3);display:block;"></a><p style="margin:4px 0 0 0;font-size:12px;color:#94a3b8;">${att.name}</p></div>`;
+            return `<div style="margin-bottom:12px;"><a href="${safeUrl}" target="_blank" style="text-decoration:none;"><img src="${safeUrl}" alt="${safeName}" style="max-width:200px;max-height:200px;border-radius:8px;border:1px solid rgba(59,130,246,0.3);display:block;"></a><p style="margin:4px 0 0 0;font-size:12px;color:#94a3b8;">${safeName}</p></div>`;
           } else {
-            return `<div style="margin-bottom:8px;"><a href="${att.url}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;text-decoration:none;color:#60a5fa;font-size:13px;">📎 ${att.name}</a></div>`;
+            return `<div style="margin-bottom:8px;"><a href="${safeUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;text-decoration:none;color:#60a5fa;font-size:13px;">📎 ${safeName}</a></div>`;
           }
         }).join("");
 
-        attachmentsHtml = `<tr><td style="padding:0 32px 20px 32px;"><div style="background:rgba(15,23,42,0.4);border-radius:12px;border:1px solid rgba(59,130,246,0.15);padding:16px;"><p style="margin:0 0 12px 0;font-size:12px;color:#94a3b8;font-weight:600;">ATTACHMENTS</p>${attachmentItems}</div></td></tr>`;
+        if (attachmentItems) {
+          attachmentsHtml = `<tr><td style="padding:0 32px 20px 32px;"><div style="background:rgba(15,23,42,0.4);border-radius:12px;border:1px solid rgba(59,130,246,0.15);padding:16px;"><p style="margin:0 0 12px 0;font-size:12px;color:#94a3b8;font-weight:600;">ATTACHMENTS</p>${attachmentItems}</div></td></tr>`;
+        }
       }
 
       // Escape HTML in body text to prevent injection
