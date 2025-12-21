@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
+import { AdminNotificationBell } from "@/components/AdminNotificationBell";
 
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -168,6 +169,7 @@ const AdminSupportTickets = () => {
               Manage customer support requests
             </p>
           </div>
+          <AdminNotificationBell />
         </div>
 
         {/* Email Sync Section */}
