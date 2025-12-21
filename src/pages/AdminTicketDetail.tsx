@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,6 +113,31 @@ const AdminTicketDetail = () => {
     { name: "Rose", isDefault: false },
   ];
 
+  // Default message template
+  const getDefaultMessage = (modName: string) => `
+
+Best Regards,
+${modName}
+PropScholar Support`;
+
+  // Initialize reply with default message when switching to reply mode
+  useEffect(() => {
+    if (!isInternalNote && !replyBody) {
+      setReplyBody(getDefaultMessage(selectedMod));
+    }
+  }, [isInternalNote]);
+
+  // Update signature when mod changes
+  useEffect(() => {
+    if (!isInternalNote && replyBody) {
+      // Replace existing signature with new one
+      const signaturePattern = /\n\nBest Regards,\n.*\nPropScholar Support$/;
+      if (signaturePattern.test(replyBody)) {
+        setReplyBody(replyBody.replace(signaturePattern, getDefaultMessage(selectedMod)));
+      }
+    }
+  }, [selectedMod]);
+
   const handleInsertReply = (content: string) => {
     setReplyBody(content);
   };
@@ -196,15 +221,12 @@ const AdminTicketDetail = () => {
 
   const sendReplyMutation = useMutation({
     mutationFn: async () => {
-      // Add signature to reply body (not for internal notes)
-      const bodyWithSignature = isInternalNote 
-        ? replyBody 
-        : `${replyBody}\n\nBest Regards,\n${selectedMod}\nPropScholar Support`;
+      // Reply body already contains the signature from the default template
 
       const { data, error } = await supabase.functions.invoke("send-support-email", {
         body: {
           ticketId: id,
-          body: bodyWithSignature,
+          body: replyBody,
           isInternalNote,
           attachments: attachments.length > 0 ? attachments : undefined,
           senderName: selectedMod,
@@ -215,7 +237,8 @@ const AdminTicketDetail = () => {
     },
     onSuccess: () => {
       toast.success(isInternalNote ? "Internal note added" : "Reply sent successfully");
-      setReplyBody("");
+      // Reset to default message with signature for next reply
+      setReplyBody(getDefaultMessage(selectedMod));
       setIsInternalNote(false);
       setAttachments([]);
       queryClient.invalidateQueries({ queryKey: ["admin-ticket-messages", id] });
