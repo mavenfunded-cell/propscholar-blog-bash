@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ const REWARD_TYPES = [
 
 export default function AdminRewardSettings() {
   const navigate = useNavigate();
+  const { getDashboardPath, getLoginPath } = useAdminNavigation();
   const [settings, setSettings] = useState<RewardSetting[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -80,32 +82,26 @@ export default function AdminRewardSettings() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath());
       return;
     }
     fetchData();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const fetchData = async () => {
     try {
-      const { data: settingsData } = await supabase
-        .from('reward_settings')
-        .select('*')
-        .order('setting_key');
-
+      // Use RPC functions to bypass RLS
+      const { data: settingsData } = await supabase.rpc('get_all_reward_settings');
       setSettings((settingsData || []).map((s: any) => ({
         ...s,
         setting_value: s.setting_value as RewardSetting['setting_value']
       })));
 
-      const { data: rewardsData } = await supabase
-        .from('rewards')
-        .select('*')
-        .order('coin_cost');
-
+      const { data: rewardsData } = await supabase.rpc('get_all_rewards');
       setRewards(rewardsData || []);
     } catch (error) {
       console.error('Error fetching settings:', error);
+      toast.error('Failed to load settings');
     } finally {
       setLoadingData(false);
     }
@@ -143,23 +139,21 @@ export default function AdminRewardSettings() {
 
     setCreatingReward(true);
     try {
-      const { data, error } = await supabase
-        .from('rewards')
-        .insert({
-          name: newReward.name,
-          description: newReward.description || null,
-          coin_cost: newReward.coin_cost,
-          reward_type: newReward.reward_type,
-          expiry_days: newReward.expiry_days,
-          max_claims_per_user: newReward.max_claims_per_user,
-          is_enabled: newReward.is_enabled
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('admin_create_reward', {
+        _name: newReward.name,
+        _description: newReward.description || '',
+        _coin_cost: newReward.coin_cost,
+        _reward_type: newReward.reward_type,
+        _expiry_days: newReward.expiry_days,
+        _max_claims_per_user: newReward.max_claims_per_user,
+        _is_enabled: newReward.is_enabled
+      });
 
       if (error) throw error;
 
-      setRewards(prev => [...prev, data]);
+      if (data) {
+        setRewards(prev => [...prev, data]);
+      }
       setShowNewRewardDialog(false);
       setNewReward({
         name: '',
@@ -183,18 +177,16 @@ export default function AdminRewardSettings() {
     if (!editingReward) return;
 
     try {
-      const { error } = await supabase
-        .from('rewards')
-        .update({
-          name: editingReward.name,
-          description: editingReward.description,
-          coin_cost: editingReward.coin_cost,
-          reward_type: editingReward.reward_type,
-          expiry_days: editingReward.expiry_days,
-          max_claims_per_user: editingReward.max_claims_per_user,
-          is_enabled: editingReward.is_enabled
-        })
-        .eq('id', editingReward.id);
+      const { error } = await supabase.rpc('admin_update_reward', {
+        _id: editingReward.id,
+        _name: editingReward.name,
+        _description: editingReward.description || '',
+        _coin_cost: editingReward.coin_cost,
+        _reward_type: editingReward.reward_type,
+        _expiry_days: editingReward.expiry_days || 14,
+        _max_claims_per_user: editingReward.max_claims_per_user || 1,
+        _is_enabled: editingReward.is_enabled ?? true
+      });
 
       if (error) throw error;
 
@@ -210,10 +202,7 @@ export default function AdminRewardSettings() {
 
   const deleteReward = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('rewards')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.rpc('admin_delete_reward', { _id: id });
 
       if (error) throw error;
 
@@ -229,29 +218,26 @@ export default function AdminRewardSettings() {
   const saveAll = async () => {
     setSaving(true);
     try {
-      // Save settings
+      // Save settings using RPC
       for (const setting of settings) {
-        await supabase
-          .from('reward_settings')
-          .update({ 
-            setting_value: setting.setting_value
-          })
-          .eq('id', setting.id);
+        await supabase.rpc('admin_update_reward_setting', {
+          _id: setting.id,
+          _setting_value: setting.setting_value
+        });
       }
 
-      // Save rewards
+      // Save rewards using RPC
       for (const reward of rewards) {
-        await supabase
-          .from('rewards')
-          .update({
-            name: reward.name,
-            description: reward.description,
-            coin_cost: reward.coin_cost,
-            expiry_days: reward.expiry_days,
-            is_enabled: reward.is_enabled,
-            max_claims_per_user: reward.max_claims_per_user
-          })
-          .eq('id', reward.id);
+        await supabase.rpc('admin_update_reward', {
+          _id: reward.id,
+          _name: reward.name,
+          _description: reward.description || '',
+          _coin_cost: reward.coin_cost,
+          _reward_type: reward.reward_type,
+          _expiry_days: reward.expiry_days || 14,
+          _max_claims_per_user: reward.max_claims_per_user || 1,
+          _is_enabled: reward.is_enabled ?? true
+        });
       }
 
       toast.success('Settings saved successfully!');
@@ -289,12 +275,12 @@ export default function AdminRewardSettings() {
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/admin/dashboard">
+            <AdminLink to="/dashboard">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-            </Link>
+            </AdminLink>
             <Logo />
           </div>
           <Button onClick={saveAll} disabled={saving}>
