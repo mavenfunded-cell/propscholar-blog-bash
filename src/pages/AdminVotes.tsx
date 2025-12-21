@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,14 +18,13 @@ interface Event {
 }
 
 interface Vote {
-  id: string;
+  vote_id: string;
   submission_id: string;
   voter_name: string;
+  voter_email: string | null;
   created_at: string;
-  submission?: {
-    name: string;
-    blog_title: string | null;
-  };
+  submission_name: string;
+  blog_title: string | null;
 }
 
 interface SubmissionVotes {
@@ -36,6 +36,7 @@ interface SubmissionVotes {
 
 export default function AdminVotes() {
   const navigate = useNavigate();
+  const { getDashboardPath, getLoginPath } = useAdminNavigation();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
@@ -48,11 +49,11 @@ export default function AdminVotes() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getLoginPath());
       return;
     }
     fetchEvents();
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   useEffect(() => {
     if (selectedEventId) {
@@ -62,21 +63,19 @@ export default function AdminVotes() {
 
   const fetchEvents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, title, status')
-        .eq('competition_type', 'blog')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_all_events');
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      const blogEvents = (data || []).filter((e: any) => e.competition_type === 'blog');
+      setEvents(blogEvents);
       
       // Auto-select first active event
-      const activeEvent = data?.find(e => e.status === 'active');
+      const activeEvent = blogEvents.find((e: any) => e.status === 'active');
       if (activeEvent) {
         setSelectedEventId(activeEvent.id);
-      } else if (data && data.length > 0) {
-        setSelectedEventId(data[0].id);
+      } else if (blogEvents.length > 0) {
+        setSelectedEventId(blogEvents[0].id);
       }
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -88,34 +87,30 @@ export default function AdminVotes() {
 
   const fetchVotes = async () => {
     try {
-      // First get submissions for this event
-      const { data: submissions, error: subError } = await supabase
-        .from('submissions')
-        .select('id, name, blog_title')
-        .eq('event_id', selectedEventId);
-
-      if (subError) throw subError;
-
-      // Then get votes for each submission
-      const votesPromises = (submissions || []).map(async (sub) => {
-        const { data: votes, error: votesError } = await supabase
-          .from('blog_votes')
-          .select('*')
-          .eq('submission_id', sub.id)
-          .order('created_at', { ascending: false });
-
-        if (votesError) throw votesError;
-
-        return {
-          submission_id: sub.id,
-          submission_name: sub.name,
-          blog_title: sub.blog_title,
-          votes: votes || []
-        };
+      // Use the RPC function to get votes for event
+      const { data: votesData, error } = await supabase.rpc('get_votes_for_event', {
+        _event_id: selectedEventId
       });
 
-      const results = await Promise.all(votesPromises);
-      // Sort by vote count descending
+      if (error) throw error;
+
+      // Group votes by submission
+      const groupedVotes: Record<string, SubmissionVotes> = {};
+      
+      (votesData || []).forEach((vote: Vote) => {
+        if (!groupedVotes[vote.submission_id]) {
+          groupedVotes[vote.submission_id] = {
+            submission_id: vote.submission_id,
+            submission_name: vote.submission_name,
+            blog_title: vote.blog_title,
+            votes: []
+          };
+        }
+        groupedVotes[vote.submission_id].votes.push(vote);
+      });
+
+      // Convert to array and sort by vote count
+      const results = Object.values(groupedVotes);
       results.sort((a, b) => b.votes.length - a.votes.length);
       setSubmissionVotes(results);
     } catch (err) {
@@ -162,14 +157,15 @@ export default function AdminVotes() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/admin/dashboard')}
-            className="text-white/60 hover:text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+          <AdminLink to="/dashboard">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white/60 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </AdminLink>
           <div>
             <h1 className="text-2xl font-bold text-white">Manage Votes</h1>
             <p className="text-white/50">View and manage blog competition votes</p>
@@ -276,7 +272,7 @@ export default function AdminVotes() {
                         <p className="text-white/50 text-sm mb-3">Voters:</p>
                         <div className="space-y-2">
                           {sub.votes.map((vote) => (
-                            <div key={vote.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <div key={vote.vote_id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
                                   <span className="text-xs font-semibold text-white">
@@ -285,20 +281,20 @@ export default function AdminVotes() {
                                 </div>
                                 <div>
                                   <p className="text-white text-sm font-medium">{vote.voter_name}</p>
-                                  <p className="text-white/40 text-xs flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {format(new Date(vote.created_at), 'MMM d, yyyy h:mm a')}
-                                  </p>
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeleteVoteId(vote.id)}
-                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                                                <p className="text-white/40 text-xs flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {format(new Date(vote.created_at), 'MMM d, yyyy h:mm a')}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setDeleteVoteId(vote.vote_id)}
+                                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
                             </div>
                           ))}
                         </div>
