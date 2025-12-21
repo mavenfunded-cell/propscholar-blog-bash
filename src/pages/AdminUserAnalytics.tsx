@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,7 +62,6 @@ interface SessionAnalytics {
 }
 
 export default function AdminUserAnalytics() {
-  const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<SubmissionAnalytics[]>([]);
   const [sessions, setSessions] = useState<SessionAnalytics[]>([]);
@@ -72,17 +71,20 @@ export default function AdminUserAnalytics() {
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
   const [activeTab, setActiveTab] = useState('sessions');
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  const handleSignOut = () => {
+    sessionStorage.removeItem('admin_logged_in');
+    navigate(isAdminSubdomain() ? '/' : '/admin');
+  };
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchData();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchData();
+  }, [isLoggedIn, navigate]);
 
   const fetchData = async () => {
     try {

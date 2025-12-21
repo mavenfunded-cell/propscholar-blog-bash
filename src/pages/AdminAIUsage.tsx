@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 interface UsageLog {
   id: string;
@@ -34,11 +34,18 @@ interface RateLimitSettings {
 const AdminAIUsage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const [rateLimitSettings, setRateLimitSettings] = useState<RateLimitSettings>({
     requests_per_hour: 10,
     enabled: true
   });
+
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+    }
+  }, [isLoggedIn, navigate]);
 
   // Fetch usage logs
   const { data: usageLogs, isLoading } = useQuery({

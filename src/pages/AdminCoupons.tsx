@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +52,6 @@ interface Coupon {
 }
 
 export default function AdminCoupons() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -61,17 +60,15 @@ export default function AdminCoupons() {
   const [newType, setNewType] = useState<string>('discount_20');
   const [revokeReason, setRevokeReason] = useState('');
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, loading, navigate]);
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchCoupons();
+    if (!isLoggedIn) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [isAdmin]);
+    fetchCoupons();
+  }, [isLoggedIn, navigate]);
 
   const fetchCoupons = async () => {
     try {
@@ -180,7 +177,7 @@ export default function AdminCoupons() {
     }
   };
 
-  if (loading || loadingData) {
+  if (loadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
