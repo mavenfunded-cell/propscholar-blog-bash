@@ -73,11 +73,6 @@ export default function AdminUserAnalytics() {
 
   const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
 
-  const handleSignOut = () => {
-    sessionStorage.removeItem('admin_logged_in');
-    navigate(isAdminSubdomain() ? '/' : '/admin');
-  };
-
   useEffect(() => {
     if (!isLoggedIn) {
       navigate(isAdminSubdomain() ? '/' : '/admin');
@@ -85,6 +80,11 @@ export default function AdminUserAnalytics() {
     }
     fetchData();
   }, [isLoggedIn, navigate]);
+
+  const handleSignOut = () => {
+    sessionStorage.removeItem('admin_logged_in');
+    navigate(isAdminSubdomain() ? '/' : '/admin');
+  };
 
   const fetchData = async () => {
     try {
@@ -178,10 +178,6 @@ export default function AdminUserAnalytics() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/admin');
-  };
 
   const formatTime = (seconds: number | null) => {
     if (!seconds) return '-';
@@ -258,7 +254,7 @@ export default function AdminUserAnalytics() {
       }, {} as Record<string, any>)
   ).sort((a: any, b: any) => (sortOrder === 'high' ? b.total_seconds - a.total_seconds : a.total_seconds - b.total_seconds));
 
-  if (loading || loadingData) {
+  if (loadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-6 h-6 border border-white/20 border-t-white/60 rounded-full animate-spin" />
@@ -283,9 +279,6 @@ export default function AdminUserAnalytics() {
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden md:block">
-              {user?.email}
-            </span>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
