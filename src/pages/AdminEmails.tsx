@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -34,8 +33,8 @@ interface UserEmail {
 }
 
 export default function AdminEmails() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [userEmails, setUserEmails] = useState<UserEmail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,17 +54,17 @@ export default function AdminEmails() {
   const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
+    if (!isLoggedIn) {
       navigate('/admin');
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
-    if (user && isAdmin) {
+    if (isLoggedIn) {
       fetchEmailLogs();
       fetchUserEmails();
     }
-  }, [user, isAdmin]);
+  }, [isLoggedIn]);
 
   const fetchEmailLogs = async () => {
     try {
@@ -206,7 +205,7 @@ export default function AdminEmails() {
     return <Badge className={colors[type] || 'bg-gray-500/20 text-gray-400'}>{type.replace(/_/g, ' ')}</Badge>;
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-space-bg flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-primary animate-spin" />

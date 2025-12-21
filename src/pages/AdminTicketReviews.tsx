@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -26,24 +25,24 @@ interface TicketReview {
 }
 
 export default function AdminTicketReviews() {
-  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   const [reviews, setReviews] = useState<TicketReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [ratingFilter, setRatingFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!isLoggedIn) {
       navigate(isAdminSubdomain() ? '/' : '/admin');
     }
-  }, [user, isAdmin, loading, navigate]);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isLoggedIn) {
       fetchReviews();
     }
-  }, [isAdmin]);
+  }, [isLoggedIn]);
 
   const fetchReviews = async () => {
     try {
@@ -107,7 +106,7 @@ export default function AdminTicketReviews() {
     return 'bg-destructive/20 text-destructive border-destructive/30';
   };
 
-  if (loading || loadingReviews) {
+  if (loadingReviews) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>

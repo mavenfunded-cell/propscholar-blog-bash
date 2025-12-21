@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Button } from '@/components/ui/button';
@@ -58,8 +57,8 @@ interface SitemapUrl {
 }
 
 export default function AdminSEO() {
-  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   const { getLoginPath, getDashboardPath } = useAdminNavigation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -82,37 +81,16 @@ export default function AdminSEO() {
   const [editingSitemapUrl, setEditingSitemapUrl] = useState<SitemapUrl | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!isLoggedIn) {
       navigate(getLoginPath());
+    } else {
+      setIsAdmin(true);
+      fetchSEOSettings();
+      fetchRobotsTxt();
+      fetchSitemapUrls();
+      setLoading(false);
     }
-  }, [user, authLoading, navigate, getLoginPath]);
-
-  useEffect(() => {
-    if (user) {
-      checkAdminAndFetch();
-    }
-  }, [user]);
-
-  const checkAdminAndFetch = async () => {
-    if (!user) return;
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-
-    if (!roleData) {
-      navigate(getLoginPath());
-      return;
-    }
-
-    setIsAdmin(true);
-    fetchSEOSettings();
-    fetchRobotsTxt();
-    fetchSitemapUrls();
-  };
+  }, [isLoggedIn, navigate, getLoginPath]);
 
   const fetchSitemapUrls = async () => {
     try {
@@ -360,7 +338,7 @@ Disallow: /admin/`;
     toast.success('Robots URL copied!');
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

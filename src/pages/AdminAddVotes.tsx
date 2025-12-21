@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,7 +24,7 @@ interface Submission {
 
 export default function AdminAddVotes() {
   const navigate = useNavigate();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   
   const [events, setEvents] = useState<Event[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -41,10 +40,10 @@ export default function AdminAddVotes() {
   const [recentVotes, setRecentVotes] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!isLoggedIn) {
       navigate('/admin');
     }
-  }, [isAdmin, authLoading, navigate]);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
     fetchEvents();
@@ -149,7 +148,7 @@ export default function AdminAddVotes() {
     return sub ? `${sub.name}${sub.blog_title ? ` - ${sub.blog_title}` : ''}` : 'Unknown';
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>

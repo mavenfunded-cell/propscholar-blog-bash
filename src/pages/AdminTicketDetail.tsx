@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,7 +94,6 @@ const priorityColors: Record<TicketPriority, string> = {
 const AdminTicketDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { adminNavigate } = useAdminNavigation();
-  const { session } = useAuth();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [replyBody, setReplyBody] = useState("");
