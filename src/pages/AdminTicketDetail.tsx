@@ -47,7 +47,7 @@ interface Attachment {
   size: number;
 }
 
-type TicketStatus = "open" | "closed";
+type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
 
 interface Ticket {
@@ -79,11 +79,15 @@ interface Message {
 
 const statusColors: Record<TicketStatus, string> = {
   open: "bg-green-500/20 text-green-400 border-green-500/30",
+  awaiting_support: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  awaiting_user: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   closed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
 
 const statusLabels: Record<TicketStatus, string> = {
   open: "Open",
+  awaiting_support: "Awaiting Support",
+  awaiting_user: "Awaiting User",
   closed: "Closed",
 };
 
@@ -816,7 +820,7 @@ const AdminTicketDetail = () => {
                     Status
                   </label>
                   <Select
-                    value={ticket.status === "closed" ? "closed" : "open"}
+                    value={ticket.status}
                     onValueChange={(value) =>
                       updateStatusMutation.mutate(value as TicketStatus)
                     }
@@ -826,6 +830,8 @@ const AdminTicketDetail = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="awaiting_support">Awaiting Support</SelectItem>
+                      <SelectItem value="awaiting_user">Awaiting User</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
