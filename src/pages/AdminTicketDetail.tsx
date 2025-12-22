@@ -305,46 +305,33 @@ const AdminTicketDetail = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: TicketStatus) => {
-      const updates: any = {
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      };
-      if (newStatus === "closed") {
-        updates.closed_at = new Date().toISOString();
-      } else {
-        updates.closed_at = null;
-      }
-      const { error } = await supabase
-        .from("support_tickets")
-        .update(updates)
-        .eq("id", id);
-      if (error) throw error;
+      // Use admin secret for authentication since admin panel uses sessionStorage auth
+      const adminSecret = "propscholar-admin-secret-2024";
 
-      // Send ticket closed email when status changes to closed
-      if (newStatus === "closed" && ticket) {
-        try {
-          const { error: emailError } = await supabase.functions.invoke("ticket-closed-email", {
-            body: {
-              to: ticket.user_email,
-              ticketNumber: ticket.ticket_number,
-              ticketId: ticket.id,
-              subject: ticket.subject,
-            },
-          });
-          if (emailError) {
-            console.error("Failed to send closed email:", emailError);
-          }
-        } catch (e) {
-          console.error("Error sending closed email:", e);
-        }
-      }
+      const { data, error } = await supabase.functions.invoke(
+        "admin-update-ticket-status",
+        {
+          body: {
+            ticketId: id,
+            status: newStatus,
+          },
+          headers: {
+            "x-admin-secret": adminSecret,
+          },
+        },
+      );
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Failed to update status");
+      return data;
     },
     onSuccess: () => {
       toast.success("Status updated");
       queryClient.invalidateQueries({ queryKey: ["admin-ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-support-tickets"] });
     },
     onError: (error: any) => {
-      toast.error("Failed to update status: " + error.message);
+      toast.error("Failed to update status: " + (error?.message || "Unknown error"));
     },
   });
 
