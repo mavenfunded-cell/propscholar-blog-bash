@@ -148,24 +148,44 @@ const AdminTicketDetail = () => {
   const decodeQuotedPrintable = (text: string): string => {
     if (!text) return text;
     
-    // Replace =XX patterns with the actual character
-    return text.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
-      return String.fromCharCode(parseInt(hex, 16));
-    })
-    // Handle soft line breaks (= at end of line)
-    .replace(/=\r?\n/g, '')
-    // Decode UTF-8 byte sequences
-    .replace(/[\xC0-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}|[\xF0-\xF7][\x80-\xBF]{3}/g, (match) => {
-      try {
-        const bytes = [];
-        for (let i = 0; i < match.length; i++) {
-          bytes.push(match.charCodeAt(i));
+    // First handle soft line breaks (= at end of line)
+    let decoded = text.replace(/=\r?\n/g, '');
+    
+    // Then decode =XX hex patterns to bytes and convert from UTF-8
+    try {
+      const bytes: number[] = [];
+      let i = 0;
+      while (i < decoded.length) {
+        if (decoded[i] === '=' && i + 2 < decoded.length) {
+          const hex = decoded.substring(i + 1, i + 3);
+          if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+            bytes.push(parseInt(hex, 16));
+            i += 3;
+            continue;
+          }
         }
-        return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
-      } catch {
-        return match;
+        // Regular character - flush any pending bytes first
+        if (bytes.length > 0) {
+          const decodedChunk = new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+          decoded = decoded.substring(0, i - bytes.length * 3) + decodedChunk + decoded.substring(i);
+          i = i - bytes.length * 3 + decodedChunk.length;
+          bytes.length = 0;
+        }
+        i++;
       }
-    });
+      // Handle any remaining bytes at the end
+      if (bytes.length > 0) {
+        const decodedChunk = new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+        decoded = decoded.substring(0, decoded.length - bytes.length * 3) + decodedChunk;
+      }
+    } catch {
+      // If decoding fails, return original with simple replacement
+      decoded = text
+        .replace(/=\r?\n/g, '')
+        .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    }
+    
+    return decoded;
   };
 
   const handleInsertReply = (content: string) => {
