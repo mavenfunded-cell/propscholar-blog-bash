@@ -22,17 +22,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  ArrowLeft, 
-  Mail, 
-  Search, 
-  RefreshCw, 
-  MessageSquare, 
-  Inbox, 
-  CheckCircle2, 
+import {
+  ArrowLeft,
+  Mail,
+  Search,
+  RefreshCw,
+  MessageSquare,
+  Inbox,
+  CheckCircle2,
   AlertCircle,
-  Clock,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
@@ -90,7 +89,7 @@ const AdminSupportTickets = () => {
     timestamp: string;
   } | null>(null);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+  const isLoggedIn = sessionStorage.getItem("admin_logged_in") === "true";
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -101,9 +100,9 @@ const AdminSupportTickets = () => {
   const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-support-tickets", statusFilter, priorityFilter],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_all_support_tickets', {
+      const { data, error } = await supabase.rpc("get_all_support_tickets", {
         _status_filter: statusFilter,
-        _priority_filter: priorityFilter
+        _priority_filter: priorityFilter,
       });
       if (error) throw error;
       return data as Ticket[];
@@ -128,7 +127,35 @@ const AdminSupportTickets = () => {
     },
     onError: (error: any) => {
       toast.error("Sync failed: " + error.message);
-      setLastSyncResult({ success: false, processed: 0, errors: 1, timestamp: new Date().toISOString() });
+      setLastSyncResult({
+        success: false,
+        processed: 0,
+        errors: 1,
+        timestamp: new Date().toISOString(),
+      });
+    },
+  });
+
+  const closeTicketMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      const adminSecret = "propscholar-admin-secret-2024";
+      const { data, error } = await supabase.functions.invoke(
+        "admin-update-ticket-status",
+        {
+          body: { ticketId, status: "closed" },
+          headers: { "x-admin-secret": adminSecret },
+        },
+      );
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Failed to close ticket");
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Ticket closed");
+      queryClient.invalidateQueries({ queryKey: ["admin-support-tickets"] });
+    },
+    onError: (error: any) => {
+      toast.error("Close failed: " + (error?.message || "Unknown error"));
     },
   });
 
@@ -165,9 +192,7 @@ const AdminSupportTickets = () => {
               <Mail className="h-8 w-8 text-primary" />
               Support Tickets
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage customer support requests
-            </p>
+            <p className="text-muted-foreground mt-1">Manage customer support requests</p>
           </div>
           <AdminNotificationBell />
         </div>
@@ -187,7 +212,7 @@ const AdminSupportTickets = () => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-3">
                 {/* Auto-sync status indicator */}
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
@@ -210,13 +235,16 @@ const AdminSupportTickets = () => {
                       Last: {format(new Date(lastSyncResult.timestamp), "h:mm a")}
                     </span>
                     {lastSyncResult.processed > 0 && (
-                      <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/30">
+                      <Badge
+                        variant="outline"
+                        className="bg-green-500/20 text-green-400 border-green-500/30"
+                      >
                         +{lastSyncResult.processed}
                       </Badge>
                     )}
                   </div>
                 )}
-                
+
                 <Button
                   onClick={() => syncInboxMutation.mutate()}
                   disabled={syncInboxMutation.isPending}
@@ -258,7 +286,11 @@ const AdminSupportTickets = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-2xl font-bold">{stat.count}</p>
-                  <stat.icon className={`h-5 w-5 ${statusFilter === stat.key ? "text-primary" : "text-muted-foreground"}`} />
+                  <stat.icon
+                    className={`h-5 w-5 ${
+                      statusFilter === stat.key ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  />
                 </div>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </CardContent>
@@ -323,52 +355,64 @@ const AdminSupportTickets = () => {
                     <TableHead className="w-40">Status</TableHead>
                     <TableHead className="w-28">Priority</TableHead>
                     <TableHead className="w-40">Last Reply</TableHead>
+                    <TableHead className="w-28 text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTickets?.map((ticket) => (
-                    <TableRow
-                      key={ticket.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
-                    >
-                      <TableCell className="font-mono text-muted-foreground">
-                        #{ticket.ticket_number}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {ticket.subject}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {ticket.user_email}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={statusColors[getDisplayStatus(ticket.status)]}
-                        >
-                          {statusLabels[getDisplayStatus(ticket.status)]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={priorityColors[ticket.priority]}
-                        >
-                          {ticket.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        <div>
-                          {formatDistanceToNow(new Date(ticket.last_reply_at), {
-                            addSuffix: true,
-                          })}
-                        </div>
-                        <div className="text-xs opacity-70">
-                          by {ticket.last_reply_by}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredTickets?.map((ticket) => {
+                    const isClosed = ticket.status === "closed";
+                    return (
+                      <TableRow
+                        key={ticket.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
+                      >
+                        <TableCell className="font-mono text-muted-foreground">
+                          #{ticket.ticket_number}
+                        </TableCell>
+                        <TableCell className="font-medium">{ticket.subject}</TableCell>
+                        <TableCell className="text-muted-foreground">{ticket.user_email}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={statusColors[getDisplayStatus(ticket.status)]}
+                          >
+                            {statusLabels[getDisplayStatus(ticket.status)]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={priorityColors[ticket.priority]}
+                          >
+                            {ticket.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          <div>
+                            {formatDistanceToNow(new Date(ticket.last_reply_at), {
+                              addSuffix: true,
+                            })}
+                          </div>
+                          <div className="text-xs opacity-70">by {ticket.last_reply_by}</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isClosed || closeTicketMutation.isPending}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              closeTicketMutation.mutate(ticket.id);
+                            }}
+                          >
+                            {isClosed ? "Closed" : "Close"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
