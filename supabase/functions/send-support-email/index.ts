@@ -166,6 +166,50 @@ const handler = async (req: Request): Promise<Response> => {
           .replace(/'/g, '&#039;');
       };
 
+      // Convert markdown to HTML for email
+      const markdownToHtml = (text: string): string => {
+        let html = text;
+        
+        // Escape HTML first to prevent XSS
+        html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        // Bold: **text** or __text__
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        
+        // Italic: *text* or _text_
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+        
+        // Inline code: `code`
+        html = html.replace(/`(.+?)`/g, '<code style="background-color:rgba(59,130,246,0.15);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:13px;">$1</code>');
+        
+        // Links: [text](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#60a5fa;text-decoration:underline;">$1</a>');
+        
+        // Headings (at start of line)
+        html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:16px;font-weight:600;margin:16px 0 8px 0;">$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:18px;font-weight:600;margin:16px 0 8px 0;">$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:20px;font-weight:600;margin:16px 0 8px 0;">$1</h1>');
+        
+        // Bullet lists
+        html = html.replace(/^- (.+)$/gm, '<li style="margin-left:20px;">$1</li>');
+        
+        // Numbered lists
+        html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin-left:20px;">$1</li>');
+        
+        // Blockquote
+        html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #3b82f6;padding-left:12px;margin:8px 0;color:#94a3b8;">$1</blockquote>');
+        
+        // Horizontal rule
+        html = html.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid rgba(59,130,246,0.3);margin:16px 0;">');
+        
+        // Convert newlines to <br>
+        html = html.replace(/\n/g, '<br>');
+        
+        return html;
+      };
+
       // URL validation to prevent javascript: and other malicious schemes
       const isSafeUrl = (url: string): boolean => {
         try {
@@ -198,8 +242,8 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // Escape HTML in body text to prevent injection
-      const escapedBody = body.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+      // Convert markdown to HTML for email body
+      const formattedBody = markdownToHtml(body);
 
       // Clean email template with attachments support
       const logoUrl = "https://res.cloudinary.com/dzozyqlqr/image/upload/v1763325013/d0d1d9_dthfiq.jpg";
@@ -244,7 +288,7 @@ const handler = async (req: Request): Promise<Response> => {
 <tr>
 <td style="padding:0 32px 20px 32px;">
 <div style="background-color:rgba(15,23,42,0.6);border-radius:12px;border:1px solid rgba(59,130,246,0.1);padding:20px;">
-<p style="margin:0;color:#e2e8f0;font-size:15px;line-height:1.7;">${escapedBody}</p>
+<div style="margin:0;color:#e2e8f0;font-size:15px;line-height:1.7;">${formattedBody}</div>
 </div>
 </td>
 </tr>

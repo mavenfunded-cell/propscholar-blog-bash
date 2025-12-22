@@ -144,6 +144,30 @@ const AdminTicketDetail = () => {
   // Signature template - appended when sending, not shown in textarea
   const getSignature = (modName: string) => `\n\nBest Regards,\n${modName}\nPropScholar Support`;
 
+  // Decode quoted-printable encoding from emails (e.g., =E2=80=99 -> ')
+  const decodeQuotedPrintable = (text: string): string => {
+    if (!text) return text;
+    
+    // Replace =XX patterns with the actual character
+    return text.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
+      return String.fromCharCode(parseInt(hex, 16));
+    })
+    // Handle soft line breaks (= at end of line)
+    .replace(/=\r?\n/g, '')
+    // Decode UTF-8 byte sequences
+    .replace(/[\xC0-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}|[\xF0-\xF7][\x80-\xBF]{3}/g, (match) => {
+      try {
+        const bytes = [];
+        for (let i = 0; i < match.length; i++) {
+          bytes.push(match.charCodeAt(i));
+        }
+        return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+      } catch {
+        return match;
+      }
+    });
+  };
+
   const handleInsertReply = (content: string) => {
     setReplyBody(content);
   };
@@ -473,7 +497,7 @@ const AdminTicketDetail = () => {
                           ),
                         }}
                       >
-                        {message.body}
+                        {decodeQuotedPrintable(message.body)}
                       </ReactMarkdown>
                     </div>
                     {/* Display attachments - handle both URL format and object format */}
