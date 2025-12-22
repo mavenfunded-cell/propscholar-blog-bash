@@ -268,6 +268,9 @@ const AdminTicketDetail = () => {
         ? replyBody 
         : replyBody + getSignature(selectedMod);
 
+      // Use admin secret for authentication since admin panel uses sessionStorage auth
+      const adminSecret = "propscholar-admin-secret-2024";
+      
       const { data, error } = await supabase.functions.invoke("send-support-email", {
         body: {
           ticketId: id,
@@ -275,6 +278,9 @@ const AdminTicketDetail = () => {
           isInternalNote,
           attachments: attachments.length > 0 ? attachments : undefined,
           senderName: selectedMod,
+        },
+        headers: {
+          "x-admin-secret": adminSecret,
         },
       });
       if (error) throw error;
