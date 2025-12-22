@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { supabase } from '@/integrations/supabase/client';
 
 // Hardcoded admin credentials
 const ADMIN_EMAIL = 'propscholars@gmail.com';
@@ -40,6 +41,20 @@ export default function AdminLogin() {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Also sign into the backend so admin-only DB updates (like closing tickets) work.
+      const { error } = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+      });
+
+      if (error) {
+        toast.error('Admin auth failed', {
+          description: error.message,
+        });
+        setLoading(false);
+        return;
+      }
+
       sessionStorage.setItem('admin_logged_in', 'true');
       toast.success('Welcome back, Admin!');
       navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard');
