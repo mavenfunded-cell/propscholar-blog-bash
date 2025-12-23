@@ -47,6 +47,9 @@ import AdminCannedMessages from "./pages/AdminCannedMessages";
 import AdminAIKnowledge from "./pages/AdminAIKnowledge";
 import AdminAIUsage from "./pages/AdminAIUsage";
 import AdminOGImages from "./pages/AdminOGImages";
+import AdminCourses from "./pages/AdminCourses";
+import AdminCourseVideos from "./pages/AdminCourseVideos";
+import Learn from "./pages/Learn";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +94,8 @@ function getAdminRoutes(basePath = "") {
     <Route key="ai-knowledge" path={`${basePath}/ai-knowledge`} element={<AdminAIKnowledge />} />,
     <Route key="ai-usage" path={`${basePath}/ai-usage`} element={<AdminAIUsage />} />,
     <Route key="og-images" path={`${basePath}/og-images`} element={<AdminOGImages />} />,
+    <Route key="courses" path={`${basePath}/courses`} element={<AdminCourses />} />,
+    <Route key="course-videos" path={`${basePath}/courses/:courseId/videos`} element={<AdminCourseVideos />} />,
   ];
 }
 
@@ -105,6 +110,7 @@ function PublicRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/rewards" element={<Rewards />} />
+      <Route path="/learn" element={<Learn />} />
       <Route path="/blog" element={<BlogCompetitions />} />
       <Route path="/reels" element={<ReelCompetitions />} />
       <Route path="/auth" element={<Auth />} />

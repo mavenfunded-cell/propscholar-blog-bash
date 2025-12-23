@@ -274,6 +274,104 @@ export type Database = {
         }
         Relationships: []
       }
+      course_videos: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          is_preview: boolean | null
+          order_index: number | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_preview?: boolean | null
+          order_index?: number | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_preview?: boolean | null
+          order_index?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_videos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          difficulty: string | null
+          duration_minutes: number | null
+          id: string
+          is_locked: boolean | null
+          is_published: boolean | null
+          order_index: number | null
+          thumbnail_url: string | null
+          title: string
+          unlock_coins: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_locked?: boolean | null
+          is_published?: boolean | null
+          order_index?: number | null
+          thumbnail_url?: string | null
+          title: string
+          unlock_coins?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_locked?: boolean | null
+          is_published?: boolean | null
+          order_index?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          unlock_coins?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           created_at: string
@@ -1088,6 +1186,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_course_progress: {
+        Row: {
+          completed_at: string | null
+          completed_videos: string[] | null
+          course_id: string
+          id: string
+          last_watched_at: string | null
+          progress_percent: number | null
+          started_at: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_videos?: string[] | null
+          course_id: string
+          id?: string
+          last_watched_at?: string | null
+          progress_percent?: number | null
+          started_at?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_videos?: string[] | null
+          course_id?: string
+          id?: string
+          last_watched_at?: string | null
+          progress_percent?: number | null
+          started_at?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_course_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_course_progress_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "course_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1434,6 +1583,24 @@ export type Database = {
           used_at: string
         }[]
       }
+      get_all_courses: {
+        Args: never
+        Returns: {
+          category: string
+          created_at: string
+          description: string
+          difficulty: string
+          duration_minutes: number
+          id: string
+          is_locked: boolean
+          is_published: boolean
+          order_index: number
+          thumbnail_url: string
+          title: string
+          unlock_coins: number
+          video_count: number
+        }[]
+      }
       get_all_email_logs: {
         Args: never
         Returns: {
@@ -1666,6 +1833,21 @@ export type Database = {
           user_email: string
           winner_id: string
           winner_type: string
+        }[]
+      }
+      get_course_videos: {
+        Args: { _course_id: string }
+        Returns: {
+          course_id: string
+          created_at: string
+          description: string
+          duration_seconds: number
+          id: string
+          is_preview: boolean
+          order_index: number
+          thumbnail_url: string
+          title: string
+          video_url: string
         }[]
       }
       get_event_submission_counts: {
