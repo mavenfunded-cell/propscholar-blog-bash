@@ -32,7 +32,7 @@ interface Course {
   video_count: number;
 }
 
-export default function AdminCourses() {
+export default function AdminScholarHub() {
   const navigate = useNavigate();
   const { isLoggedIn } = useAdminAuth();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -340,7 +340,7 @@ export default function AdminCourses() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => navigate(`/admin/courses/${course.id}/videos`)}
+                      onClick={() => navigate(`/admin/scholar-hub/${course.id}/videos`)}
                     >
                       <Video className="w-4 h-4 mr-1" />
                       Videos
