@@ -283,8 +283,13 @@ export type Database = {
           id: string
           is_preview: boolean | null
           order_index: number | null
+          resources: Json | null
+          seo_description: string | null
+          seo_title: string | null
+          tags: string[] | null
           thumbnail_url: string | null
           title: string
+          transcript: string | null
           updated_at: string
           video_url: string
         }
@@ -296,8 +301,13 @@ export type Database = {
           id?: string
           is_preview?: boolean | null
           order_index?: number | null
+          resources?: Json | null
+          seo_description?: string | null
+          seo_title?: string | null
+          tags?: string[] | null
           thumbnail_url?: string | null
           title: string
+          transcript?: string | null
           updated_at?: string
           video_url: string
         }
@@ -309,8 +319,13 @@ export type Database = {
           id?: string
           is_preview?: boolean | null
           order_index?: number | null
+          resources?: Json | null
+          seo_description?: string | null
+          seo_title?: string | null
+          tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
+          transcript?: string | null
           updated_at?: string
           video_url?: string
         }
@@ -332,9 +347,16 @@ export type Database = {
           difficulty: string | null
           duration_minutes: number | null
           id: string
+          instructor_avatar: string | null
+          instructor_bio: string | null
+          instructor_name: string | null
           is_locked: boolean | null
           is_published: boolean | null
           order_index: number | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          slug: string | null
           thumbnail_url: string | null
           title: string
           unlock_coins: number | null
@@ -347,9 +369,16 @@ export type Database = {
           difficulty?: string | null
           duration_minutes?: number | null
           id?: string
+          instructor_avatar?: string | null
+          instructor_bio?: string | null
+          instructor_name?: string | null
           is_locked?: boolean | null
           is_published?: boolean | null
           order_index?: number | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          slug?: string | null
           thumbnail_url?: string | null
           title: string
           unlock_coins?: number | null
@@ -362,9 +391,16 @@ export type Database = {
           difficulty?: string | null
           duration_minutes?: number | null
           id?: string
+          instructor_avatar?: string | null
+          instructor_bio?: string | null
+          instructor_name?: string | null
           is_locked?: boolean | null
           is_published?: boolean | null
           order_index?: number | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          slug?: string | null
           thumbnail_url?: string | null
           title?: string
           unlock_coins?: number | null
@@ -838,6 +874,45 @@ export type Database = {
           name?: string
           reward_type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      scholar_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          order_index: number | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          order_index?: number | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          order_index?: number | null
+          slug?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1592,9 +1667,16 @@ export type Database = {
           difficulty: string
           duration_minutes: number
           id: string
+          instructor_avatar: string
+          instructor_bio: string
+          instructor_name: string
           is_locked: boolean
           is_published: boolean
           order_index: number
+          seo_description: string
+          seo_keywords: string
+          seo_title: string
+          slug: string
           thumbnail_url: string
           title: string
           unlock_coins: number
@@ -1729,6 +1811,20 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_all_scholar_categories: {
+        Args: never
+        Returns: {
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          order_index: number
+          slug: string
+        }[]
       }
       get_all_seo_settings: {
         Args: never
