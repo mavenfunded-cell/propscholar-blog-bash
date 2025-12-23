@@ -9,7 +9,6 @@ import { NotificationBell } from '@/components/NotificationBell';
 const navLinks = [
   { name: 'Home', href: '/', external: false, icon: Home, scrollTo: null },
   { name: 'Events', href: '/', external: false, icon: Calendar, scrollTo: 'choose-your-arena' },
-  { name: 'Scholar Hub', href: '/learn', external: false, icon: Rocket, scrollTo: null },
   { name: 'Rewards', href: '/rewards', external: false, icon: Gift, scrollTo: null },
   { name: 'About', href: '/about', external: false, icon: Info, scrollTo: null },
   { name: 'Shop', href: 'https://propscholar.com/shop', external: true, icon: null, scrollTo: null },
