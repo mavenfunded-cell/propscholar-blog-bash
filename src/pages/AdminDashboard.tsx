@@ -36,7 +36,8 @@ import {
   UserPlus,
   Brain,
   MessageSquare,
-  BarChart3
+  BarChart3,
+  GraduationCap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -519,6 +520,16 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-cyan-400" />
                     AI Usage
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </AdminLink>
+            <AdminLink to="/admin/scholar-hub">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-amber-400" />
+                    Scholar Hub
                   </CardDescription>
                 </CardHeader>
               </Card>

@@ -92,7 +92,7 @@ export default function AdminCourseVideos() {
     } catch (err) {
       console.error('Error fetching data:', err);
       toast.error('Failed to load course');
-      navigate('/admin/courses');
+      navigate('/admin/scholar-hub');
     } finally {
       setLoading(false);
     }
@@ -211,7 +211,7 @@ export default function AdminCourseVideos() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/courses')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/scholar-hub')}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
