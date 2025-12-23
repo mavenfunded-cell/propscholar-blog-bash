@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus, Info, Bell } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User, Coins, Home, Calendar, Gift, Plus, Info, Bell, GraduationCap } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 const navLinks = [
   { name: 'Home', href: '/', external: false, icon: Home, scrollTo: null },
   { name: 'Events', href: '/', external: false, icon: Calendar, scrollTo: 'choose-your-arena' },
+  { name: 'Learn', href: '/learn', external: false, icon: GraduationCap, scrollTo: null },
   { name: 'Rewards', href: '/rewards', external: false, icon: Gift, scrollTo: null },
   { name: 'About', href: '/about', external: false, icon: Info, scrollTo: null },
   { name: 'Shop', href: 'https://propscholar.com/shop', external: true, icon: null, scrollTo: null },
