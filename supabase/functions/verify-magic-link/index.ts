@@ -77,32 +77,59 @@ const handler = async (req: Request): Promise<Response> => {
     const email = tokenData.email;
     console.log("Token verified for email:", email);
 
-    // Check if user exists
-    const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === email);
-
     let userId: string;
 
-    if (existingUser) {
-      console.log("Existing user found:", existingUser.id);
-      userId = existingUser.id;
-    } else {
-      // New user - create account
-      console.log("Creating new user");
-      
-      const tempPassword = crypto.randomUUID();
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: email,
-        password: tempPassword,
-        email_confirm: true,
-      });
+    // Try to create user first - if they exist, it will fail with email_exists
+    const tempPassword = crypto.randomUUID();
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email: email,
+      password: tempPassword,
+      email_confirm: true,
+    });
 
-      if (createError || !newUser.user) {
+    if (createError) {
+      if (createError.message.includes("already been registered") || (createError as any).code === "email_exists") {
+        // User exists - get user by email using admin API
+        console.log("User already exists, finding user by email...");
+        
+        // List users and search through pages if needed
+        let foundUser = null;
+        let page = 1;
+        const perPage = 1000;
+        
+        while (!foundUser) {
+          const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+            page,
+            perPage,
+          });
+          
+          if (listError) {
+            console.error("Failed to list users:", listError);
+            throw new Error("Failed to find user account");
+          }
+          
+          foundUser = users.find(u => u.email === email);
+          
+          if (foundUser || users.length < perPage) break;
+          page++;
+        }
+        
+        if (!foundUser) {
+          console.error("Could not find user with email:", email);
+          throw new Error("Failed to find user account");
+        }
+        
+        userId = foundUser.id;
+        console.log("Found existing user:", userId);
+      } else {
         console.error("Failed to create user:", createError);
         throw new Error("Failed to create account");
       }
-      
+    } else if (newUser?.user) {
       userId = newUser.user.id;
+      console.log("Created new user:", userId);
+    } else {
+      throw new Error("Failed to create account");
     }
 
     // Generate a magic link for sign-in
