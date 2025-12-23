@@ -157,6 +157,13 @@ export type Database = {
             foreignKeyName: "blog_votes_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
+            referencedRelation: "public_winner_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_votes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
             referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
@@ -1232,6 +1239,13 @@ export type Database = {
             foreignKeyName: "winners_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
+            referencedRelation: "public_winner_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "winners_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
             referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
@@ -1239,7 +1253,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_winner_submissions: {
+        Row: {
+          blog: string | null
+          blog_title: string | null
+          display_name: string | null
+          event_id: string | null
+          id: string | null
+          submitted_at: string | null
+          word_count: number | null
+        }
+        Insert: {
+          blog?: string | null
+          blog_title?: string | null
+          display_name?: never
+          event_id?: string | null
+          id?: string | null
+          submitted_at?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          blog?: string | null
+          blog_title?: string | null
+          display_name?: never
+          event_id?: string | null
+          id?: string | null
+          submitted_at?: string | null
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_coins: {
