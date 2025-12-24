@@ -24,11 +24,101 @@ interface InboundEmail {
   }>;
 }
 
+// Extract text from MIME multipart content
+function extractTextFromMime(text: string): string {
+  if (!text) return "";
+  
+  // Check if this is MIME multipart content
+  const boundaryMatch = text.match(/^--([a-zA-Z0-9]+)/m);
+  if (!boundaryMatch) {
+    // Not MIME content, return as-is
+    return text;
+  }
+  
+  const boundary = boundaryMatch[1];
+  const parts = text.split(new RegExp(`--${boundary}(?:--)?`));
+  
+  let plainTextContent = "";
+  
+  for (const part of parts) {
+    // Skip empty parts
+    if (!part.trim()) continue;
+    
+    // Check for Content-Type header
+    const contentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
+    if (!contentTypeMatch) continue;
+    
+    const contentType = contentTypeMatch[1].toLowerCase().trim();
+    
+    // We only want text/plain content
+    if (contentType === "text/plain") {
+      // Find where headers end and content begins (double newline)
+      const headerEndIndex = part.search(/\r?\n\r?\n/);
+      if (headerEndIndex !== -1) {
+        let content = part.substring(headerEndIndex).trim();
+        
+        // Check if it's quoted-printable encoded
+        const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
+        if (encodingMatch && encodingMatch[1].toLowerCase().trim() === "quoted-printable") {
+          content = decodeQuotedPrintableMime(content);
+        }
+        
+        // Check for base64 encoding
+        if (encodingMatch && encodingMatch[1].toLowerCase().trim() === "base64") {
+          try {
+            content = atob(content.replace(/\s/g, ""));
+          } catch {
+            // If decoding fails, keep original
+          }
+        }
+        
+        plainTextContent = content;
+        break; // Found text/plain, use it
+      }
+    }
+  }
+  
+  return plainTextContent || text;
+}
+
+// Decode quoted-printable encoding
+function decodeQuotedPrintableMime(text: string): string {
+  if (!text) return text;
+  
+  // Handle soft line breaks (= at end of line)
+  let decoded = text.replace(/=\r?\n/g, "");
+  
+  // Decode =XX hex patterns
+  decoded = decoded.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
+    return String.fromCharCode(parseInt(hex, 16));
+  });
+  
+  // Handle UTF-8 sequences properly
+  try {
+    // Convert to proper UTF-8
+    const bytes: number[] = [];
+    for (let i = 0; i < decoded.length; i++) {
+      const code = decoded.charCodeAt(i);
+      if (code < 256) {
+        bytes.push(code);
+      }
+    }
+    decoded = new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+  } catch {
+    // If conversion fails, return the partially decoded string
+  }
+  
+  return decoded;
+}
+
 // Strip quoted content and signatures
 function stripQuotedContent(text: string): string {
   if (!text) return "";
   
-  const lines = text.split("\n");
+  // First, extract text from MIME if needed
+  const extractedText = extractTextFromMime(text);
+  
+  const lines = extractedText.split("\n");
   const cleanLines: string[] = [];
   
   for (const line of lines) {
