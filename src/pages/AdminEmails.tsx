@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowLeft, Download, Mail, CheckCircle, XCircle, Clock, RefreshCw, Users, Send, Loader2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 
 interface EmailLog {
@@ -35,7 +36,7 @@ interface UserEmail {
 
 export default function AdminEmails() {
   const navigate = useNavigate();
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [userEmails, setUserEmails] = useState<UserEmail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,17 +56,12 @@ export default function AdminEmails() {
   const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-    }
-  }, [isLoggedIn, navigate]);
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchEmailLogs();
-      fetchUserEmails();
-    }
-  }, [isLoggedIn]);
+    if (authLoading) return;
+    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    fetchEmailLogs();
+    fetchUserEmails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchEmailLogs = async () => {
     try {

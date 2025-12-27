@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
@@ -51,8 +51,8 @@ const REWARD_TYPES = [
 ];
 
 export default function AdminRewardSettings() {
-  const navigate = useNavigate();
   const { getDashboardPath, getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [settings, setSettings] = useState<RewardSetting[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -78,15 +78,12 @@ export default function AdminRewardSettings() {
   // Delete confirmation
   const [deletingRewardId, setDeletingRewardId] = useState<string | null>(null);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath());
-      return;
-    }
+    if (authLoading) return;
+    if (!isLoggedIn) return; // useAdminAuth handles redirect
     fetchData();
-  }, [isLoggedIn, navigate, getLoginPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchData = async () => {
     try {

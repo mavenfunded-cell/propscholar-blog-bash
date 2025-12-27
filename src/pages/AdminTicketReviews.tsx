@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,25 +26,19 @@ interface TicketReview {
 }
 
 export default function AdminTicketReviews() {
-  const navigate = useNavigate();
   const { getLoginPath } = useAdminNavigation();
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [reviews, setReviews] = useState<TicketReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [ratingFilter, setRatingFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath());
-    }
-  }, [isLoggedIn, navigate, getLoginPath]);
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchReviews();
-    }
-  }, [isLoggedIn]);
+    if (authLoading) return;
+    if (!isLoggedIn) return;
+    fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchReviews = async () => {
     try {
