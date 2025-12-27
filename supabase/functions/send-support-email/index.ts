@@ -4,8 +4,7 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-admin-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -38,51 +37,49 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // For admin panel, we use a simple secret-based auth since admin uses sessionStorage
-    // The admin panel is already protected by its own auth flow
-    const authHeader = req.headers.get("authorization");
-    const adminSecret = req.headers.get("x-admin-secret");
-    
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Allow if valid admin secret OR valid Supabase JWT with admin role
-    let isAuthorized = false;
-    
-    // Check admin secret first (for sessionStorage-based admin auth)
-    if (adminSecret === Deno.env.get("ADMIN_API_SECRET")) {
-      isAuthorized = true;
-      console.log("Authorized via admin secret");
-    } 
-    // Fallback to JWT-based auth
-    else if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: userData, error: userError } = await supabase.auth.getUser(token);
-      
-      if (!userError && userData.user) {
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userData.user.id)
-          .eq("role", "admin")
-          .single();
-          
-        if (roleData) {
-          isAuthorized = true;
-          console.log("Authorized via JWT admin role");
-        }
-      }
-    }
-
-    if (!isAuthorized) {
-      console.error("Authorization failed - no valid credentials");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    // Verify admin role via JWT
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(JSON.stringify({ error: "Unauthorized - no token provided" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      console.error("Auth error:", userError);
+      return new Response(JSON.stringify({ error: "Unauthorized - invalid token" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Check admin role
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (roleError || !roleData) {
+      console.error("Role check failed:", roleError);
+      return new Response(JSON.stringify({ error: "Unauthorized - not an admin" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    console.log("Admin authenticated:", userData.user.email);
 
     const { ticketId, body, isInternalNote, attachments, senderName }: SendEmailRequest = await req.json();
 

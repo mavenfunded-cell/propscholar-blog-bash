@@ -115,13 +115,36 @@ const AdminTicketDetail = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
+  // Check admin authentication via Supabase
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-    }
-  }, [isLoggedIn, navigate]);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setIsAdmin(false);
+        navigate(isAdminSubdomain() ? '/' : '/admin');
+        return;
+      }
+      
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      if (!roleData) {
+        setIsAdmin(false);
+        navigate(isAdminSubdomain() ? '/' : '/admin');
+        return;
+      }
+      
+      setIsAdmin(true);
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   // Listen for close event from AI sidebar
   useEffect(() => {
@@ -252,7 +275,7 @@ const AdminTicketDetail = () => {
       if (error) throw error;
       return data?.[0] as Ticket;
     },
-    enabled: !!id && isLoggedIn,
+    enabled: !!id && isAdmin === true,
   });
 
   const { data: messages, isLoading: messagesLoading } = useQuery({
@@ -262,7 +285,7 @@ const AdminTicketDetail = () => {
       if (error) throw error;
       return data as Message[];
     },
-    enabled: !!id && isLoggedIn,
+    enabled: !!id && isAdmin === true,
   });
 
   const sendReplyMutation = useMutation({
@@ -272,8 +295,11 @@ const AdminTicketDetail = () => {
         ? replyBody 
         : replyBody + getSignature(selectedMod);
 
-      // Use admin secret for authentication since admin panel uses sessionStorage auth
-      const adminSecret = "propscholar-admin-secret-2024";
+      // Get access token for JWT auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Not authenticated");
+      }
       
       const { data, error } = await supabase.functions.invoke("send-support-email", {
         body: {
@@ -282,9 +308,6 @@ const AdminTicketDetail = () => {
           isInternalNote,
           attachments: attachments.length > 0 ? attachments : undefined,
           senderName: selectedMod,
-        },
-        headers: {
-          "x-admin-secret": adminSecret,
         },
       });
       if (error) throw error;
@@ -305,8 +328,11 @@ const AdminTicketDetail = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: TicketStatus) => {
-      // Use admin secret for authentication since admin panel uses sessionStorage auth
-      const adminSecret = "propscholar-admin-secret-2024";
+      // Get access token for JWT auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Not authenticated");
+      }
 
       const { data, error } = await supabase.functions.invoke(
         "admin-update-ticket-status",
@@ -314,9 +340,6 @@ const AdminTicketDetail = () => {
           body: {
             ticketId: id,
             status: newStatus,
-          },
-          headers: {
-            "x-admin-secret": adminSecret,
           },
         },
       );

@@ -89,13 +89,32 @@ const AdminSupportTickets = () => {
     timestamp: string;
   } | null>(null);
 
-  const isLoggedIn = sessionStorage.getItem("admin_logged_in") === "true";
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-    }
-  }, [isLoggedIn, navigate, getLoginPath]);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setIsAdmin(false);
+        navigate(getLoginPath(), { replace: true });
+        return;
+      }
+      
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      setIsAdmin(!!roleData);
+      if (!roleData) {
+        navigate(getLoginPath(), { replace: true });
+      }
+    };
+    
+    checkAuth();
+  }, [navigate, getLoginPath]);
 
   const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-support-tickets", statusFilter, priorityFilter],
@@ -107,7 +126,7 @@ const AdminSupportTickets = () => {
       if (error) throw error;
       return data as Ticket[];
     },
-    enabled: isLoggedIn,
+    enabled: isAdmin === true,
   });
 
   const syncInboxMutation = useMutation({
@@ -138,12 +157,10 @@ const AdminSupportTickets = () => {
 
   const closeTicketMutation = useMutation({
     mutationFn: async (ticketId: string) => {
-      const adminSecret = "propscholar-admin-secret-2024";
       const { data, error } = await supabase.functions.invoke(
         "admin-update-ticket-status",
         {
           body: { ticketId, status: "closed" },
-          headers: { "x-admin-secret": adminSecret },
         },
       );
       if (error) throw error;

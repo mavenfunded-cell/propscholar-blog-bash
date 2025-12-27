@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const SMTP_HOST = "smtp.hostinger.com";
@@ -13,9 +13,6 @@ const SUPPORT_EMAIL = "support@propscholar.com";
 const FROM_NAME = "PropScholar Support";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-const HEADER_ADMIN_SECRET = "x-admin-secret";
-const FALLBACK_ADMIN_SECRET = "propscholar-admin-secret-2024";
 
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 
@@ -37,15 +34,47 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const expectedSecret = Deno.env.get("ADMIN_PANEL_SECRET") || FALLBACK_ADMIN_SECRET;
-    const providedSecret = req.headers.get(HEADER_ADMIN_SECRET);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
 
-    if (!providedSecret || providedSecret !== expectedSecret) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    // Verify admin role via JWT
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized - no token provided" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      console.error("Auth error:", userError);
+      return new Response(JSON.stringify({ error: "Unauthorized - invalid token" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Check admin role
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (roleError || !roleData) {
+      console.error("Role check failed:", roleError);
+      return new Response(JSON.stringify({ error: "Unauthorized - not an admin" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    console.log("Admin authenticated:", userData.user.email);
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       console.error("Missing backend env vars SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
@@ -65,10 +94,6 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
 
     const { data: ticket, error: ticketErr } = await supabase
       .from("support_tickets")
@@ -101,7 +126,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (updateErr) throw updateErr;
     if (!updated) {
-      // PostgREST can return 204 with no rows updated; treat as failure.
       throw new Error("Ticket update failed (no rows updated)");
     }
 
@@ -111,7 +135,6 @@ const handler = async (req: Request): Promise<Response> => {
       const smtpPassword = Deno.env.get("HOSTINGER_SUPPORT_PASSWORD");
 
       if (!smtpUser || !smtpPassword) {
-        // Roll back status so close isn't "fake".
         await supabase
           .from("support_tickets")
           .update({ status: prevStatus, closed_at: null, updated_at: new Date().toISOString() })
@@ -129,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
       const generateStarUrl = (rating: number) =>
         `${reviewBaseUrl}?ticketId=${ticketId}&email=${encodeURIComponent(ticket.user_email)}&rating=${rating}`;
 
-      const htmlContent = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;background-color:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#020617;"><tr><td style="padding:40px 20px;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;margin:0 auto;"><tr><td style="text-align:center;padding-bottom:24px;"><img src="${logoUrl}" alt="PropScholar" width="100" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:12px;"></td></tr><tr><td><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 100%);border-radius:16px;border:1px solid rgba(16,185,129,0.3);"><tr><td style="height:3px;background:linear-gradient(90deg,#059669,#10b981,#059669);border-radius:16px 16px 0 0;"></td></tr><tr><td style="padding:28px 32px;text-align:center;"><div style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);width:60px;height:60px;border-radius:50%;margin-bottom:16px;text-align:center;line-height:60px;"><span style="font-size:28px;color:#fff;">✓</span></div><h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#ffffff;">Ticket Resolved!</h1><span style="display:inline-block;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:16px;padding:6px 14px;font-size:11px;color:#34d399;font-weight:600;">TICKET #${ticket.ticket_number} CLOSED</span></td></tr><tr><td style="padding:0 32px 24px 32px;text-align:center;"><h2 style="margin:0 0 8px 0;color:#f8fafc;font-size:18px;font-weight:600;">Thank You for Contacting Us!</h2><p style="margin:0;color:#94a3b8;font-size:14px;line-height:1.6;">We hope your issue regarding \"${ticket.subject}\" has been resolved.</p></td></tr><tr><td style="padding:0 32px 24px 32px;"><div style="background:rgba(59,130,246,0.1);border-radius:12px;border:1px solid rgba(59,130,246,0.2);padding:24px;text-align:center;"><p style="margin:0 0 4px 0;color:#f8fafc;font-size:14px;font-weight:600;">How was your experience?</p><p style="margin:0 0 16px 0;color:#94a3b8;font-size:12px;">Click a star to rate our support</p><table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;"><tr><td style="padding:0 8px;"><a href="${generateStarUrl(1)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(2)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(3)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(4)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(5)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td></tr></table></div></td></tr><tr><td style="padding:0 32px 24px 32px;text-align:center;"><a href="https://www.propscholar.com" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:10px;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Visit PropScholar</a><p style="margin:12px 0 0 0;color:#64748b;font-size:12px;">We look forward to serving you again!</p></td></tr></table></td></tr><tr><td style="padding:24px 20px;text-align:center;"><p style="margin:0;color:#475569;font-size:11px;">© ${new Date().getFullYear()} PropScholar. All rights reserved.</p></td></tr></table></td></tr></table></body></html>`;
+      const htmlContent = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;background-color:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#020617;"><tr><td style="padding:40px 20px;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;margin:0 auto;"><tr><td style="text-align:center;padding-bottom:24px;"><img src="${logoUrl}" alt="PropScholar" width="100" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:12px;"></td></tr><tr><td><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 100%);border-radius:16px;border:1px solid rgba(16,185,129,0.3);"><tr><td style="height:3px;background:linear-gradient(90deg,#059669,#10b981,#059669);border-radius:16px 16px 0 0;"></td></tr><tr><td style="padding:28px 32px;text-align:center;"><div style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);width:60px;height:60px;border-radius:50%;margin-bottom:16px;text-align:center;line-height:60px;"><span style="font-size:28px;color:#fff;">✓</span></div><h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:#ffffff;">Ticket Resolved!</h1><span style="display:inline-block;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:16px;padding:6px 14px;font-size:11px;color:#34d399;font-weight:600;">TICKET #${ticket.ticket_number} CLOSED</span></td></tr><tr><td style="padding:0 32px 24px 32px;text-align:center;"><h2 style="margin:0 0 8px 0;color:#f8fafc;font-size:18px;font-weight:600;">Thank You for Contacting Us!</h2><p style="margin:0;color:#94a3b8;font-size:14px;line-height:1.6;">We hope your issue regarding "${ticket.subject}" has been resolved.</p></td></tr><tr><td style="padding:0 32px 24px 32px;"><div style="background:rgba(59,130,246,0.1);border-radius:12px;border:1px solid rgba(59,130,246,0.2);padding:24px;text-align:center;"><p style="margin:0 0 4px 0;color:#f8fafc;font-size:14px;font-weight:600;">How was your experience?</p><p style="margin:0 0 16px 0;color:#94a3b8;font-size:12px;">Click a star to rate our support</p><table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;"><tr><td style="padding:0 8px;"><a href="${generateStarUrl(1)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(2)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(3)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(4)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td><td style="padding:0 8px;"><a href="${generateStarUrl(5)}" style="text-decoration:none;font-size:32px;display:block;">⭐</a></td></tr></table></div></td></tr><tr><td style="padding:0 32px 24px 32px;text-align:center;"><a href="https://www.propscholar.com" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:10px;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Visit PropScholar</a><p style="margin:12px 0 0 0;color:#64748b;font-size:12px;">We look forward to serving you again!</p></td></tr></table></td></tr><tr><td style="padding:24px 20px;text-align:center;"><p style="margin:0;color:#475569;font-size:11px;">© ${new Date().getFullYear()} PropScholar. All rights reserved.</p></td></tr></table></td></tr></table></body></html>`;
 
       const client = new SMTPClient({
         connection: {
@@ -153,7 +176,6 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("SMTP error (ticket close):", smtpError);
         await client.close();
 
-        // Roll back status so close isn't "fake".
         await supabase
           .from("support_tickets")
           .update({ status: prevStatus, closed_at: null, updated_at: new Date().toISOString() })
