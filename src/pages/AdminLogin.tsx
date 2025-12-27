@@ -9,62 +9,157 @@ import { toast } from 'sonner';
 import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
+import { z } from 'zod';
 
-// Hardcoded admin credentials
-const ADMIN_EMAIL = 'propscholars@gmail.com';
-const ADMIN_PASSWORD = 'Hindi@1234';
+// Input validation schema
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
 
-  // Check if already logged in
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard', { replace: true });
-    }
-  }, [isLoggedIn, navigate]);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Defer admin role check with setTimeout to avoid deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            checkAdminAndRedirect(session.user.id);
+          }, 0);
+        } else {
+          setCheckingAuth(false);
+        }
+      }
+    );
 
-  if (isLoggedIn) {
-    return null;
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        checkAdminAndRedirect(session.user.id);
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkAdminAndRedirect = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!error && data) {
+        // User is admin, redirect to dashboard
+        navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard', { replace: true });
+      } else {
+        // Not an admin, sign them out
+        await supabase.auth.signOut();
+        toast.error('Access denied', {
+          description: 'You do not have admin privileges.'
+        });
+      }
+    } catch (err) {
+      console.error('Error checking admin role:', err);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const firstError = validation.error.errors[0];
+      toast.error('Validation error', {
+        description: firstError.message
+      });
+      return;
+    }
+    
     setLoading(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      // Also sign into the backend so admin-only DB updates (like closing tickets) work.
-      const { error } = await supabase.auth.signInWithPassword({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
+    try {
+      // Sign in with Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
       });
 
       if (error) {
-        toast.error('Admin auth failed', {
+        toast.error('Login failed', {
           description: error.message,
         });
         setLoading(false);
         return;
       }
 
-      sessionStorage.setItem('admin_logged_in', 'true');
+      if (!data.user) {
+        toast.error('Login failed', {
+          description: 'Unable to authenticate. Please try again.',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Check if user has admin role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError || !roleData) {
+        // Not an admin - sign them out
+        await supabase.auth.signOut();
+        toast.error('Access denied', {
+          description: 'You do not have admin privileges.'
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Successfully authenticated as admin
       toast.success('Welcome back, Admin!');
       navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard');
-    } else {
-      toast.error('Invalid credentials', {
-        description: 'Please check your email and password.'
+    } catch (err: any) {
+      toast.error('Login error', {
+        description: 'An unexpected error occurred. Please try again.'
       });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -105,6 +200,7 @@ export default function AdminLogin() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
                     required
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -121,6 +217,7 @@ export default function AdminLogin() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
                     required
+                    autoComplete="current-password"
                   />
                 </div>
               </div>
