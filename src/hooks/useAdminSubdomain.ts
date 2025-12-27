@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const ADMIN_SUBDOMAIN = 'admin.propscholar.com';
+const ADMIN_SUBDOMAINS = ['admin.propscholar.com', 'admin.propscholar.space'];
 
 export function isAdminSubdomain(): boolean {
   const hostname = window.location.hostname;
-  // Check for both production and potential preview URLs
-  return hostname === ADMIN_SUBDOMAIN || hostname.startsWith('admin.');
+  // Check for both production domains and potential preview URLs
+  return ADMIN_SUBDOMAINS.includes(hostname) || hostname.startsWith('admin.');
 }
 
 export function useAdminSubdomainSEO() {
