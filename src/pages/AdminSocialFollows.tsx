@@ -52,21 +52,17 @@ const platformIcons: Record<string, React.ElementType> = {
 };
 
 export default function AdminSocialFollows() {
-  const navigate = useNavigate();
-  const { getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { getDashboardPath } = useAdminNavigation();
   const [follows, setFollows] = useState<SocialFollow[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-      return;
+    if (!authLoading && isLoggedIn) {
+      fetchFollows();
     }
-    fetchFollows();
-  }, [isLoggedIn, navigate, getLoginPath]);
+  }, [authLoading, isLoggedIn]);
 
   const fetchFollows = async () => {
     try {
