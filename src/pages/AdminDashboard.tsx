@@ -9,14 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { AdminLink } from '@/components/AdminLink';
 import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
-import { 
-  Plus, 
-  Calendar, 
-  FileText, 
-  LogOut, 
-  Edit2, 
-  Eye, 
-  XCircle, 
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import {
+  Plus,
+  Calendar,
+  FileText,
+  LogOut,
+  Edit2,
+  Eye,
+  XCircle,
   CheckCircle,
   Users,
   ExternalLink,
@@ -37,7 +38,7 @@ import {
   Brain,
   MessageSquare,
   BarChart3,
-  GraduationCap
+  GraduationCap,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -72,19 +73,18 @@ interface EventWithCount extends Event {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { isLoggedIn, loading: authLoading, signOut } = useAdminAuth();
+
   const [events, setEvents] = useState<EventWithCount[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-      return;
-    }
+    if (authLoading) return;
+    if (!isLoggedIn) return; // useAdminAuth handles redirect to login
     fetchEvents();
-  }, [isLoggedIn, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchEvents = async () => {
     try {
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
         const countMap = event.competition_type === 'reel' ? reelCountMap : blogCountMap;
         return {
           ...event,
-          submission_count: countMap.get(event.id) || 0
+          submission_count: countMap.get(event.id) || 0,
         };
       });
 
@@ -163,17 +163,28 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSignOut = () => {
-    sessionStorage.removeItem('admin_logged_in');
-    navigate(isAdminSubdomain() ? '/' : '/admin');
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   const isEventExpired = (endDate: string) => new Date(endDate) < new Date();
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
   if (loadingEvents) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">Loading…</div>
       </div>
     );
   }
