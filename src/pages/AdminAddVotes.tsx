@@ -34,7 +34,6 @@ export default function AdminAddVotes() {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string>('');
   const [voterName, setVoterName] = useState<string>('');
-  const [voterEmail, setVoterEmail] = useState<string>('');
   const [voteDate, setVoteDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [voteTime, setVoteTime] = useState<string>(format(new Date(), 'HH:mm'));
   const [numberOfVotes, setNumberOfVotes] = useState<number>(1);
@@ -119,7 +118,6 @@ export default function AdminAddVotes() {
         votesData.push({
           submission_id: selectedSubmissionId,
           voter_name: numberOfVotes > 1 ? `${voterName} ${i + 1}` : voterName,
-          voter_email: voterEmail.trim() || null,
           created_at: voteDatetime.toISOString()
         });
       }
@@ -138,7 +136,6 @@ export default function AdminAddVotes() {
       
       // Reset form
       setVoterName('');
-      setVoterEmail('');
       setNumberOfVotes(1);
     } catch (err) {
       console.error('Error adding votes:', err);
@@ -239,16 +236,6 @@ export default function AdminAddVotes() {
                   value={voterName}
                   onChange={(e) => setVoterName(e.target.value)}
                   placeholder="Enter voter name"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white">Voter Email (optional)</Label>
-                <Input
-                  type="email"
-                  value={voterEmail}
-                  onChange={(e) => setVoterEmail(e.target.value)}
-                  placeholder="Enter voter email"
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>

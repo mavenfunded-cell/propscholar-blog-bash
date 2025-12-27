@@ -133,7 +133,6 @@ export type Database = {
           id: string
           submission_id: string
           user_id: string | null
-          voter_email: string | null
           voter_name: string
         }
         Insert: {
@@ -141,7 +140,6 @@ export type Database = {
           id?: string
           submission_id: string
           user_id?: string | null
-          voter_email?: string | null
           voter_name: string
         }
         Update: {
@@ -149,7 +147,6 @@ export type Database = {
           id?: string
           submission_id?: string
           user_id?: string | null
-          voter_email?: string | null
           voter_name?: string
         }
         Relationships: [

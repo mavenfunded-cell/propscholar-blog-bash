@@ -68,7 +68,6 @@ interface LiveSubmission {
 interface Vote {
   id: string;
   voter_name: string;
-  voter_email: string | null;
   created_at: string;
 }
 
