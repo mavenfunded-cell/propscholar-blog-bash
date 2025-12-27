@@ -21,7 +21,6 @@ interface Vote {
   vote_id: string;
   submission_id: string;
   voter_name: string;
-  voter_email: string | null;
   created_at: string;
   submission_name: string;
   blog_title: string | null;

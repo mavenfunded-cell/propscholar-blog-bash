@@ -17,12 +17,47 @@ serve(async (req) => {
   );
 
   try {
-    const { ticketId, conversationHistory, adminId } = await req.json();
-    console.log("Generating AI suggestions for ticket:", ticketId, "by admin:", adminId);
-
-    if (!adminId) {
-      throw new Error("Admin ID is required");
+    // Verify JWT and admin role
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized - No token provided" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      console.error("Auth error:", userError);
+      return new Response(JSON.stringify({ error: "Unauthorized - Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify admin role
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (roleError || !roleData) {
+      console.error("Not an admin:", userData.user.id);
+      return new Response(JSON.stringify({ error: "Forbidden - Admin access required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Use verified user ID as adminId instead of client-provided value
+    const adminId = userData.user.id;
+    
+    const { ticketId, conversationHistory } = await req.json();
+    console.log("Generating AI suggestions for ticket:", ticketId, "by verified admin:", adminId);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
