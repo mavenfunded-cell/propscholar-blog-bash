@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ const PAGE_TYPES = [
 ];
 
 export default function AdminOGImages() {
-  const navigate = useNavigate();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingImage, setEditingImage] = useState<OGImage | null>(null);
@@ -51,14 +51,6 @@ export default function AdminOGImages() {
     image_url: "",
     is_default: false,
   });
-
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin', { replace: true });
-    }
-  }, [isLoggedIn, navigate]);
 
   const { data: ogImages, isLoading } = useQuery({
     queryKey: ["og-images"],

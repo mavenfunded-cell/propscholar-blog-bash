@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,8 @@ interface UserOption {
 }
 
 export default function AdminNotifications() {
-  const navigate = useNavigate();
   const { getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -61,15 +61,12 @@ export default function AdminNotifications() {
   const [sending, setSending] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-      return;
-    }
+    if (authLoading) return;
+    if (!isLoggedIn) return; // useAdminAuth handles redirect
     fetchData();
-  }, [isLoggedIn, navigate, getLoginPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchData = async () => {
     try {

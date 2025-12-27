@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,8 @@ interface Submission {
 }
 
 export default function AdminAddVotes() {
-  const navigate = useNavigate();
   const { getLoginPath, getDashboardPath } = useAdminNavigation();
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -42,14 +41,11 @@ export default function AdminAddVotes() {
   const [recentVotes, setRecentVotes] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-    }
-  }, [isLoggedIn, navigate, getLoginPath]);
-
-  useEffect(() => {
+    if (authLoading) return;
+    if (!isLoggedIn) return;
     fetchEvents();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   useEffect(() => {
     if (selectedEventId) {

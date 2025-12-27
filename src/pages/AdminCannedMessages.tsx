@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
@@ -45,8 +45,8 @@ interface CannedMessage {
 const categories = ["greeting", "closing", "info", "escalation", "account", "competition", "technical", "general"];
 
 const AdminCannedMessages = () => {
-  const navigate = useNavigate();
   const { adminNavigate, getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<CannedMessage | null>(null);
@@ -56,14 +56,6 @@ const AdminCannedMessages = () => {
     category: "general",
     shortcut: "",
   });
-
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-    }
-  }, [isLoggedIn, navigate, getLoginPath]);
 
   const { data: messages, isLoading } = useQuery({
     queryKey: ["canned-messages-admin"],

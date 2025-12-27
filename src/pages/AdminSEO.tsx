@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -57,9 +57,8 @@ interface SitemapUrl {
 }
 
 export default function AdminSEO() {
-  const navigate = useNavigate();
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
   const { getLoginPath, getDashboardPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [seoSettings, setSeoSettings] = useState<SEOSetting[]>([]);
@@ -81,16 +80,15 @@ export default function AdminSEO() {
   const [editingSitemapUrl, setEditingSitemapUrl] = useState<SitemapUrl | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath());
-    } else {
-      setIsAdmin(true);
-      fetchSEOSettings();
-      fetchRobotsTxt();
-      fetchSitemapUrls();
-      setLoading(false);
-    }
-  }, [isLoggedIn, navigate, getLoginPath]);
+    if (authLoading) return;
+    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    setIsAdmin(true);
+    fetchSEOSettings();
+    fetchRobotsTxt();
+    fetchSitemapUrls();
+    setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchSitemapUrls = async () => {
     try {

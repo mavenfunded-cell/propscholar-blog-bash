@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { isAdminSubdomain, useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +53,8 @@ interface Coupon {
 }
 
 export default function AdminCoupons() {
-  const navigate = useNavigate();
+  const { getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -60,15 +62,12 @@ export default function AdminCoupons() {
   const [newType, setNewType] = useState<string>('discount_20');
   const [revokeReason, setRevokeReason] = useState('');
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-      return;
-    }
+    if (authLoading) return;
+    if (!isLoggedIn) return; // useAdminAuth handles redirect
     fetchCoupons();
-  }, [isLoggedIn, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]);
 
   const fetchCoupons = async () => {
     try {
