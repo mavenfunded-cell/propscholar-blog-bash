@@ -25,21 +25,17 @@ interface ReferralLog {
 }
 
 export default function AdminReferrals() {
-  const navigate = useNavigate();
-  const { getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { getDashboardPath } = useAdminNavigation();
   const [referrals, setReferrals] = useState<ReferralLog[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath());
-      return;
+    if (!authLoading && isLoggedIn) {
+      fetchReferrals();
     }
-    fetchReferrals();
-  }, [isLoggedIn, navigate, getLoginPath]);
+  }, [authLoading, isLoggedIn]);
 
   const fetchReferrals = async () => {
     try {

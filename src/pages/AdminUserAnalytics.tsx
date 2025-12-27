@@ -63,8 +63,8 @@ interface SessionAnalytics {
 }
 
 export default function AdminUserAnalytics() {
-  const navigate = useNavigate();
-  const { getLoginPath, getDashboardPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading, signOut } = useAdminAuth();
+  const { getDashboardPath } = useAdminNavigation();
   const [submissions, setSubmissions] = useState<SubmissionAnalytics[]>([]);
   const [sessions, setSessions] = useState<SessionAnalytics[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -73,19 +73,14 @@ export default function AdminUserAnalytics() {
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
   const [activeTab, setActiveTab] = useState('sessions');
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath());
-      return;
+    if (!authLoading && isLoggedIn) {
+      fetchData();
     }
-    fetchData();
-  }, [isLoggedIn, navigate, getLoginPath]);
+  }, [authLoading, isLoggedIn]);
 
   const handleSignOut = () => {
-    sessionStorage.removeItem('admin_logged_in');
-    navigate(getLoginPath());
+    signOut();
   };
 
   const fetchData = async () => {

@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { isAdminSubdomain, useAdminNavigation } from '@/hooks/useAdminSubdomain';
 
 interface UsageLog {
   id: string;
@@ -32,20 +32,13 @@ interface RateLimitSettings {
 }
 
 const AdminAIUsage = () => {
-  const navigate = useNavigate();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { adminNavigate, getDashboardPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [rateLimitSettings, setRateLimitSettings] = useState<RateLimitSettings>({
     requests_per_hour: 10,
     enabled: true
   });
-
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-    }
-  }, [isLoggedIn, navigate]);
 
   // Fetch usage logs
   const { data: usageLogs, isLoading } = useQuery({
@@ -197,7 +190,7 @@ const AdminAIUsage = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
+            onClick={() => adminNavigate(getDashboardPath())}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>

@@ -43,21 +43,17 @@ interface WinnerClaim {
 }
 
 export default function AdminWinnerClaims() {
-  const navigate = useNavigate();
-  const { getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { getDashboardPath } = useAdminNavigation();
   const [claims, setClaims] = useState<WinnerClaim[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [notes, setNotes] = useState('');
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-      return;
+    if (!authLoading && isLoggedIn) {
+      fetchClaims();
     }
-    fetchClaims();
-  }, [isLoggedIn, navigate, getLoginPath]);
+  }, [authLoading, isLoggedIn]);
 
   const fetchClaims = async () => {
     try {

@@ -48,8 +48,8 @@ interface KnowledgeEntry {
 const categories = ["general", "competition", "rewards", "account", "technical", "support", "learned"];
 
 const AdminAIKnowledge = () => {
-  const navigate = useNavigate();
-  const { adminNavigate, getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { adminNavigate, getDashboardPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<KnowledgeEntry | null>(null);
@@ -59,14 +59,6 @@ const AdminAIKnowledge = () => {
     content: "",
     category: "general",
   });
-
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate(getLoginPath(), { replace: true });
-    }
-  }, [isLoggedIn, navigate, getLoginPath]);
 
   const { data: entries, isLoading } = useQuery({
     queryKey: ["ai-knowledge-admin"],
@@ -182,7 +174,7 @@ const AdminAIKnowledge = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => adminNavigate("/tickets")}
+            onClick={() => adminNavigate(getDashboardPath())}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

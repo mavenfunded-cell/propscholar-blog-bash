@@ -57,7 +57,7 @@ interface SitemapUrl {
 }
 
 export default function AdminSEO() {
-  const { getLoginPath, getDashboardPath } = useAdminNavigation();
+  const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
   const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -352,7 +352,7 @@ Disallow: /admin/`;
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(getDashboardPath())}>
+            <Button variant="ghost" size="icon" onClick={() => adminNavigate(getDashboardPath())}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
