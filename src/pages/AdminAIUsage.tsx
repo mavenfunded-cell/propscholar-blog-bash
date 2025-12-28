@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { ArrowLeft, Brain, Clock, Zap, AlertTriangle, RefreshCw, Settings, CreditCard, ExternalLink, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
