@@ -32,13 +32,22 @@ interface RateLimitSettings {
 }
 
 const AdminAIUsage = () => {
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const { adminNavigate, getDashboardPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [rateLimitSettings, setRateLimitSettings] = useState<RateLimitSettings>({
     requests_per_hour: 10,
     enabled: true
   });
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
+  }, [authLoading, isAdmin, navigate]);
 
   // Fetch usage logs
   const { data: usageLogs, isLoading } = useQuery({

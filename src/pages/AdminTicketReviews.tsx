@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { AdminLink } from '@/components/AdminLink';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation, isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { ArrowLeft, Star, TrendingUp, MessageSquare, Calendar, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -26,8 +26,9 @@ interface TicketReview {
 }
 
 export default function AdminTicketReviews() {
+  const navigate = useNavigate();
   const { getLoginPath } = useAdminNavigation();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const [reviews, setReviews] = useState<TicketReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [ratingFilter, setRatingFilter] = useState<string>('all');
@@ -35,10 +36,13 @@ export default function AdminTicketReviews() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return;
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   const fetchReviews = async () => {
     try {

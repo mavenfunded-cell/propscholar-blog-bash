@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation, isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { AdminLink } from '@/components/AdminLink';
@@ -63,7 +64,8 @@ interface SessionAnalytics {
 }
 
 export default function AdminUserAnalytics() {
-  const { isLoggedIn, loading: authLoading, signOut } = useAdminAuth();
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading, signOut } = useAdminAuth();
   const { getDashboardPath } = useAdminNavigation();
   const [submissions, setSubmissions] = useState<SubmissionAnalytics[]>([]);
   const [sessions, setSessions] = useState<SessionAnalytics[]>([]);
@@ -74,10 +76,14 @@ export default function AdminUserAnalytics() {
   const [activeTab, setActiveTab] = useState('sessions');
 
   useEffect(() => {
-    if (!authLoading && isLoggedIn) {
-      fetchData();
+    if (authLoading) return;
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [authLoading, isLoggedIn]);
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isAdmin]);
 
   const handleSignOut = () => {
     signOut();

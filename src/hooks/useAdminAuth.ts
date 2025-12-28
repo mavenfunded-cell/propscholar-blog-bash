@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { isAdminSubdomain } from './useAdminSubdomain';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
 export function useAdminAuth() {
-  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -69,19 +66,11 @@ export function useAdminAuth() {
     }
   };
 
-  useEffect(() => {
-    // Only redirect once loading is complete
-    if (!loading && !isAdmin) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
-    }
-  }, [loading, isAdmin, navigate]);
-
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setIsAdmin(false);
-    navigate(isAdminSubdomain() ? '/' : '/admin');
   };
 
   // Get access token for API calls

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminSubdomain, useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -53,8 +53,9 @@ interface Coupon {
 }
 
 export default function AdminCoupons() {
+  const navigate = useNavigate();
   const { getLoginPath } = useAdminNavigation();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -64,10 +65,13 @@ export default function AdminCoupons() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchCoupons();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   const fetchCoupons = async () => {
     try {
