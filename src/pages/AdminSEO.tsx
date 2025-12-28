@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation, isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -57,9 +58,9 @@ interface SitemapUrl {
 }
 
 export default function AdminSEO() {
+  const navigate = useNavigate();
   const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const [loading, setLoading] = useState(true);
   const [seoSettings, setSeoSettings] = useState<SEOSetting[]>([]);
   const [selectedSeo, setSelectedSeo] = useState<SEOSetting | null>(null);
@@ -81,14 +82,16 @@ export default function AdminSEO() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return; // useAdminAuth handles redirect
-    setIsAdmin(true);
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchSEOSettings();
     fetchRobotsTxt();
     fetchSitemapUrls();
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   const fetchSitemapUrls = async () => {
     try {

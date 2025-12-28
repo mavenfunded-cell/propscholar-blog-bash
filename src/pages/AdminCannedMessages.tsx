@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
+import { useAdminNavigation, isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,8 +46,9 @@ interface CannedMessage {
 const categories = ["greeting", "closing", "info", "escalation", "account", "competition", "technical", "general"];
 
 const AdminCannedMessages = () => {
+  const navigate = useNavigate();
   const { adminNavigate, getLoginPath } = useAdminNavigation();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<CannedMessage | null>(null);
@@ -57,6 +59,14 @@ const AdminCannedMessages = () => {
     shortcut: "",
   });
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
+  }, [authLoading, isAdmin, navigate]);
+
   const { data: messages, isLoading } = useQuery({
     queryKey: ["canned-messages-admin"],
     queryFn: async () => {
@@ -64,7 +74,7 @@ const AdminCannedMessages = () => {
       if (error) throw error;
       return data as CannedMessage[];
     },
-    enabled: isLoggedIn,
+    enabled: isAdmin,
   });
 
   const saveMutation = useMutation({

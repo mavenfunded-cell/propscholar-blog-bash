@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation, isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { AdminLink } from '@/components/AdminLink';
@@ -51,8 +52,9 @@ const REWARD_TYPES = [
 ];
 
 export default function AdminRewardSettings() {
+  const navigate = useNavigate();
   const { getDashboardPath, getLoginPath } = useAdminNavigation();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const [settings, setSettings] = useState<RewardSetting[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -80,10 +82,13 @@ export default function AdminRewardSettings() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   const fetchData = async () => {
     try {

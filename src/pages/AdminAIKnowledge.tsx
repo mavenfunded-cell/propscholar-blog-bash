@@ -48,7 +48,8 @@ interface KnowledgeEntry {
 const categories = ["general", "competition", "rewards", "account", "technical", "support", "learned"];
 
 const AdminAIKnowledge = () => {
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const { adminNavigate, getDashboardPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -60,6 +61,14 @@ const AdminAIKnowledge = () => {
     category: "general",
   });
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
+  }, [authLoading, isAdmin, navigate]);
+
   const { data: entries, isLoading } = useQuery({
     queryKey: ["ai-knowledge-admin"],
     queryFn: async () => {
@@ -67,7 +76,7 @@ const AdminAIKnowledge = () => {
       if (error) throw error;
       return data as KnowledgeEntry[];
     },
-    enabled: isLoggedIn,
+    enabled: isAdmin,
   });
 
   const saveMutation = useMutation({

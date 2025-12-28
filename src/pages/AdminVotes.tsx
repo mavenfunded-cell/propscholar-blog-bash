@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation, isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { AdminLink } from '@/components/AdminLink';
 import { Button } from '@/components/ui/button';
@@ -34,8 +35,9 @@ interface SubmissionVotes {
 }
 
 export default function AdminVotes() {
+  const navigate = useNavigate();
   const { getDashboardPath, getLoginPath } = useAdminNavigation();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
@@ -46,10 +48,13 @@ export default function AdminVotes() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   useEffect(() => {
     if (selectedEventId) {

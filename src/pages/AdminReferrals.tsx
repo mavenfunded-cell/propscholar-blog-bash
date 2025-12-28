@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminNavigation, isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { AdminLink } from '@/components/AdminLink';
@@ -25,17 +26,22 @@ interface ReferralLog {
 }
 
 export default function AdminReferrals() {
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const { getDashboardPath } = useAdminNavigation();
   const [referrals, setReferrals] = useState<ReferralLog[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (!authLoading && isLoggedIn) {
-      fetchReferrals();
+    if (authLoading) return;
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
     }
-  }, [authLoading, isLoggedIn]);
+    fetchReferrals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, isAdmin]);
 
   const fetchReferrals = async () => {
     try {

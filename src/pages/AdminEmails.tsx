@@ -36,7 +36,7 @@ interface UserEmail {
 
 export default function AdminEmails() {
   const navigate = useNavigate();
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [userEmails, setUserEmails] = useState<UserEmail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,11 +57,14 @@ export default function AdminEmails() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchEmailLogs();
     fetchUserEmails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   const fetchEmailLogs = async () => {
     try {

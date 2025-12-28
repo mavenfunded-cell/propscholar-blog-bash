@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { AdminLink } from '@/components/AdminLink';
@@ -46,17 +46,21 @@ interface RewardClaim {
 }
 
 export default function AdminRewardClaims() {
-  const { isLoggedIn, loading: authLoading } = useAdminAuth();
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const [claims, setClaims] = useState<RewardClaim[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isLoggedIn) return; // useAdminAuth handles redirect
+    if (!isAdmin) {
+      navigate(isAdminSubdomain() ? '/' : '/admin');
+      return;
+    }
     fetchClaims();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isLoggedIn]);
+  }, [authLoading, isAdmin]);
 
   const fetchClaims = async () => {
     try {
