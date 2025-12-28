@@ -2048,7 +2048,6 @@ export type Database = {
           submission_id: string
           submission_name: string
           vote_id: string
-          voter_email: string
           voter_name: string
         }[]
       }
