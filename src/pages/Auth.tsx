@@ -10,8 +10,44 @@ import { toast } from 'sonner';
 import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
+// Allowed email domains
+const ALLOWED_EMAIL_DOMAINS = [
+  // Google
+  'gmail.com', 'googlemail.com',
+  // Microsoft
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
+  // Yahoo
+  'yahoo.com', 'ymail.com', 'rocketmail.com',
+  // Apple
+  'icloud.com', 'me.com', 'mac.com',
+  // Privacy & Pro
+  'proton.me', 'protonmail.com', 'pm.me',
+  'zoho.com', 'zoho.in',
+  'tuta.com', 'tutanota.com',
+  'fastmail.com', 'fastmail.fm',
+  // Europe
+  'gmx.de', 'web.de', 'orange.fr', 'libero.it',
+  // USA ISPs
+  'comcast.net', 'verizon.net', 'att.net', 'cox.net',
+  // Asia
+  'qq.com', 'naver.com', 'yahoo.co.jp', 'rediffmail.com',
+  // Russia
+  'mail.ru', 'yandex.ru', 'rambler.ru',
+  // Others
+  'aol.com',
+  'mail.com', 'email.com', 'usa.com',
+];
+
+const isAllowedEmailDomain = (email: string): boolean => {
+  const domain = email.split('@')[1]?.toLowerCase();
+  return domain ? ALLOWED_EMAIL_DOMAINS.includes(domain) : false;
+};
+
 const emailSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
+  email: z.string().email('Please enter a valid email').refine(
+    (email) => isAllowedEmailDomain(email),
+    'This email provider is not supported. Please use a major email provider like Gmail, Outlook, Yahoo, etc.'
+  ),
 });
 
 export default function Auth() {
