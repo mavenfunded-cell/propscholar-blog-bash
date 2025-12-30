@@ -11,6 +11,15 @@ const IMAP_HOST = "imap.hostinger.com";
 const IMAP_PORT = 993;
 const SUPPORT_EMAIL = "support@propscholar.com";
 
+// Attachment interface
+interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  size: number;
+  content?: string; // Base64 encoded content
+  url?: string; // URL if stored somewhere
+}
+
 // Simple IMAP command sender/receiver with timeout
 async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -145,15 +154,15 @@ function parseEmailHeaders(raw: string): Record<string, string> {
   return headers;
 }
 
-// Parse email body from raw email
-function parseEmailBody(raw: string): { text: string; html: string | null } {
+// Parse MIME parts including attachments
+function parseMimeParts(raw: string): { text: string; html: string | null; attachments: EmailAttachment[] } {
   const parts = raw.split(/\r?\n\r?\n/);
-  if (parts.length < 2) return { text: "", html: null };
+  if (parts.length < 2) return { text: "", html: null, attachments: [] };
   
   const body = parts.slice(1).join("\n\n");
-  
-  // Check for multipart
-  const contentType = parseEmailHeaders(raw)["content-type"] || "";
+  const headers = parseEmailHeaders(raw);
+  const contentType = headers["content-type"] || "";
+  const attachments: EmailAttachment[] = [];
   
   if (contentType.includes("multipart")) {
     const boundaryMatch = contentType.match(/boundary="?([^";\s]+)"?/i);
@@ -166,24 +175,95 @@ function parseEmailBody(raw: string): { text: string; html: string | null } {
       let htmlBody: string | null = null;
       
       for (const section of sections) {
-        const sectionLower = section.toLowerCase();
-        if (sectionLower.includes("content-type: text/plain") || sectionLower.includes("content-type:text/plain")) {
-          const sectionParts = section.split(/\r?\n\r?\n/);
-          textBody = sectionParts.slice(1).join("\n\n").replace(/--$/, "").trim();
-        } else if (sectionLower.includes("content-type: text/html") || sectionLower.includes("content-type:text/html")) {
-          const sectionParts = section.split(/\r?\n\r?\n/);
-          htmlBody = sectionParts.slice(1).join("\n\n").replace(/--$/, "").trim();
+        if (!section.trim() || section.trim() === "--") continue;
+        
+        const sectionHeaders = parseEmailHeaders(section);
+        const sectionContentType = (sectionHeaders["content-type"] || "").toLowerCase();
+        const contentDisposition = (sectionHeaders["content-disposition"] || "").toLowerCase();
+        const contentTransferEncoding = (sectionHeaders["content-transfer-encoding"] || "").toLowerCase();
+        
+        // Check for nested multipart
+        if (sectionContentType.includes("multipart")) {
+          const nestedBoundaryMatch = sectionContentType.match(/boundary="?([^";\s]+)"?/i);
+          if (nestedBoundaryMatch) {
+            const nestedResult = parseMimeParts(section);
+            if (nestedResult.text && !textBody) textBody = nestedResult.text;
+            if (nestedResult.html && !htmlBody) htmlBody = nestedResult.html;
+            attachments.push(...nestedResult.attachments);
+          }
+          continue;
+        }
+        
+        // Get the actual content (after headers)
+        const sectionParts = section.split(/\r?\n\r?\n/);
+        let content = sectionParts.slice(1).join("\n\n").replace(/--$/, "").trim();
+        
+        // Check if this is an attachment
+        const isAttachment = contentDisposition.includes("attachment") || 
+                             contentDisposition.includes("inline") ||
+                             (sectionContentType && !sectionContentType.includes("text/plain") && !sectionContentType.includes("text/html"));
+        
+        // Extract filename from content-disposition or content-type
+        let filename = "";
+        const filenameMatch = contentDisposition.match(/filename="?([^";\n]+)"?/i) || 
+                              sectionContentType.match(/name="?([^";\n]+)"?/i);
+        if (filenameMatch) {
+          filename = filenameMatch[1].trim();
+        }
+        
+        if (isAttachment && (filename || sectionContentType.includes("image/") || sectionContentType.includes("application/"))) {
+          // This is an attachment
+          const attachment: EmailAttachment = {
+            filename: filename || `attachment_${attachments.length + 1}`,
+            contentType: sectionContentType.split(";")[0].trim(),
+            size: content.length,
+            content: content // Store the base64/raw content
+          };
+          
+          // Calculate approximate size for base64 content
+          if (contentTransferEncoding === "base64") {
+            attachment.size = Math.floor(content.replace(/\s/g, "").length * 0.75);
+          }
+          
+          attachments.push(attachment);
+          console.log(`Found attachment: ${attachment.filename} (${attachment.contentType}, ${attachment.size} bytes)`);
+        } else if (sectionContentType.includes("text/plain")) {
+          textBody = content;
+          // Decode if needed
+          if (contentTransferEncoding === "base64") {
+            try {
+              textBody = atob(content.replace(/\s/g, ""));
+            } catch { /* keep original */ }
+          } else if (contentTransferEncoding === "quoted-printable") {
+            textBody = decodeQuotedPrintable(content);
+          }
+        } else if (sectionContentType.includes("text/html")) {
+          htmlBody = content;
+          if (contentTransferEncoding === "base64") {
+            try {
+              htmlBody = atob(content.replace(/\s/g, ""));
+            } catch { /* keep original */ }
+          } else if (contentTransferEncoding === "quoted-printable") {
+            htmlBody = decodeQuotedPrintable(content);
+          }
         }
       }
       
-      return { text: textBody, html: htmlBody };
+      return { text: textBody, html: htmlBody, attachments };
     }
   }
   
-  return { text: body, html: null };
+  return { text: body, html: null, attachments };
 }
 
-// Decode quoted-printable or base64 encoded content
+// Decode quoted-printable content
+function decodeQuotedPrintable(content: string): string {
+  return content
+    .replace(/=\r?\n/g, "")
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+// Decode content based on transfer encoding
 function decodeContent(content: string, encoding: string): string {
   if (!encoding || !content) return content || "";
   
@@ -199,9 +279,7 @@ function decodeContent(content: string, encoding: string): string {
   }
   
   if (encoding === "quoted-printable") {
-    return content
-      .replace(/=\r?\n/g, "")
-      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    return decodeQuotedPrintable(content);
   }
   
   return content;
@@ -221,6 +299,61 @@ function stripHtml(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Upload attachment to Supabase storage and return URL
+async function uploadAttachment(
+  supabase: any,
+  ticketId: string,
+  attachment: EmailAttachment
+): Promise<string | null> {
+  try {
+    if (!attachment.content) return null;
+    
+    // Decode base64 content to binary
+    let binaryContent: Uint8Array;
+    try {
+      const cleanContent = attachment.content.replace(/\s/g, "");
+      const binaryString = atob(cleanContent);
+      binaryContent = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        binaryContent[i] = binaryString.charCodeAt(i);
+      }
+    } catch (e) {
+      console.error("Failed to decode attachment content:", e);
+      return null;
+    }
+    
+    // Generate unique filename
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(7);
+    const safeFilename = attachment.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const filePath = `${ticketId}/${timestamp}-${random}-${safeFilename}`;
+    
+    // Upload to storage
+    const { data, error } = await supabase.storage
+      .from("ticket-attachments")
+      .upload(filePath, binaryContent, {
+        contentType: attachment.contentType,
+        upsert: false
+      });
+    
+    if (error) {
+      console.error("Storage upload error:", error);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: publicUrl } = supabase.storage
+      .from("ticket-attachments")
+      .getPublicUrl(filePath);
+    
+    console.log(`Uploaded attachment: ${attachment.filename} -> ${publicUrl.publicUrl}`);
+    return publicUrl.publicUrl;
+  } catch (e) {
+    console.error("Failed to upload attachment:", e);
+    return null;
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -361,8 +494,8 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Parse body
-        const { text, html } = parseEmailBody(rawEmail);
+        // Parse body AND attachments
+        const { text, html, attachments: rawAttachments } = parseMimeParts(rawEmail);
         let bodyText = text;
         
         // Decode if needed
@@ -484,7 +617,28 @@ const handler = async (req: Request): Promise<Response> => {
           console.log(`Created new ticket #${newTicket.ticket_number}`);
         }
 
-        // Insert message
+        // Upload attachments to storage and get URLs
+        const processedAttachments: { filename: string; contentType: string; size: number; url: string }[] = [];
+        
+        if (rawAttachments.length > 0) {
+          console.log(`Processing ${rawAttachments.length} attachment(s)...`);
+          
+          for (const att of rawAttachments) {
+            const url = await uploadAttachment(supabase, ticketId!, att);
+            if (url) {
+              processedAttachments.push({
+                filename: att.filename,
+                contentType: att.contentType,
+                size: att.size,
+                url: url
+              });
+            }
+          }
+          
+          console.log(`Uploaded ${processedAttachments.length} attachment(s)`);
+        }
+
+        // Insert message with attachments
         const { error: messageError } = await supabase.from("support_messages").insert({
           ticket_id: ticketId,
           sender_email: senderEmail,
@@ -494,7 +648,7 @@ const handler = async (req: Request): Promise<Response> => {
           body_html: html,
           message_id: messageId,
           in_reply_to: inReplyTo,
-          attachments: [],
+          attachments: processedAttachments,
         });
 
         if (messageError) {
@@ -546,7 +700,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Mark as seen ONLY after successful processing
         await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
         processedCount++;
-        console.log(`Successfully processed message ${uid}`);
+        console.log(`Successfully processed message ${uid} with ${processedAttachments.length} attachment(s)`);
         
       } catch (msgError) {
         console.error(`Error processing message ${uid}:`, msgError);
