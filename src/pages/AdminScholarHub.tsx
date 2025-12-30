@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { getAdminPath } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,7 +108,7 @@ export default function AdminScholarHub() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/admin');
+      navigate(getAdminPath('/admin'));
     }
   }, [isLoggedIn, navigate]);
 
@@ -365,7 +366,7 @@ export default function AdminScholarHub() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(getAdminPath('/admin/dashboard'))}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
