@@ -30,28 +30,23 @@ interface SendEmailRequest {
 }
 
 // Fetch attachment content from URL and convert to base64
-async function fetchAttachmentContent(url: string): Promise<{ content: string; success: boolean }> {
+async function fetchAttachmentContent(url: string): Promise<{ content: Uint8Array; success: boolean }> {
   try {
+    console.log(`Fetching attachment from: ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
       console.error(`Failed to fetch attachment: ${url} - ${response.status}`);
-      return { content: "", success: false };
+      return { content: new Uint8Array(), success: false };
     }
     
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
+    console.log(`Successfully fetched attachment, size: ${uint8Array.length} bytes`);
     
-    // Convert to base64
-    let binary = "";
-    for (let i = 0; i < uint8Array.length; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    const base64 = btoa(binary);
-    
-    return { content: base64, success: true };
+    return { content: uint8Array, success: true };
   } catch (error) {
     console.error(`Error fetching attachment: ${url}`, error);
-    return { content: "", success: false };
+    return { content: new Uint8Array(), success: false };
   }
 }
 
@@ -345,8 +340,9 @@ ${attachmentsHtml}
 
       console.log(`Sending email to ${ticket.user_email} via Hostinger SMTP`);
 
-      // Prepare email attachments for SMTP
-      const emailAttachments: { filename: string; content: string; encoding: string; contentType: string }[] = [];
+      // Prepare email attachments for SMTP using denomailer format
+      // See: https://deno.land/x/denomailer - Attachment type requires: contentType, filename, content, encoding
+      const emailAttachments: { filename: string; content: Uint8Array; encoding: "binary"; contentType: string }[] = [];
       
       if (attachments && attachments.length > 0) {
         console.log(`Preparing ${attachments.length} attachment(s) for email...`);
@@ -358,14 +354,14 @@ ${attachmentsHtml}
           }
           
           const { content, success } = await fetchAttachmentContent(att.url);
-          if (success && content) {
+          if (success && content.length > 0) {
             emailAttachments.push({
               filename: att.name || 'attachment',
               content: content,
-              encoding: 'base64',
+              encoding: 'binary',
               contentType: att.type || 'application/octet-stream'
             });
-            console.log(`Prepared attachment: ${att.name}`);
+            console.log(`Prepared attachment: ${att.name} (${content.length} bytes)`);
           } else {
             console.log(`Failed to fetch attachment: ${att.name}`);
           }
