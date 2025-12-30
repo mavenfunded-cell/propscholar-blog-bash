@@ -58,7 +58,7 @@ interface Course {
 
 export default function AdminScholarHub() {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAdminAuth();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,10 +107,10 @@ export default function AdminScholarHub() {
   });
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!authLoading && !isLoggedIn) {
       navigate(getAdminPath('/admin'));
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, authLoading, navigate]);
 
   useEffect(() => {
     if (isLoggedIn) {
