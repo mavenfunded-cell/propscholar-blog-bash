@@ -544,7 +544,7 @@ export default function AdminScholarHub() {
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => navigate(`/admin/scholar-hub/${course.id}/videos`)}
+                          onClick={() => navigate(getAdminPath(`/admin/scholar-hub/${course.id}/videos`))}
                         >
                           <Video className="w-4 h-4 mr-1" />
                           Sessions

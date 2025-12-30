@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { getAdminPath } from '@/hooks/useAdminSubdomain';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ interface Course {
 export default function AdminCourseVideos() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const { isLoggedIn } = useAdminAuth();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [videos, setVideos] = useState<CourseVideo[]>([]);
@@ -76,10 +77,10 @@ export default function AdminCourseVideos() {
   const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link' });
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate('/admin');
+    if (!authLoading && !isLoggedIn) {
+      navigate(getAdminPath('/admin'));
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, authLoading, navigate]);
 
   useEffect(() => {
     if (isLoggedIn && courseId) {
@@ -111,7 +112,7 @@ export default function AdminCourseVideos() {
     } catch (err) {
       console.error('Error fetching data:', err);
       toast.error('Failed to load course');
-      navigate('/admin/scholar-hub');
+      navigate(getAdminPath('/admin/scholar-hub'));
     } finally {
       setLoading(false);
     }
@@ -286,7 +287,7 @@ export default function AdminCourseVideos() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/scholar-hub')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(getAdminPath('/admin/scholar-hub'))}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
