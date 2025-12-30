@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { getAdminPath } from '@/hooks/useAdminSubdomain';
@@ -58,6 +58,7 @@ interface Course {
 
 export default function AdminScholarHub() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -107,10 +108,12 @@ export default function AdminScholarHub() {
   });
 
   useEffect(() => {
+    console.log('[AdminScholarHub] route', location.pathname, { authLoading, isLoggedIn });
     if (!authLoading && !isLoggedIn) {
+      console.log('[AdminScholarHub] redirect ->', getAdminPath('/admin'));
       navigate(getAdminPath('/admin'));
     }
-  }, [isLoggedIn, authLoading, navigate]);
+  }, [isLoggedIn, authLoading, navigate, location.pathname]);
 
   useEffect(() => {
     if (isLoggedIn) {
