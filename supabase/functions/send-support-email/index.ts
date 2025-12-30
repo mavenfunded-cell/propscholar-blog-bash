@@ -29,6 +29,32 @@ interface SendEmailRequest {
   senderName?: string;
 }
 
+// Fetch attachment content from URL and convert to base64
+async function fetchAttachmentContent(url: string): Promise<{ content: string; success: boolean }> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch attachment: ${url} - ${response.status}`);
+      return { content: "", success: false };
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Convert to base64
+    let binary = "";
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    const base64 = btoa(binary);
+    
+    return { content: base64, success: true };
+  } catch (error) {
+    console.error(`Error fetching attachment: ${url}`, error);
+    return { content: "", success: false };
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("Sending support email via Hostinger SMTP");
 
@@ -224,10 +250,9 @@ const handler = async (req: Request): Promise<Response> => {
         }
       };
 
-      // Build attachments HTML section with sanitization
+      // Build attachments HTML section for the email body (as backup/preview)
       let attachmentsHtml = "";
       if (attachments && attachments.length > 0) {
-        // Filter out attachments with unsafe URLs
         const safeAttachments = attachments.filter(att => isSafeUrl(att.url));
         
         const attachmentItems = safeAttachments.map(att => {
@@ -320,6 +345,35 @@ ${attachmentsHtml}
 
       console.log(`Sending email to ${ticket.user_email} via Hostinger SMTP`);
 
+      // Prepare email attachments for SMTP
+      const emailAttachments: { filename: string; content: string; encoding: string; contentType: string }[] = [];
+      
+      if (attachments && attachments.length > 0) {
+        console.log(`Preparing ${attachments.length} attachment(s) for email...`);
+        
+        for (const att of attachments) {
+          if (!isSafeUrl(att.url)) {
+            console.log(`Skipping unsafe URL: ${att.url}`);
+            continue;
+          }
+          
+          const { content, success } = await fetchAttachmentContent(att.url);
+          if (success && content) {
+            emailAttachments.push({
+              filename: att.name || 'attachment',
+              content: content,
+              encoding: 'base64',
+              contentType: att.type || 'application/octet-stream'
+            });
+            console.log(`Prepared attachment: ${att.name}`);
+          } else {
+            console.log(`Failed to fetch attachment: ${att.name}`);
+          }
+        }
+        
+        console.log(`Successfully prepared ${emailAttachments.length} attachment(s)`);
+      }
+
       // Create SMTP client
       const client = new SMTPClient({
         connection: {
@@ -334,7 +388,8 @@ ${attachmentsHtml}
       });
 
       try {
-        await client.send({
+        // Build email config with attachments
+        const emailConfig: any = {
           from: `${displaySenderName} <${SUPPORT_EMAIL}>`,
           to: ticket.user_email,
           subject: subject,
@@ -350,10 +405,17 @@ ${attachmentsHtml}
               ? { "References": references.join(" ") }
               : {}),
           },
-        });
+        };
+
+        // Add attachments if any
+        if (emailAttachments.length > 0) {
+          emailConfig.attachments = emailAttachments;
+        }
+
+        await client.send(emailConfig);
 
         await client.close();
-        console.log("Email sent successfully via Hostinger SMTP");
+        console.log(`Email sent successfully via Hostinger SMTP with ${emailAttachments.length} attachment(s)`);
 
       } catch (smtpError: any) {
         console.error("SMTP send error:", smtpError);
