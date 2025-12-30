@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
+import { isAdminSubdomain, getAdminPath } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +49,7 @@ interface Winner {
 export default function EventSubmissions() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -57,17 +59,16 @@ export default function EventSubmissions() {
   const [savingWinners, setSavingWinners] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
-  const isLoggedIn = sessionStorage.getItem('admin_logged_in') === 'true';
-
   useEffect(() => {
+    if (authLoading) return;
     if (!isLoggedIn) {
-      navigate(isAdminSubdomain() ? '/' : '/admin');
+      navigate(getAdminPath('/admin'));
       return;
     }
     if (id) {
       fetchEventAndSubmissions();
     }
-  }, [isLoggedIn, id, navigate]);
+  }, [authLoading, isLoggedIn, id, navigate]);
 
   const fetchEventAndSubmissions = async () => {
     try {
@@ -102,7 +103,7 @@ export default function EventSubmissions() {
     } catch (err) {
       console.error('Error fetching data:', err);
       toast.error('Failed to load submissions');
-      navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard');
+      navigate(getAdminPath('/admin/dashboard'));
     } finally {
       setLoading(false);
     }
@@ -221,6 +222,18 @@ export default function EventSubmissions() {
     toast.success('Exported successfully');
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Authenticating...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -242,7 +255,7 @@ export default function EventSubmissions() {
 
       <main className="container mx-auto px-4 py-8">
         <Link 
-          to="/admin/dashboard" 
+          to={getAdminPath('/admin/dashboard')} 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
