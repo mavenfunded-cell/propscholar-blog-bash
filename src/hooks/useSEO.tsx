@@ -19,7 +19,7 @@ const DEFAULT_SEO: SEOSettings = {
   keywords: 'propscholar, blog competition, reel competition, writing contest, giveaway',
   og_title: 'PropScholar Space - The Giveaway Hub',
   og_description: 'Join PropScholar competitions to showcase your writing and video skills. Win prizes and earn rewards!',
-  og_image: 'https://propscholar.space/og-image.png',
+  og_image: 'https://propscholar.space/og-home.png',
   canonical_url: null,
   robots: 'index, follow'
 };
