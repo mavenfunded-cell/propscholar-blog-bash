@@ -420,28 +420,47 @@ const handler = async (req: Request): Promise<Response> => {
     const selectResp = await sendCommand(conn, `A${tagNum++}`, "SELECT INBOX");
     console.log("Selected INBOX");
 
-    // Search for unseen messages
+    // Search for unseen messages first (fast path)
     const searchResp = await sendCommand(conn, `A${tagNum++}`, "SEARCH UNSEEN");
     const uidMatch = searchResp.match(/\* SEARCH([\d\s]*)/);
-    const messageUids = uidMatch && uidMatch[1] ? uidMatch[1].trim().split(/\s+/).filter(Boolean) : [];
-    
-    console.log(`Found ${messageUids.length} unread message(s)`);
+    let messageUids = uidMatch && uidMatch[1] ? uidMatch[1].trim().split(/\s+/).filter(Boolean) : [];
+
+    // Fallback: if nothing is UNSEEN, also look for recent messages.
+    // Some mailbox clients (forwarders / Gmail fetchers) can mark messages as \Seen
+    // before our poll runs, which would otherwise make tickets "disappear".
+    if (messageUids.length === 0) {
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const sinceDate = new Date(Date.now() - 48 * 60 * 60 * 1000); // last 48 hours
+      const imapSince = `${sinceDate.getUTCDate()}-${months[sinceDate.getUTCMonth()]}-${sinceDate.getUTCFullYear()}`;
+
+      console.log(`No UNSEEN mail found. Fallback SEARCH SINCE \"${imapSince}\" (last 48h)`);
+      const recentResp = await sendCommand(conn, `A${tagNum++}`, `SEARCH SINCE "${imapSince}"`);
+      const recentMatch = recentResp.match(/\* SEARCH([\d\s]*)/);
+      messageUids = recentMatch && recentMatch[1]
+        ? recentMatch[1].trim().split(/\s+/).filter(Boolean)
+        : [];
+
+      // Process only the newest handful to avoid scanning the whole mailbox
+      if (messageUids.length > 25) messageUids = messageUids.slice(-25);
+    }
+
+    console.log(`Found ${messageUids.length} candidate message(s)`);
 
     if (messageUids.length === 0) {
       // Logout and close connection
       await sendCommand(conn, `A${tagNum++}`, "LOGOUT");
       conn.close();
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: "No new emails",
-          processed: 0, 
+          processed: 0,
           errors: 0,
           email: SUPPORT_EMAIL,
           timestamp: new Date().toISOString(),
         }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
