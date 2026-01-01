@@ -154,6 +154,71 @@ function parseEmailHeaders(raw: string): Record<string, string> {
   return headers;
 }
 
+// Clean raw MIME content to extract actual text (fallback when MIME parsing fails)
+function extractTextFromRawMime(text: string): string {
+  if (!text) return "";
+  
+  // Check for MIME boundary patterns
+  const boundaryMatch = text.match(/--([a-zA-Z0-9_-]+)/);
+  if (!boundaryMatch) {
+    return text; // Not MIME content
+  }
+  
+  const boundary = boundaryMatch[1];
+  const parts = text.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:--)?`));
+  
+  let bestText = "";
+  
+  for (const part of parts) {
+    const trimmedPart = part.trim();
+    if (!trimmedPart) continue;
+    
+    // Look for Content-Type header
+    const contentTypeMatch = trimmedPart.match(/Content-Type:\s*([^;\r\n]+)/i);
+    const contentType = contentTypeMatch ? contentTypeMatch[1].toLowerCase().trim() : "";
+    
+    // Get content after headers (double newline)
+    const headerEnd = trimmedPart.search(/\r?\n\r?\n/);
+    if (headerEnd === -1) continue;
+    
+    let content = trimmedPart.substring(headerEnd).trim();
+    
+    // Check for transfer encoding
+    const encodingMatch = trimmedPart.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
+    const encoding = encodingMatch ? encodingMatch[1].toLowerCase().trim() : "";
+    
+    // Handle nested multipart
+    if (contentType.includes("multipart")) {
+      const nestedResult = extractTextFromRawMime(content);
+      if (nestedResult && !bestText) {
+        bestText = nestedResult;
+      }
+      continue;
+    }
+    
+    // Decode content
+    if (encoding === "quoted-printable") {
+      content = decodeQuotedPrintable(content);
+    } else if (encoding === "base64") {
+      try {
+        content = atob(content.replace(/\s/g, ""));
+      } catch { /* keep original */ }
+    }
+    
+    // Prefer text/plain
+    if (contentType === "text/plain" && content.trim()) {
+      return content.trim();
+    }
+    
+    // Store as fallback
+    if (!bestText && content.trim() && !contentType.includes("text/html")) {
+      bestText = content.trim();
+    }
+  }
+  
+  return bestText;
+}
+
 // Parse MIME parts including attachments
 function parseMimeParts(raw: string): { text: string; html: string | null; attachments: EmailAttachment[] } {
   const parts = raw.split(/\r?\n\r?\n/);
@@ -162,7 +227,21 @@ function parseMimeParts(raw: string): { text: string; html: string | null; attac
   const body = parts.slice(1).join("\n\n");
   const headers = parseEmailHeaders(raw);
   const contentType = headers["content-type"] || "";
+  const contentTransferEncoding = headers["content-transfer-encoding"] || "";
   const attachments: EmailAttachment[] = [];
+  
+  // Check if the whole email is text/plain (no MIME parts)
+  if (contentType.includes("text/plain") && !contentType.includes("multipart")) {
+    let decodedBody = body;
+    if (contentTransferEncoding.toLowerCase() === "quoted-printable") {
+      decodedBody = decodeQuotedPrintable(body);
+    } else if (contentTransferEncoding.toLowerCase() === "base64") {
+      try {
+        decodedBody = atob(body.replace(/\s/g, ""));
+      } catch { /* keep original */ }
+    }
+    return { text: decodedBody, html: null, attachments: [] };
+  }
   
   if (contentType.includes("multipart")) {
     const boundaryMatch = contentType.match(/boundary="?([^";\s]+)"?/i);
@@ -180,16 +259,46 @@ function parseMimeParts(raw: string): { text: string; html: string | null; attac
         const sectionHeaders = parseEmailHeaders(section);
         const sectionContentType = (sectionHeaders["content-type"] || "").toLowerCase();
         const contentDisposition = (sectionHeaders["content-disposition"] || "").toLowerCase();
-        const contentTransferEncoding = (sectionHeaders["content-transfer-encoding"] || "").toLowerCase();
+        const sectionTransferEncoding = (sectionHeaders["content-transfer-encoding"] || "").toLowerCase();
         
-        // Check for nested multipart
+        // Check for nested multipart (like multipart/alternative inside multipart/mixed)
         if (sectionContentType.includes("multipart")) {
           const nestedBoundaryMatch = sectionContentType.match(/boundary="?([^";\s]+)"?/i);
           if (nestedBoundaryMatch) {
-            const nestedResult = parseMimeParts(section);
-            if (nestedResult.text && !textBody) textBody = nestedResult.text;
-            if (nestedResult.html && !htmlBody) htmlBody = nestedResult.html;
-            attachments.push(...nestedResult.attachments);
+            // Create a fake email structure for recursive parsing
+            const nestedBoundary = nestedBoundaryMatch[1];
+            const sectionParts = section.split(/\r?\n\r?\n/);
+            const nestedBody = sectionParts.slice(1).join("\n\n");
+            
+            // Parse nested sections directly
+            const nestedEscapedBoundary = nestedBoundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const nestedSections = nestedBody.split(new RegExp(`--${nestedEscapedBoundary}`));
+            
+            for (const nestedSection of nestedSections) {
+              if (!nestedSection.trim() || nestedSection.trim() === "--") continue;
+              
+              const nestedHeaders = parseEmailHeaders(nestedSection);
+              const nestedContentType = (nestedHeaders["content-type"] || "").toLowerCase();
+              const nestedEncoding = (nestedHeaders["content-transfer-encoding"] || "").toLowerCase();
+              
+              const nestedParts = nestedSection.split(/\r?\n\r?\n/);
+              let nestedContent = nestedParts.slice(1).join("\n\n").replace(/--$/, "").trim();
+              
+              // Decode content
+              if (nestedEncoding === "base64") {
+                try {
+                  nestedContent = atob(nestedContent.replace(/\s/g, ""));
+                } catch { /* keep original */ }
+              } else if (nestedEncoding === "quoted-printable") {
+                nestedContent = decodeQuotedPrintable(nestedContent);
+              }
+              
+              if (nestedContentType.includes("text/plain") && !textBody) {
+                textBody = nestedContent;
+              } else if (nestedContentType.includes("text/html") && !htmlBody) {
+                htmlBody = nestedContent;
+              }
+            }
           }
           continue;
         }
@@ -200,8 +309,7 @@ function parseMimeParts(raw: string): { text: string; html: string | null; attac
         
         // Check if this is an attachment
         const isAttachment = contentDisposition.includes("attachment") || 
-                             contentDisposition.includes("inline") ||
-                             (sectionContentType && !sectionContentType.includes("text/plain") && !sectionContentType.includes("text/html"));
+                             (contentDisposition.includes("inline") && sectionContentType.includes("image/"));
         
         // Extract filename from content-disposition or content-type
         let filename = "";
@@ -211,7 +319,13 @@ function parseMimeParts(raw: string): { text: string; html: string | null; attac
           filename = filenameMatch[1].trim();
         }
         
-        if (isAttachment && (filename || sectionContentType.includes("image/") || sectionContentType.includes("application/"))) {
+        // Mark as attachment if it has a filename and is not text/plain or text/html
+        const isImageOrFile = sectionContentType.includes("image/") || 
+                              sectionContentType.includes("application/") ||
+                              sectionContentType.includes("audio/") ||
+                              sectionContentType.includes("video/");
+        
+        if ((isAttachment || isImageOrFile) && (filename || isImageOrFile)) {
           // This is an attachment
           const attachment: EmailAttachment = {
             filename: filename || `attachment_${attachments.length + 1}`,
@@ -221,39 +335,62 @@ function parseMimeParts(raw: string): { text: string; html: string | null; attac
           };
           
           // Calculate approximate size for base64 content
-          if (contentTransferEncoding === "base64") {
+          if (sectionTransferEncoding === "base64") {
             attachment.size = Math.floor(content.replace(/\s/g, "").length * 0.75);
           }
           
           attachments.push(attachment);
           console.log(`Found attachment: ${attachment.filename} (${attachment.contentType}, ${attachment.size} bytes)`);
-        } else if (sectionContentType.includes("text/plain")) {
+        } else if (sectionContentType.includes("text/plain") && !textBody) {
           textBody = content;
           // Decode if needed
-          if (contentTransferEncoding === "base64") {
+          if (sectionTransferEncoding === "base64") {
             try {
               textBody = atob(content.replace(/\s/g, ""));
             } catch { /* keep original */ }
-          } else if (contentTransferEncoding === "quoted-printable") {
+          } else if (sectionTransferEncoding === "quoted-printable") {
             textBody = decodeQuotedPrintable(content);
           }
-        } else if (sectionContentType.includes("text/html")) {
+        } else if (sectionContentType.includes("text/html") && !htmlBody) {
           htmlBody = content;
-          if (contentTransferEncoding === "base64") {
+          if (sectionTransferEncoding === "base64") {
             try {
               htmlBody = atob(content.replace(/\s/g, ""));
             } catch { /* keep original */ }
-          } else if (contentTransferEncoding === "quoted-printable") {
+          } else if (sectionTransferEncoding === "quoted-printable") {
             htmlBody = decodeQuotedPrintable(content);
           }
         }
+      }
+      
+      // Final fallback: if we still have no text, try to extract from raw
+      if (!textBody && !htmlBody) {
+        textBody = extractTextFromRawMime(body);
       }
       
       return { text: textBody, html: htmlBody, attachments };
     }
   }
   
-  return { text: body, html: null, attachments };
+  // Not multipart - check if body looks like MIME and try to parse it
+  if (body.match(/^--[a-zA-Z0-9_-]+/m)) {
+    const extractedText = extractTextFromRawMime(body);
+    if (extractedText) {
+      return { text: extractedText, html: null, attachments };
+    }
+  }
+  
+  // Simple text body - decode if needed
+  let textBody = body;
+  if (contentTransferEncoding.toLowerCase() === "quoted-printable") {
+    textBody = decodeQuotedPrintable(body);
+  } else if (contentTransferEncoding.toLowerCase() === "base64") {
+    try {
+      textBody = atob(body.replace(/\s/g, ""));
+    } catch { /* keep original */ }
+  }
+  
+  return { text: textBody, html: null, attachments };
 }
 
 // Decode quoted-printable content

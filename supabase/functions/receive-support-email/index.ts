@@ -29,56 +29,86 @@ function extractTextFromMime(text: string): string {
   if (!text) return "";
   
   // Check if this is MIME multipart content
-  const boundaryMatch = text.match(/^--([a-zA-Z0-9]+)/m);
+  const boundaryMatch = text.match(/--([a-zA-Z0-9_-]+)/);
   if (!boundaryMatch) {
     // Not MIME content, return as-is
     return text;
   }
   
   const boundary = boundaryMatch[1];
-  const parts = text.split(new RegExp(`--${boundary}(?:--)?`));
+  const parts = text.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:--)?`));
   
-  let plainTextContent = "";
+  let bestText = "";
+  let foundHtml = "";
   
   for (const part of parts) {
-    // Skip empty parts
-    if (!part.trim()) continue;
+    const trimmedPart = part.trim();
+    if (!trimmedPart) continue;
     
-    // Check for Content-Type header
-    const contentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
-    if (!contentTypeMatch) continue;
+    // Look for Content-Type header
+    const contentTypeMatch = trimmedPart.match(/Content-Type:\s*([^;\r\n]+)/i);
+    const contentType = contentTypeMatch ? contentTypeMatch[1].toLowerCase().trim() : "";
     
-    const contentType = contentTypeMatch[1].toLowerCase().trim();
+    // Get content after headers (double newline)
+    const headerEnd = trimmedPart.search(/\r?\n\r?\n/);
+    if (headerEnd === -1) continue;
     
-    // We only want text/plain content
-    if (contentType === "text/plain") {
-      // Find where headers end and content begins (double newline)
-      const headerEndIndex = part.search(/\r?\n\r?\n/);
-      if (headerEndIndex !== -1) {
-        let content = part.substring(headerEndIndex).trim();
-        
-        // Check if it's quoted-printable encoded
-        const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
-        if (encodingMatch && encodingMatch[1].toLowerCase().trim() === "quoted-printable") {
-          content = decodeQuotedPrintableMime(content);
-        }
-        
-        // Check for base64 encoding
-        if (encodingMatch && encodingMatch[1].toLowerCase().trim() === "base64") {
-          try {
-            content = atob(content.replace(/\s/g, ""));
-          } catch {
-            // If decoding fails, keep original
-          }
-        }
-        
-        plainTextContent = content;
-        break; // Found text/plain, use it
+    let content = trimmedPart.substring(headerEnd).trim();
+    
+    // Check for transfer encoding
+    const encodingMatch = trimmedPart.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
+    const encoding = encodingMatch ? encodingMatch[1].toLowerCase().trim() : "";
+    
+    // Handle nested multipart
+    if (contentType.includes("multipart")) {
+      const nestedResult = extractTextFromMime(content);
+      if (nestedResult && !bestText) {
+        bestText = nestedResult;
       }
+      continue;
+    }
+    
+    // Decode content
+    if (encoding === "quoted-printable") {
+      content = decodeQuotedPrintableMime(content);
+    } else if (encoding === "base64") {
+      try {
+        content = atob(content.replace(/\s/g, ""));
+      } catch { /* keep original */ }
+    }
+    
+    // Prefer text/plain
+    if (contentType === "text/plain" && content.trim()) {
+      return content.trim();
+    }
+    
+    // Store HTML as fallback
+    if (contentType === "text/html" && content.trim()) {
+      foundHtml = content.trim();
+    }
+    
+    // Store any text as fallback
+    if (!bestText && content.trim() && !contentType.includes("image/") && !contentType.includes("application/")) {
+      bestText = content.trim();
     }
   }
   
-  return plainTextContent || text;
+  // If we found HTML but no plain text, strip HTML tags
+  if (!bestText && foundHtml) {
+    bestText = foundHtml
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  
+  return bestText || text;
 }
 
 // Decode quoted-printable encoding
