@@ -464,6 +464,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Track processed message IDs within this run to prevent race conditions
+    const processedMessageIds = new Set<string>();
+    
     for (const uid of messageUids) {
       if (!uid) continue;
       
@@ -535,8 +538,16 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Check for duplicate by message_id
+        // Check for duplicate by message_id (in-memory first, then DB)
         if (messageId) {
+          // Check in-memory set first (handles same-run duplicates)
+          if (processedMessageIds.has(messageId)) {
+            console.log(`Duplicate message detected (in-memory): ${messageId}`);
+            await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
+            continue;
+          }
+          
+          // Check database for existing message
           const { data: existingMessage } = await supabase
             .from("support_messages")
             .select("id")
@@ -544,10 +555,14 @@ const handler = async (req: Request): Promise<Response> => {
             .maybeSingle();
 
           if (existingMessage) {
-            console.log(`Duplicate message detected: ${messageId}`);
+            console.log(`Duplicate message detected (DB): ${messageId}`);
+            processedMessageIds.add(messageId);
             await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
             continue;
           }
+          
+          // Mark as being processed
+          processedMessageIds.add(messageId);
         }
 
         // Find existing ticket by message references
@@ -671,6 +686,12 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         if (messageError) {
+          // Handle unique constraint violation (duplicate message_id) gracefully
+          if (messageError.code === '23505' || messageError.message?.includes('duplicate') || messageError.message?.includes('unique')) {
+            console.log(`Duplicate message caught by DB constraint: ${messageId}`);
+            await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
+            continue;
+          }
           console.error("Error inserting message:", messageError);
           errorCount++;
           continue;
