@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -74,46 +75,48 @@ const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444'];
 export default function AdminCampaignDetail() {
   const { id } = useParams();
   const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading, email } = useAdminAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setHasAccess(false);
-        adminNavigate(getLoginPath());
-        return;
-      }
+    if (authLoading) return;
 
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
+    if (!isLoggedIn) {
+      setHasAccess(false);
+      adminNavigate(getLoginPath());
+      return;
+    }
 
-      if (!roleData) {
-        setHasAccess(false);
-        adminNavigate(getLoginPath());
-        return;
-      }
+    if (!email) {
+      setHasAccess(false);
+      adminNavigate(getLoginPath());
+      return;
+    }
 
-      const { data: accessData } = await supabase
+    const checkCampaignAccess = async () => {
+      const { data: accessData, error } = await supabase
         .from('admin_campaign_access')
         .select('has_access')
-        .eq('admin_email', session.user.email ?? '')
+        .eq('admin_email', email)
         .eq('has_access', true)
         .maybeSingle();
+
+      if (error) {
+        setHasAccess(false);
+        adminNavigate(getDashboardPath());
+        return;
+      }
 
       const ok = !!accessData;
       setHasAccess(ok);
       if (!ok) adminNavigate(getDashboardPath());
     };
 
-    checkAccess();
-  }, [adminNavigate, getDashboardPath, getLoginPath]);
+    checkCampaignAccess();
+  }, [adminNavigate, authLoading, email, getDashboardPath, getLoginPath, isLoggedIn]);
+
 
   const { data: campaign, isLoading } = useQuery({
     queryKey: ['campaign', id],
