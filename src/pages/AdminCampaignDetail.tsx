@@ -9,10 +9,30 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft, Edit, Pause, Play, XCircle, Send, Eye,
   TrendingUp, MousePointer, AlertTriangle, Users, Clock,
-  CheckCircle, Mail
+  CheckCircle, Mail, TestTube
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -79,6 +99,9 @@ export default function AdminCampaignDetail() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -249,11 +272,36 @@ export default function AdminCampaignDetail() {
       if (invokeError) console.warn('Queue processor invoke warning:', invokeError);
     },
     onSuccess: () => {
+      setShowSendConfirm(false);
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
       toast.success('Campaign is now sending!');
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to send campaign');
+    },
+  });
+
+  const sendTestMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { error } = await supabase.functions.invoke('send-campaign-test', {
+        body: {
+          campaignId: id,
+          testEmail: email,
+          subject: campaign?.subject || 'Test',
+          htmlContent: campaign?.html_content || '',
+          senderEmail: 'info@propscholar.com',
+          senderName: 'PropScholar',
+        },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setShowTestDialog(false);
+      setTestEmail('');
+      toast.success('Test email sent successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send test email');
     },
   });
 
@@ -345,17 +393,20 @@ export default function AdminCampaignDetail() {
           <div className="flex items-center gap-2">
             {campaign.status === 'draft' && (
               <>
+                <Button variant="outline" onClick={() => setShowTestDialog(true)}>
+                  <TestTube className="w-4 h-4 mr-2" />
+                  Send Test
+                </Button>
                 <Button variant="outline" onClick={() => adminNavigate(`/admin/campaigns/${id}/edit`)}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
                 <Button 
-                  onClick={() => sendCampaignMutation.mutate()}
-                  disabled={sendCampaignMutation.isPending}
+                  onClick={() => setShowSendConfirm(true)}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  {sendCampaignMutation.isPending ? 'Preparing...' : 'Send Now'}
+                  Send Now
                 </Button>
               </>
             )}
@@ -717,6 +768,67 @@ export default function AdminCampaignDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Send Confirmation Dialog */}
+      <AlertDialog open={showSendConfirm} onOpenChange={setShowSendConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Campaign Now?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will send the campaign "{campaign.name}" to all active audience members. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => sendCampaignMutation.mutate()}
+              disabled={sendCampaignMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {sendCampaignMutation.isPending ? 'Sending...' : 'Yes, Send Now'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Test Email Dialog */}
+      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+            <DialogDescription>
+              Send a test version of this campaign to preview how it will look.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-email">Email Address</Label>
+              <Input
+                id="test-email"
+                type="email"
+                placeholder="your@email.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Subject will be prefixed with [TEST] and variables like {"{{first_name}}"} will show as "Test User".
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => sendTestMutation.mutate(testEmail)}
+              disabled={!testEmail || sendTestMutation.isPending}
+            >
+              {sendTestMutation.isPending ? 'Sending...' : 'Send Test'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
