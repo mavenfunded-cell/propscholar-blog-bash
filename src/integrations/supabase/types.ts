@@ -2457,6 +2457,10 @@ export type Database = {
         Args: { campaign_id: string }
         Returns: undefined
       }
+      increment_campaign_failed: {
+        Args: { campaign_id: string }
+        Returns: undefined
+      }
       increment_campaign_open: {
         Args: { campaign_id: string }
         Returns: undefined
