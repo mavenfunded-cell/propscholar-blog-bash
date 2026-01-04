@@ -10,8 +10,9 @@ const corsHeaders = {
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
 const BATCH_SIZE = 10;
-const DELAY_BETWEEN_EMAILS_MS = 2000; // 2 seconds between emails
-const MAX_BOUNCE_RATE = 0.05; // Stop if bounce rate exceeds 5%
+const DELAY_BETWEEN_EMAILS_MS = 2000;
+const MAX_BOUNCE_RATE = 0.05;
+const MAX_CONSECUTIVE_FAILURES = 3; // Stop after 3 consecutive SMTP failures
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -23,7 +24,6 @@ const handler = async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Get campaigns that are scheduled and ready to send
     const now = new Date().toISOString();
     const { data: campaigns, error: campaignError } = await supabase
       .from("campaigns")
@@ -44,13 +44,30 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPassword = Deno.env.get("HOSTINGER_CAMPAIGN_PASSWORD") || Deno.env.get("HOSTINGER_INFO_PASSWORD");
 
     if (!smtpUser || !smtpPassword) {
-      throw new Error("Campaign SMTP credentials not configured");
+      console.error("CRITICAL: Campaign SMTP credentials not configured");
+      // Mark all sending campaigns as failed
+      for (const campaign of campaigns) {
+        await supabase
+          .from("campaigns")
+          .update({ 
+            status: "failed",
+            completed_at: new Date().toISOString()
+          })
+          .eq("id", campaign.id);
+        console.log(`Campaign ${campaign.id} marked as failed - no SMTP credentials`);
+      }
+      return new Response(
+        JSON.stringify({ error: "SMTP credentials not configured", failed: true }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Use the authenticated SMTP email as sender to avoid rejection
     const senderEmail = smtpUser;
 
     for (const campaign of campaigns) {
+      let consecutiveFailures = 0;
+      let criticalError = false;
+
       // Check bounce rate - stop if too high
       if (campaign.sent_count > 10) {
         const bounceRate = campaign.bounce_count / campaign.sent_count;
@@ -82,7 +99,6 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (recipientError) throw recipientError;
       if (!recipients?.length) {
-        // No more recipients - mark campaign as sent
         await supabase
           .from("campaigns")
           .update({ status: "sent", completed_at: new Date().toISOString() })
@@ -91,11 +107,68 @@ const handler = async (req: Request): Promise<Response> => {
         continue;
       }
 
-      // Generate tracking URL base
       const trackingBaseUrl = `${supabaseUrl}/functions/v1`;
 
-      // Send emails - create new client for each to avoid "nested MAIL command" errors
+      // Test SMTP connection first before processing recipients
+      let testClient: SMTPClient | null = null;
+      try {
+        console.log(`Testing SMTP connection for campaign ${campaign.id}...`);
+        testClient = new SMTPClient({
+          connection: {
+            hostname: SMTP_HOST,
+            port: SMTP_PORT,
+            tls: true,
+            auth: {
+              username: smtpUser,
+              password: smtpPassword,
+            },
+          },
+        });
+        await testClient.close();
+        console.log(`SMTP connection test successful for campaign ${campaign.id}`);
+      } catch (smtpTestError: any) {
+        console.error(`CRITICAL: SMTP connection failed for campaign ${campaign.id}:`, smtpTestError.message);
+        
+        // Mark campaign as failed due to SMTP issues
+        await supabase
+          .from("campaigns")
+          .update({ 
+            status: "failed",
+            completed_at: new Date().toISOString()
+          })
+          .eq("id", campaign.id);
+        
+        // Mark all pending recipients as failed
+        await supabase
+          .from("campaign_recipients")
+          .update({ 
+            status: "failed", 
+            error_message: `SMTP connection failed: ${smtpTestError.message}` 
+          })
+          .eq("campaign_id", campaign.id)
+          .eq("status", "pending");
+        
+        console.log(`Campaign ${campaign.id} marked as FAILED - SMTP connection error`);
+        continue; // Skip to next campaign
+      } finally {
+        if (testClient) {
+          try { await testClient.close(); } catch {}
+        }
+      }
+
+      // Send emails
       for (const recipient of recipients) {
+        // Stop if we hit too many consecutive failures
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          console.error(`Campaign ${campaign.id}: Too many consecutive failures (${consecutiveFailures}), pausing...`);
+          await supabase
+            .from("campaigns")
+            .update({ status: "paused" })
+            .eq("id", campaign.id);
+          criticalError = true;
+          break;
+        }
+
         // Skip if recipient has empty/invalid email
         if (!recipient.email || !recipient.email.includes('@')) {
           console.warn(`Skipping recipient with invalid email: ${recipient.email}`);
@@ -111,7 +184,6 @@ const handler = async (req: Request): Promise<Response> => {
 
         let client: SMTPClient | null = null;
         try {
-          // Create fresh SMTP connection for each email
           client = new SMTPClient({
             connection: {
               hostname: SMTP_HOST,
@@ -139,10 +211,8 @@ const handler = async (req: Request): Promise<Response> => {
             /href="([^"]+)"/g,
             (match: string, linkUrl: string) => {
               if (linkUrl.includes("unsubscribe") || linkUrl === "#") {
-                // Unsubscribe link
                 return `href="${trackingBaseUrl}/campaign-unsubscribe?t=${recipient.tracking_id}"`;
               }
-              // Tracked link
               const encodedUrl = encodeURIComponent(linkUrl);
               return `href="${trackingBaseUrl}/track-campaign-click?t=${recipient.tracking_id}&url=${encodedUrl}"`;
             }
@@ -168,19 +238,35 @@ const handler = async (req: Request): Promise<Response> => {
           await supabase.rpc("increment_campaign_sent", { campaign_id: campaign.id });
 
           console.log(`Email sent to ${recipient.email}`);
+          
+          // Reset consecutive failures on success
+          consecutiveFailures = 0;
 
-          // Add randomized delay
+          // Add delay
           const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
 
         } catch (emailError: any) {
-          console.error(`Failed to send to ${recipient.email}:`, emailError);
+          console.error(`Failed to send to ${recipient.email}:`, emailError.message);
+          consecutiveFailures++;
           
-          // Check if it's a bounce
-          const isBounce = emailError.message?.includes("550") || 
-                          emailError.message?.includes("invalid") ||
-                          emailError.message?.includes("not exist");
+          // Check if it's a critical SMTP error (auth, connection, sender rejection)
+          const isCriticalError = 
+            emailError.message?.includes("535") || // Auth failed
+            emailError.message?.includes("authentication") ||
+            emailError.message?.includes("553") || // Sender rejected
+            emailError.message?.includes("connection") ||
+            emailError.message?.includes("EHLO") ||
+            emailError.message?.includes("timed out");
 
+          // Check if it's a bounce (recipient issue, not sender issue)
+          const isBounce = 
+            emailError.message?.includes("550") || 
+            emailError.message?.includes("invalid") ||
+            emailError.message?.includes("not exist") ||
+            emailError.message?.includes("recipient");
+
+          // Update recipient status
           await supabase
             .from("campaign_recipients")
             .update({ 
@@ -189,11 +275,33 @@ const handler = async (req: Request): Promise<Response> => {
             })
             .eq("id", recipient.id);
 
+          // Update bounce count in campaign metrics
           if (isBounce) {
             await supabase.rpc("increment_campaign_bounce", { campaign_id: campaign.id });
           }
+
+          // If critical SMTP error, pause campaign and stop processing
+          if (isCriticalError) {
+            console.error(`CRITICAL SMTP error for campaign ${campaign.id}: ${emailError.message}`);
+            await supabase
+              .from("campaigns")
+              .update({ status: "paused" })
+              .eq("id", campaign.id);
+            
+            // Mark remaining pending recipients as failed
+            await supabase
+              .from("campaign_recipients")
+              .update({ 
+                status: "failed", 
+                error_message: `Campaign paused: ${emailError.message}` 
+              })
+              .eq("campaign_id", campaign.id)
+              .eq("status", "pending");
+            
+            criticalError = true;
+            break;
+          }
         } finally {
-          // Always close the client connection
           if (client) {
             try {
               await client.close();
@@ -202,6 +310,11 @@ const handler = async (req: Request): Promise<Response> => {
             }
           }
         }
+      }
+
+      // If critical error occurred, don't continue with this campaign
+      if (criticalError) {
+        console.log(`Campaign ${campaign.id} stopped due to critical error`);
       }
     }
 
