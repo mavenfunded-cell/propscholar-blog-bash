@@ -132,11 +132,23 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (!emailResponse.ok) {
-      const errorData = await emailResponse.text();
-      console.error("Resend API error:", errorData);
+      const raw = await emailResponse.text();
+      console.error("Resend API error:", raw);
+
+      // Return a 200 so the frontend can show a readable error (Supabase invoke otherwise hides the body)
+      let message = "Failed to send OTP email";
+      try {
+        const parsed = JSON.parse(raw);
+        message = parsed?.message || parsed?.error || message;
+      } catch {
+        // keep default
+      }
+
       return new Response(
-        JSON.stringify({ error: "Failed to send OTP email" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({
+          error: message,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
