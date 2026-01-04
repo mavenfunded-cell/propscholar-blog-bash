@@ -1,21 +1,21 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger 
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Users, Plus, Upload, Download, Search, Tag, Trash2, 
+import {
+  Users, Plus, Upload, Download, Search, Tag, Trash2,
   Mail, UserMinus, ArrowLeft, Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
@@ -45,10 +45,11 @@ interface AudienceTag {
 }
 
 export default function AdminCampaignAudience() {
-  const navigate = useNavigate();
+  const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [search, setSearch] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -57,6 +58,43 @@ export default function AdminCampaignAudience() {
   const [newTag, setNewTag] = useState({ name: '', color: '#6366F1' });
   const [filterTag, setFilterTag] = useState<string | null>(null);
 
+  useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setHasAccess(false);
+        adminNavigate(getLoginPath());
+        return;
+      }
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!roleData) {
+        setHasAccess(false);
+        adminNavigate(getLoginPath());
+        return;
+      }
+
+      const { data: accessData } = await supabase
+        .from('admin_campaign_access')
+        .select('has_access')
+        .eq('admin_email', session.user.email ?? '')
+        .eq('has_access', true)
+        .maybeSingle();
+
+      const ok = !!accessData;
+      setHasAccess(ok);
+      if (!ok) adminNavigate(getDashboardPath());
+    };
+
+    checkAccess();
+  }, [adminNavigate, getDashboardPath, getLoginPath]);
+
   const { data: users, isLoading } = useQuery({
     queryKey: ['audience-users', search, filterTag],
     queryFn: async () => {
@@ -64,11 +102,11 @@ export default function AdminCampaignAudience() {
         .from('audience_users')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (search) {
         query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       }
-      
+
       if (filterTag) {
         query = query.contains('tags', [filterTag]);
       }
@@ -77,6 +115,7 @@ export default function AdminCampaignAudience() {
       if (error) throw error;
       return data as AudienceUser[];
     },
+    enabled: hasAccess === true,
   });
 
   const { data: tags } = useQuery({
@@ -86,10 +125,11 @@ export default function AdminCampaignAudience() {
         .from('audience_tags')
         .select('*')
         .order('name');
-      
+
       if (error) throw error;
       return data as AudienceTag[];
     },
+    enabled: hasAccess === true,
   });
 
   const addUserMutation = useMutation({
@@ -233,7 +273,7 @@ export default function AdminCampaignAudience() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/campaigns')}>
+          <Button variant="ghost" size="icon" onClick={() => adminNavigate('/admin/campaigns')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
