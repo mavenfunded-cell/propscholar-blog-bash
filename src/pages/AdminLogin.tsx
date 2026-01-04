@@ -5,104 +5,93 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
-import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, Loader2, KeyRound, CheckCircle } from 'lucide-react';
 import { isAdminSubdomain } from '@/hooks/useAdminSubdomain';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+// Storage keys
+const ADMIN_SESSION_KEY = 'propscholar_admin_session';
+const ADMIN_EMAIL_KEY = 'propscholar_admin_email';
+const ADMIN_EXPIRES_KEY = 'propscholar_admin_expires';
+
 // Input validation schema
-const loginSchema = z.object({
+const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
+
+type LoginStep = 'email' | 'otp' | 'success';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<LoginStep>('email');
   const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
 
+  // Check for existing valid session on mount
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer admin role check with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminAndRedirect(session.user.id);
-          }, 0);
-        } else {
-          setCheckingAuth(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        checkAdminAndRedirect(session.user.id);
-      } else {
-        setCheckingAuth(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    checkExistingSession();
   }, []);
 
-  const checkAdminAndRedirect = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+  const checkExistingSession = async () => {
+    const sessionToken = localStorage.getItem(ADMIN_SESSION_KEY);
+    const expiresAt = localStorage.getItem(ADMIN_EXPIRES_KEY);
 
-      if (!error && data) {
-        // User is admin, redirect to dashboard
-        navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard', { replace: true });
-      } else {
-        // Not an admin, sign them out
-        await supabase.auth.signOut();
-        toast.error('Access denied', {
-          description: 'You do not have admin privileges.'
-        });
+    if (!sessionToken || !expiresAt) {
+      setCheckingSession(false);
+      return;
+    }
+
+    // Check if session is expired locally first
+    if (new Date(expiresAt) < new Date()) {
+      clearSession();
+      setCheckingSession(false);
+      return;
+    }
+
+    try {
+      // Validate session with server
+      const { data, error } = await supabase.functions.invoke('validate-admin-session', {
+        body: { sessionToken },
+      });
+
+      if (error || !data?.valid) {
+        clearSession();
+        setCheckingSession(false);
+        return;
       }
+
+      // Session is valid, redirect to dashboard
+      navigateToDashboard();
     } catch (err) {
-      console.error('Error checking admin role:', err);
-    } finally {
-      setCheckingAuth(false);
+      console.error('Error validating session:', err);
+      clearSession();
+      setCheckingSession(false);
     }
   };
 
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const clearSession = () => {
+    localStorage.removeItem(ADMIN_SESSION_KEY);
+    localStorage.removeItem(ADMIN_EMAIL_KEY);
+    localStorage.removeItem(ADMIN_EXPIRES_KEY);
+  };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const navigateToDashboard = () => {
+    navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard', { replace: true });
+  };
+
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate inputs
-    const validation = loginSchema.safeParse({ email, password });
+    // Validate email
+    const validation = emailSchema.safeParse({ email });
     if (!validation.success) {
-      const firstError = validation.error.errors[0];
       toast.error('Validation error', {
-        description: firstError.message
+        description: validation.error.errors[0].message
       });
       return;
     }
@@ -110,57 +99,126 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      // Sign in with Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const { data, error } = await supabase.functions.invoke('send-admin-otp', {
+        body: { email: email.trim() },
       });
 
       if (error) {
-        toast.error('Login failed', {
+        toast.error('Failed to send OTP', {
           description: error.message,
         });
         setLoading(false);
         return;
       }
 
-      if (!data.user) {
-        toast.error('Login failed', {
-          description: 'Unable to authenticate. Please try again.',
+      if (data?.error) {
+        toast.error('Access Denied', {
+          description: data.error === 'Unauthorized email address' 
+            ? 'This email is not authorized for admin access.'
+            : data.error,
         });
         setLoading(false);
         return;
       }
 
-      // Check if user has admin role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (roleError || !roleData) {
-        // Not an admin - sign them out
-        await supabase.auth.signOut();
-        toast.error('Access denied', {
-          description: 'You do not have admin privileges.'
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Successfully authenticated as admin
-      toast.success('Welcome back, Admin!');
-      navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard');
+      toast.success('OTP Sent!', {
+        description: 'Check your email for the 6-digit code.',
+      });
+      setStep('otp');
     } catch (err: any) {
-      toast.error('Login error', {
-        description: 'An unexpected error occurred. Please try again.'
+      toast.error('Error', {
+        description: 'Failed to send OTP. Please try again.'
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const handleVerifyOTP = async () => {
+    if (otp.length !== 6) {
+      toast.error('Invalid OTP', {
+        description: 'Please enter the complete 6-digit code.'
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-admin-otp', {
+        body: { email: email.trim(), otp },
+      });
+
+      if (error) {
+        toast.error('Verification failed', {
+          description: error.message,
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error('Invalid OTP', {
+          description: data.error === 'Invalid or expired OTP'
+            ? 'The OTP is incorrect or has expired. Please request a new one.'
+            : data.error,
+        });
+        setOtp('');
+        setLoading(false);
+        return;
+      }
+
+      // Store session in localStorage
+      localStorage.setItem(ADMIN_SESSION_KEY, data.sessionToken);
+      localStorage.setItem(ADMIN_EMAIL_KEY, data.email);
+      localStorage.setItem(ADMIN_EXPIRES_KEY, data.expiresAt);
+
+      setStep('success');
+      toast.success('Welcome back, Admin!');
+      
+      // Redirect after short delay to show success state
+      setTimeout(() => {
+        navigateToDashboard();
+      }, 1000);
+    } catch (err: any) {
+      toast.error('Error', {
+        description: 'Failed to verify OTP. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-admin-otp', {
+        body: { email: email.trim() },
+      });
+
+      if (error || data?.error) {
+        toast.error('Failed to resend OTP');
+        return;
+      }
+
+      toast.success('New OTP sent!', {
+        description: 'Check your email for the new code.',
+      });
+      setOtp('');
+    } catch (err) {
+      toast.error('Failed to resend OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -183,64 +241,133 @@ export default function AdminLogin() {
             </div>
             <CardTitle className="text-2xl">Admin Login</CardTitle>
             <CardDescription>
-              Enter your admin credentials to continue
+              {step === 'email' && 'Enter your admin email to receive an OTP'}
+              {step === 'otp' && 'Enter the 6-digit code sent to your email'}
+              {step === 'success' && 'Authentication successful!'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                    autoComplete="email"
-                  />
+            {step === 'email' && (
+              <form onSubmit={handleSendOTP} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Admin Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="propscholars@gmail.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                      autoComplete="email"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Only authorized admin emails can access this panel.
+                  </p>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  variant="gold" 
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending OTP...
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Send OTP
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
+
+            {step === 'otp' && (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={otp}
+                      onChange={setOtp}
+                      disabled={loading}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    OTP sent to <span className="font-medium text-foreground">{email}</span>
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={handleVerifyOTP}
+                  variant="gold" 
+                  className="w-full"
+                  disabled={loading || otp.length !== 6}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Verify & Login
+                    </>
+                  )}
+                </Button>
+
+                <div className="flex items-center justify-between text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('email');
+                      setOtp('');
+                    }}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
+                  >
+                    ← Change email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    className="text-gold hover:text-gold/80 transition-colors"
+                    disabled={loading}
+                  >
+                    Resend OTP
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                    autoComplete="current-password"
-                  />
+            {step === 'success' && (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-500" />
                 </div>
+                <p className="text-muted-foreground">Redirecting to dashboard...</p>
+                <Loader2 className="h-5 w-5 animate-spin text-gold" />
               </div>
-
-              <Button 
-                type="submit" 
-                variant="gold" 
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Sign In
-                  </>
-                )}
-              </Button>
-            </form>
+            )}
           </CardContent>
         </Card>
       </div>

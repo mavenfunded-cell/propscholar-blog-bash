@@ -1,91 +1,101 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
+
+// Storage keys
+const ADMIN_SESSION_KEY = 'propscholar_admin_session';
+const ADMIN_EMAIL_KEY = 'propscholar_admin_email';
+const ADMIN_EXPIRES_KEY = 'propscholar_admin_expires';
 
 export function useAdminAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer admin role check with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole(session.user.id);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-          setLoading(false);
-        }
-      }
-    );
+  const checkSession = useCallback(async () => {
+    const sessionToken = localStorage.getItem(ADMIN_SESSION_KEY);
+    const storedEmail = localStorage.getItem(ADMIN_EMAIL_KEY);
+    const expiresAt = localStorage.getItem(ADMIN_EXPIRES_KEY);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        checkAdminRole(session.user.id);
-      } else {
-        setIsAdmin(false);
-        setLoading(false);
-      }
-    });
+    if (!sessionToken || !expiresAt) {
+      setIsAdmin(false);
+      setEmail(null);
+      setLoading(false);
+      return;
+    }
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Check if session is expired locally first
+    if (new Date(expiresAt) < new Date()) {
+      clearSession();
+      setIsAdmin(false);
+      setEmail(null);
+      setLoading(false);
+      return;
+    }
 
-  const checkAdminRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+      // Validate session with server
+      const { data, error } = await supabase.functions.invoke('validate-admin-session', {
+        body: { sessionToken },
+      });
 
-      if (error) {
-        console.error('Error checking admin role:', error);
+      if (error || !data?.valid) {
+        clearSession();
         setIsAdmin(false);
+        setEmail(null);
       } else {
-        setIsAdmin(!!data);
+        setIsAdmin(true);
+        setEmail(storedEmail);
       }
     } catch (err) {
-      console.error('Error checking admin role:', err);
+      console.error('Error validating session:', err);
+      clearSession();
       setIsAdmin(false);
+      setEmail(null);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  const clearSession = () => {
+    localStorage.removeItem(ADMIN_SESSION_KEY);
+    localStorage.removeItem(ADMIN_EMAIL_KEY);
+    localStorage.removeItem(ADMIN_EXPIRES_KEY);
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
+    const sessionToken = localStorage.getItem(ADMIN_SESSION_KEY);
+    
+    if (sessionToken) {
+      try {
+        await supabase.functions.invoke('logout-admin', {
+          body: { sessionToken },
+        });
+      } catch (err) {
+        console.error('Error logging out:', err);
+      }
+    }
+    
+    clearSession();
     setIsAdmin(false);
+    setEmail(null);
   };
 
-  // Get access token for API calls
-  const getAccessToken = async (): Promise<string | null> => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
+  // Get session token for API calls
+  const getSessionToken = (): string | null => {
+    return localStorage.getItem(ADMIN_SESSION_KEY);
   };
 
   return { 
-    user, 
-    session, 
     isAdmin, 
     loading, 
+    email,
     signOut, 
-    getAccessToken,
-    isLoggedIn: isAdmin && !loading 
+    getSessionToken,
+    isLoggedIn: isAdmin && !loading,
+    refreshSession: checkSession,
   };
 }

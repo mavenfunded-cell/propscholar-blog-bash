@@ -53,6 +53,69 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_otp_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          otp: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          otp: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          otp?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
+      admin_sessions: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          last_accessed_at: string | null
+          session_token: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          session_token: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          session_token?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       ai_knowledge_base: {
         Row: {
           category: string | null
