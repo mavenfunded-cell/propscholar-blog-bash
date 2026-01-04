@@ -190,6 +190,73 @@ export default function AdminCampaignDetail() {
     },
   });
 
+  const sendCampaignMutation = useMutation({
+    mutationFn: async () => {
+      // First, populate campaign_recipients from audience_users if not already done
+      const { data: existingRecipients } = await supabase
+        .from('campaign_recipients')
+        .select('id')
+        .eq('campaign_id', id)
+        .limit(1);
+
+      if (!existingRecipients?.length) {
+        // Get all active audience users
+        const { data: audienceUsers, error: audienceError } = await supabase
+          .from('audience_users')
+          .select('id, email, first_name')
+          .eq('is_marketing_allowed', true)
+          .is('unsubscribed_at', null);
+
+        if (audienceError) throw audienceError;
+        if (!audienceUsers?.length) throw new Error('No active audience users to send to');
+
+        // Create campaign recipients
+        const recipients = audienceUsers.map(user => ({
+          campaign_id: id!,
+          audience_user_id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          status: 'pending',
+          tracking_id: crypto.randomUUID(),
+        }));
+
+        const { error: insertError } = await supabase
+          .from('campaign_recipients')
+          .insert(recipients);
+        if (insertError) throw insertError;
+
+        // Update campaign total recipients
+        await supabase
+          .from('campaigns')
+          .update({ total_recipients: recipients.length })
+          .eq('id', id);
+      }
+
+      // Set campaign to scheduled (will be picked up by queue processor)
+      const { error: updateError } = await supabase
+        .from('campaigns')
+        .update({ 
+          status: 'scheduled', 
+          scheduled_at: new Date().toISOString(),
+          sender_email: 'info@propscholar.com',
+          sender_name: 'PropScholar'
+        })
+        .eq('id', id);
+      if (updateError) throw updateError;
+
+      // Trigger the campaign queue processor
+      const { error: invokeError } = await supabase.functions.invoke('process-campaign-queue');
+      if (invokeError) console.warn('Queue processor invoke warning:', invokeError);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      toast.success('Campaign is now sending!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send campaign');
+    },
+  });
+
   if (isLoading || !campaign) {
     return <div className="min-h-screen bg-background p-6">Loading...</div>;
   }
@@ -277,10 +344,20 @@ export default function AdminCampaignDetail() {
 
           <div className="flex items-center gap-2">
             {campaign.status === 'draft' && (
-              <Button onClick={() => adminNavigate(`/admin/campaigns/${id}/edit`)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => adminNavigate(`/admin/campaigns/${id}/edit`)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                <Button 
+                  onClick={() => sendCampaignMutation.mutate()}
+                  disabled={sendCampaignMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {sendCampaignMutation.isPending ? 'Preparing...' : 'Send Now'}
+                </Button>
+              </>
             )}
             {(campaign.status === 'sending' || campaign.status === 'paused') && (
               <>
