@@ -47,17 +47,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Campaign SMTP credentials not configured");
     }
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: SMTP_HOST,
-        port: SMTP_PORT,
-        tls: true,
-        auth: {
-          username: smtpUser,
-          password: smtpPassword,
-        },
-      },
-    });
+    // Use the authenticated SMTP email as sender to avoid rejection
+    const senderEmail = smtpUser;
 
     for (const campaign of campaigns) {
       // Check bounce rate - stop if too high
@@ -103,9 +94,36 @@ const handler = async (req: Request): Promise<Response> => {
       // Generate tracking URL base
       const trackingBaseUrl = `${supabaseUrl}/functions/v1`;
 
-      // Send emails
+      // Send emails - create new client for each to avoid "nested MAIL command" errors
       for (const recipient of recipients) {
+        // Skip if recipient has empty/invalid email
+        if (!recipient.email || !recipient.email.includes('@')) {
+          console.warn(`Skipping recipient with invalid email: ${recipient.email}`);
+          await supabase
+            .from("campaign_recipients")
+            .update({ 
+              status: "failed", 
+              error_message: "Invalid email address" 
+            })
+            .eq("id", recipient.id);
+          continue;
+        }
+
+        let client: SMTPClient | null = null;
         try {
+          // Create fresh SMTP connection for each email
+          client = new SMTPClient({
+            connection: {
+              hostname: SMTP_HOST,
+              port: SMTP_PORT,
+              tls: true,
+              auth: {
+                username: smtpUser,
+                password: smtpPassword,
+              },
+            },
+          });
+
           // Replace variables
           let html = campaign.html_content;
           html = html.replace(/\{\{first_name\}\}/g, recipient.first_name || "there");
@@ -130,8 +148,6 @@ const handler = async (req: Request): Promise<Response> => {
             }
           );
 
-          // Always use info@propscholar.com as sender
-          const senderEmail = 'info@propscholar.com';
           const senderName = campaign.sender_name || 'PropScholar';
 
           await client.send({
@@ -176,11 +192,18 @@ const handler = async (req: Request): Promise<Response> => {
           if (isBounce) {
             await supabase.rpc("increment_campaign_bounce", { campaign_id: campaign.id });
           }
+        } finally {
+          // Always close the client connection
+          if (client) {
+            try {
+              await client.close();
+            } catch (closeError) {
+              console.warn("Error closing SMTP connection:", closeError);
+            }
+          }
         }
       }
     }
-
-    await client.close();
 
     return new Response(
       JSON.stringify({ success: true, processed: campaigns.length }),
