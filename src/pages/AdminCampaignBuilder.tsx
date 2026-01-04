@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +18,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { 
-  ArrowLeft, Save, Send, Eye, Smartphone, Monitor, Calendar,
-  Clock, Users, AlertTriangle, CheckCircle, Loader2, Mail
+import {
+  ArrowLeft, Save, Eye, Smartphone, Monitor, Calendar,
+  Users, AlertTriangle, CheckCircle, Loader2, Mail
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -78,10 +79,11 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
 export default function AdminCampaignBuilder() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
   const queryClient = useQueryClient();
-  const isNew = id === 'new';
+  const isNew = id === 'new' || !id;
 
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [campaign, setCampaign] = useState<Partial<Campaign>>({
     name: '',
     subject: '',
@@ -101,6 +103,43 @@ export default function AdminCampaignBuilder() {
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setHasAccess(false);
+        adminNavigate(getLoginPath());
+        return;
+      }
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!roleData) {
+        setHasAccess(false);
+        adminNavigate(getLoginPath());
+        return;
+      }
+
+      const { data: accessData } = await supabase
+        .from('admin_campaign_access')
+        .select('has_access')
+        .eq('admin_email', session.user.email ?? '')
+        .eq('has_access', true)
+        .maybeSingle();
+
+      const ok = !!accessData;
+      setHasAccess(ok);
+      if (!ok) adminNavigate(getDashboardPath());
+    };
+
+    checkAccess();
+  }, [adminNavigate, getDashboardPath, getLoginPath]);
+
   const { data: existingCampaign, isLoading } = useQuery({
     queryKey: ['campaign', id],
     queryFn: async () => {
@@ -113,7 +152,7 @@ export default function AdminCampaignBuilder() {
       if (error) throw error;
       return data as Campaign;
     },
-    enabled: !isNew,
+    enabled: hasAccess === true && !isNew,
   });
 
   const { data: tags } = useQuery({
@@ -126,21 +165,22 @@ export default function AdminCampaignBuilder() {
       if (error) throw error;
       return data;
     },
+    enabled: hasAccess === true,
   });
 
   const { data: audienceCount } = useQuery({
     queryKey: ['audience-count-for-campaign', campaign.target_tags, campaign.exclude_tags],
     queryFn: async () => {
-      let query = supabase
+      const { count, error } = await supabase
         .from('audience_users')
         .select('*', { count: 'exact', head: true })
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
 
-      const { count, error } = await query;
       if (error) throw error;
       return count || 0;
     },
+    enabled: hasAccess === true,
   });
 
   useEffect(() => {
@@ -181,7 +221,7 @@ export default function AdminCampaignBuilder() {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       toast.success('Campaign saved');
       if (isNew && data?.id) {
-        navigate(`/admin/campaigns/${data.id}`, { replace: true });
+        adminNavigate(`/admin/campaigns/${data.id}`);
       }
       setIsSaving(false);
     },
@@ -272,7 +312,7 @@ export default function AdminCampaignBuilder() {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       setScheduleDialogOpen(false);
       toast.success('Campaign scheduled!');
-      navigate('/admin/campaigns');
+      adminNavigate('/admin/campaigns');
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to schedule');
@@ -302,7 +342,7 @@ export default function AdminCampaignBuilder() {
       <div className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/campaigns')}>
+            <Button variant="ghost" size="icon" onClick={() => adminNavigate('/admin/campaigns')}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>

@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Mail, Users, Send, BarChart3, Plus, Eye, Copy, 
+import {
+  Mail, Users, Send, BarChart3, Plus, Eye, Copy,
   Calendar, CheckCircle, Clock, Pause, XCircle,
   TrendingUp, MousePointer, AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Campaign {
@@ -38,8 +38,46 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.C
 };
 
 export default function AdminCampaigns() {
-  const navigate = useNavigate();
+  const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
   const [activeTab, setActiveTab] = useState('all');
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setHasAccess(false);
+        adminNavigate(getLoginPath());
+        return;
+      }
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!roleData) {
+        setHasAccess(false);
+        adminNavigate(getLoginPath());
+        return;
+      }
+
+      const { data: accessData } = await supabase
+        .from('admin_campaign_access')
+        .select('has_access')
+        .eq('admin_email', session.user.email ?? '')
+        .eq('has_access', true)
+        .maybeSingle();
+
+      const ok = !!accessData;
+      setHasAccess(ok);
+      if (!ok) adminNavigate(getDashboardPath());
+    };
+
+    checkAccess();
+  }, [adminNavigate, getDashboardPath, getLoginPath]);
 
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['campaigns'],
@@ -48,10 +86,11 @@ export default function AdminCampaigns() {
         .from('campaigns')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as Campaign[];
     },
+    enabled: hasAccess === true,
   });
 
   const { data: audienceCount } = useQuery({
@@ -62,10 +101,11 @@ export default function AdminCampaigns() {
         .select('*', { count: 'exact', head: true })
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
-      
+
       if (error) throw error;
       return count || 0;
     },
+    enabled: hasAccess === true,
   });
 
   const stats = {
@@ -98,9 +138,9 @@ export default function AdminCampaigns() {
       }])
       .select()
       .single();
-    
+
     if (!error && data) {
-      navigate(`/admin/campaigns/${data.id}`);
+      adminNavigate(`/admin/campaigns/${data.id}`);
     }
   };
 
@@ -116,11 +156,11 @@ export default function AdminCampaigns() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate('/admin/campaigns/audience')}>
+            <Button variant="outline" onClick={() => adminNavigate('/admin/campaigns/audience')}>
               <Users className="w-4 h-4 mr-2" />
               Audience ({audienceCount})
             </Button>
-            <Button onClick={() => navigate('/admin/campaigns/new')}>
+            <Button onClick={() => adminNavigate('/admin/campaigns/new')}>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
             </Button>
@@ -240,7 +280,7 @@ export default function AdminCampaigns() {
                 <p className="text-muted-foreground mb-4">
                   Create your first email campaign to get started
                 </p>
-                <Button onClick={() => navigate('/admin/campaigns/new')}>
+                <Button onClick={() => adminNavigate('/admin/campaigns/new')}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Campaign
                 </Button>
@@ -260,7 +300,7 @@ export default function AdminCampaigns() {
                     <div 
                       key={campaign.id}
                       className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/admin/campaigns/${campaign.id}`)}
+                       onClick={() => adminNavigate(`/admin/campaigns/${campaign.id}`)}
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-2 rounded-lg bg-primary/10">
@@ -292,7 +332,7 @@ export default function AdminCampaigns() {
                             variant="ghost"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/admin/campaigns/${campaign.id}`);
+                               adminNavigate(`/admin/campaigns/${campaign.id}`);
                             }}
                           >
                             <Eye className="w-4 h-4" />
