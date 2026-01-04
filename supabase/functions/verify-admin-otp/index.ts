@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Only this email can login as admin
-const ADMIN_EMAIL = "propscholars@gmail.com";
+const ADMIN_EMAIL = "notehanmalik@gmail.com";
 
 // Session validity in days
 const SESSION_VALIDITY_DAYS = 7;
