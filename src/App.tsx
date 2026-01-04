@@ -50,6 +50,10 @@ import AdminOGImages from "./pages/AdminOGImages";
 import AdminScholarHub from "./pages/AdminScholarHub";
 import AdminCourseVideos from "./pages/AdminCourseVideos";
 import Learn from "./pages/Learn";
+import AdminCampaigns from "./pages/AdminCampaigns";
+import AdminCampaignAudience from "./pages/AdminCampaignAudience";
+import AdminCampaignBuilder from "./pages/AdminCampaignBuilder";
+import AdminCampaignDetail from "./pages/AdminCampaignDetail";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +100,11 @@ function getAdminRoutes(basePath = "") {
     <Route key="og-images" path={`${basePath}/og-images`} element={<AdminOGImages />} />,
     <Route key="scholar-hub" path={`${basePath}/scholar-hub`} element={<AdminScholarHub />} />,
     <Route key="scholar-hub-videos" path={`${basePath}/scholar-hub/:courseId/videos`} element={<AdminCourseVideos />} />,
+    <Route key="campaigns" path={`${basePath}/campaigns`} element={<AdminCampaigns />} />,
+    <Route key="campaigns-audience" path={`${basePath}/campaigns/audience`} element={<AdminCampaignAudience />} />,
+    <Route key="campaigns-new" path={`${basePath}/campaigns/new`} element={<AdminCampaignBuilder />} />,
+    <Route key="campaigns-edit" path={`${basePath}/campaigns/:id/edit`} element={<AdminCampaignBuilder />} />,
+    <Route key="campaigns-detail" path={`${basePath}/campaigns/:id`} element={<AdminCampaignDetail />} />,
   ];
 }
 
