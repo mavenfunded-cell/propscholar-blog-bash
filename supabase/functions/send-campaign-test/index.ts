@@ -66,8 +66,9 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
+    // Always use the authenticated SMTP email as sender to avoid rejection
     await client.send({
-      from: `${senderName || FROM_NAME} <${senderEmail || smtpUser}>`,
+      from: `${senderName || FROM_NAME} <${smtpUser}>`,
       to: testEmail,
       subject: `[TEST] ${subject}`,
       html: processedHtml,
