@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Only this email can receive admin OTP
-const ADMIN_EMAIL = "propscholars@gmail.com";
+const ADMIN_EMAIL = "notehanmalik@gmail.com";
 
 interface OTPRequest {
   email: string;
@@ -80,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "PropScholar Admin <support@propscholar.com>",
+        from: "PropScholar Admin <onboarding@resend.dev>",
         to: [normalizedEmail],
         subject: "Your Admin Login OTP - PropScholar",
         html: `

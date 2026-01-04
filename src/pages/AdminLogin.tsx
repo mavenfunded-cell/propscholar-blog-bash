@@ -256,7 +256,7 @@ export default function AdminLogin() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="propscholars@gmail.com"
+                      placeholder="Enter admin email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
