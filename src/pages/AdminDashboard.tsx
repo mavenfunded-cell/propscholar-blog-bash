@@ -39,6 +39,7 @@ import {
   MessageSquare,
   BarChart3,
   GraduationCap,
+  Megaphone,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -541,6 +542,16 @@ export default function AdminDashboard() {
                   <CardDescription className="flex items-center gap-2">
                     <GraduationCap className="w-4 h-4 text-amber-400" />
                     Scholar Hub
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </AdminLink>
+            <AdminLink to="/admin/campaigns">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer border-rose-500/30 bg-gradient-to-r from-rose-500/10 to-pink-500/10">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Megaphone className="w-4 h-4 text-rose-400" />
+                    Campaigns
                   </CardDescription>
                 </CardHeader>
               </Card>
