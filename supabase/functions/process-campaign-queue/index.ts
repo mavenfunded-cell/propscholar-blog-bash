@@ -130,8 +130,12 @@ const handler = async (req: Request): Promise<Response> => {
             }
           );
 
+          // Always use info@propscholar.com as sender
+          const senderEmail = 'info@propscholar.com';
+          const senderName = campaign.sender_name || 'PropScholar';
+
           await client.send({
-            from: `${campaign.sender_name} <${campaign.sender_email}>`,
+            from: `${senderName} <${senderEmail}>`,
             to: recipient.email,
             subject: campaign.subject,
             html: html,
