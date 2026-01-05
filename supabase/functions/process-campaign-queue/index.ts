@@ -89,230 +89,193 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("id", campaign.id);
       }
 
-      // Get pending recipients
-      const { data: recipients, error: recipientError } = await supabase
-        .from("campaign_recipients")
-        .select("*")
-        .eq("campaign_id", campaign.id)
-        .eq("status", "pending")
-        .limit(BATCH_SIZE);
-
-      if (recipientError) throw recipientError;
-      if (!recipients?.length) {
-        await supabase
-          .from("campaigns")
-          .update({ status: "sent", completed_at: new Date().toISOString() })
-          .eq("id", campaign.id);
-        console.log(`Campaign ${campaign.id} completed`);
-        continue;
-      }
-
       const trackingBaseUrl = `${supabaseUrl}/functions/v1`;
 
-      // Test SMTP connection first before processing recipients
-      let testClient: SMTPClient | null = null;
-      try {
-        console.log(`Testing SMTP connection for campaign ${campaign.id}...`);
-        testClient = new SMTPClient({
-          connection: {
-            hostname: SMTP_HOST,
-            port: SMTP_PORT,
-            tls: true,
-            auth: {
-              username: smtpUser,
-              password: smtpPassword,
-            },
-          },
-        });
-        await testClient.close();
-        console.log(`SMTP connection test successful for campaign ${campaign.id}`);
-      } catch (smtpTestError: any) {
-        console.error(`CRITICAL: SMTP connection failed for campaign ${campaign.id}:`, smtpTestError.message);
-        
-        // Mark campaign as failed due to SMTP issues
-        await supabase
-          .from("campaigns")
-          .update({ 
-            status: "failed",
-            completed_at: new Date().toISOString()
-          })
-          .eq("id", campaign.id);
-        
-        // Mark all pending recipients as failed
-        await supabase
-          .from("campaign_recipients")
-          .update({ 
-            status: "failed", 
-            error_message: `SMTP connection failed: ${smtpTestError.message}` 
-          })
-          .eq("campaign_id", campaign.id)
-          .eq("status", "pending");
-        
-        console.log(`Campaign ${campaign.id} marked as FAILED - SMTP connection error`);
-        continue; // Skip to next campaign
-      } finally {
-        if (testClient) {
-          try { await testClient.close(); } catch {}
-        }
-      }
+      // Process recipients in a loop so the campaign doesn't get stuck in "sending"
+      // (edge functions are short-lived, so we stop when we near the runtime limit)
+      const campaignStart = Date.now();
+      const MAX_RUNTIME_MS = 55_000;
 
-      // Send emails
-      for (const recipient of recipients) {
-        // Stop if we hit too many consecutive failures
-        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-          console.error(`Campaign ${campaign.id}: Too many consecutive failures (${consecutiveFailures}), pausing...`);
+      while (Date.now() - campaignStart < MAX_RUNTIME_MS) {
+        // Get pending recipients (batch)
+        const { data: recipients, error: recipientError } = await supabase
+          .from("campaign_recipients")
+          .select("*")
+          .eq("campaign_id", campaign.id)
+          .eq("status", "pending")
+          .limit(BATCH_SIZE);
+
+        if (recipientError) throw recipientError;
+
+        // No more recipients => campaign complete
+        if (!recipients?.length) {
           await supabase
             .from("campaigns")
-            .update({ status: "paused" })
+            .update({ status: "sent", completed_at: new Date().toISOString() })
             .eq("id", campaign.id);
-          criticalError = true;
+          console.log(`Campaign ${campaign.id} completed`);
           break;
         }
 
-        // Skip if recipient has empty/invalid email
-        if (!recipient.email || !recipient.email.includes('@')) {
-          console.warn(`Skipping recipient with invalid email: ${recipient.email}`);
-          await supabase
-            .from("campaign_recipients")
-            .update({ 
-              status: "failed", 
-              error_message: "Invalid email address" 
-            })
-            .eq("id", recipient.id);
-          continue;
-        }
+        // Send emails
+        for (const recipient of recipients) {
+          // Stop if we hit too many consecutive failures
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            console.error(
+              `Campaign ${campaign.id}: Too many consecutive failures (${consecutiveFailures}), pausing...`
+            );
+            await supabase
+              .from("campaigns")
+              .update({ status: "paused" })
+              .eq("id", campaign.id);
+            criticalError = true;
+            break;
+          }
 
-        let client: SMTPClient | null = null;
-        try {
-          client = new SMTPClient({
-            connection: {
-              hostname: SMTP_HOST,
-              port: SMTP_PORT,
-              tls: true,
-              auth: {
-                username: smtpUser,
-                password: smtpPassword,
+          // Stop if we're near runtime limit
+          if (Date.now() - campaignStart >= MAX_RUNTIME_MS) {
+            console.log(`Campaign ${campaign.id}: runtime limit reached, will continue next run`);
+            break;
+          }
+
+          // Skip if recipient has empty/invalid email
+          if (!recipient.email || !recipient.email.includes("@")) {
+            console.warn(`Skipping recipient with invalid email: ${recipient.email}`);
+            await supabase
+              .from("campaign_recipients")
+              .update({ status: "failed", error_message: "Invalid email address" })
+              .eq("id", recipient.id);
+            continue;
+          }
+
+          let client: SMTPClient | null = null;
+          try {
+            client = new SMTPClient({
+              connection: {
+                hostname: SMTP_HOST,
+                port: SMTP_PORT,
+                tls: true,
+                auth: {
+                  username: smtpUser,
+                  password: smtpPassword,
+                },
               },
-            },
-          });
+            });
 
-          // Replace variables
-          let html = campaign.html_content;
-          html = html.replace(/\{\{first_name\}\}/g, recipient.first_name || "there");
-          html = html.replace(/\{\{email\}\}/g, recipient.email);
-          html = html.replace(/\{\{subject\}\}/g, campaign.subject);
-          
-          // Add tracking pixel
-          const trackingPixel = `<img src="${trackingBaseUrl}/track-campaign-open?t=${recipient.tracking_id}" width="1" height="1" style="display:none;" />`;
-          html = html.replace("</body>", `${trackingPixel}</body>`);
-          
-          // Replace links with tracking links
-          html = html.replace(
-            /href="([^"]+)"/g,
-            (match: string, linkUrl: string) => {
+            // Replace variables
+            let html = campaign.html_content;
+            html = html.replace(/\{\{first_name\}\}/g, recipient.first_name || "there");
+            html = html.replace(/\{\{email\}\}/g, recipient.email);
+            html = html.replace(/\{\{subject\}\}/g, campaign.subject);
+
+            // Add tracking pixel
+            const trackingPixel = `<img src="${trackingBaseUrl}/track-campaign-open?t=${recipient.tracking_id}" width="1" height="1" style="display:none;" />`;
+            html = html.replace("</body>", `${trackingPixel}</body>`);
+
+            // Replace links with tracking links
+            html = html.replace(/href="([^"]+)"/g, (match: string, linkUrl: string) => {
               if (linkUrl.includes("unsubscribe") || linkUrl === "#") {
                 return `href="${trackingBaseUrl}/campaign-unsubscribe?t=${recipient.tracking_id}"`;
               }
               const encodedUrl = encodeURIComponent(linkUrl);
               return `href="${trackingBaseUrl}/track-campaign-click?t=${recipient.tracking_id}&url=${encodedUrl}"`;
-            }
-          );
+            });
 
-          const senderName = campaign.sender_name || 'PropScholar';
+            const senderName = campaign.sender_name || "PropScholar";
 
-          await client.send({
-            from: `${senderName} <${senderEmail}>`,
-            to: recipient.email,
-            subject: campaign.subject,
-            html: html,
-            content: campaign.plain_text_content || undefined,
-          });
+            await client.send({
+              from: `${senderName} <${senderEmail}>`,
+              to: recipient.email,
+              subject: campaign.subject,
+              html,
+              content: campaign.plain_text_content || undefined,
+            });
 
-          // Mark as sent
-          await supabase
-            .from("campaign_recipients")
-            .update({ status: "sent", sent_at: new Date().toISOString() })
-            .eq("id", recipient.id);
-
-          // Update campaign sent count
-          await supabase.rpc("increment_campaign_sent", { campaign_id: campaign.id });
-
-          console.log(`Email sent to ${recipient.email}`);
-          
-          // Reset consecutive failures on success
-          consecutiveFailures = 0;
-
-          // Add delay
-          const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-
-        } catch (emailError: any) {
-          console.error(`Failed to send to ${recipient.email}:`, emailError.message);
-          consecutiveFailures++;
-          
-          // Check if it's a critical SMTP error (auth, connection, sender rejection)
-          const isCriticalError = 
-            emailError.message?.includes("535") || // Auth failed
-            emailError.message?.includes("authentication") ||
-            emailError.message?.includes("553") || // Sender rejected
-            emailError.message?.includes("connection") ||
-            emailError.message?.includes("EHLO") ||
-            emailError.message?.includes("timed out");
-
-          // Check if it's a bounce (recipient issue, not sender issue)
-          const isBounce = 
-            emailError.message?.includes("550") || 
-            emailError.message?.includes("invalid") ||
-            emailError.message?.includes("not exist") ||
-            emailError.message?.includes("recipient");
-
-          // Update recipient status
-          await supabase
-            .from("campaign_recipients")
-            .update({ 
-              status: isBounce ? "bounced" : "failed", 
-              error_message: emailError.message 
-            })
-            .eq("id", recipient.id);
-
-          // Update bounce count in campaign metrics
-          if (isBounce) {
-            await supabase.rpc("increment_campaign_bounce", { campaign_id: campaign.id });
-          }
-
-          // If critical SMTP error, pause campaign and stop processing
-          if (isCriticalError) {
-            console.error(`CRITICAL SMTP error for campaign ${campaign.id}: ${emailError.message}`);
-            await supabase
-              .from("campaigns")
-              .update({ status: "paused" })
-              .eq("id", campaign.id);
-            
-            // Mark remaining pending recipients as failed
+            // Mark as sent
             await supabase
               .from("campaign_recipients")
-              .update({ 
-                status: "failed", 
-                error_message: `Campaign paused: ${emailError.message}` 
+              .update({ status: "sent", sent_at: new Date().toISOString() })
+              .eq("id", recipient.id);
+
+            // Update campaign sent count
+            await supabase.rpc("increment_campaign_sent", { campaign_id: campaign.id });
+
+            console.log(`Email sent to ${recipient.email}`);
+
+            // Reset consecutive failures on success
+            consecutiveFailures = 0;
+
+            // Add delay
+            const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 1000;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          } catch (emailError: any) {
+            console.error(`Failed to send to ${recipient.email}:`, emailError?.message || emailError);
+            consecutiveFailures++;
+
+            const msg = emailError?.message || String(emailError);
+
+            // Critical SMTP errors (stop the campaign)
+            const isCriticalError =
+              msg.includes("535") ||
+              msg.toLowerCase().includes("authentication") ||
+              msg.includes("553") ||
+              msg.toLowerCase().includes("sender") ||
+              msg.toLowerCase().includes("connection") ||
+              msg.toLowerCase().includes("ehlo") ||
+              msg.toLowerCase().includes("timed out");
+
+            // Bounce-type errors (recipient issue)
+            const isBounce =
+              msg.includes("550") ||
+              msg.toLowerCase().includes("invalid") ||
+              msg.toLowerCase().includes("not exist") ||
+              msg.toLowerCase().includes("recipient");
+
+            await supabase
+              .from("campaign_recipients")
+              .update({
+                status: isBounce ? "bounced" : "failed",
+                error_message: msg,
               })
-              .eq("campaign_id", campaign.id)
-              .eq("status", "pending");
-            
-            criticalError = true;
-            break;
-          }
-        } finally {
-          if (client) {
-            try {
-              await client.close();
-            } catch (closeError) {
-              console.warn("Error closing SMTP connection:", closeError);
+              .eq("id", recipient.id);
+
+            if (isBounce) {
+              await supabase.rpc("increment_campaign_bounce", { campaign_id: campaign.id });
+            }
+
+            if (isCriticalError) {
+              console.error(`CRITICAL SMTP error for campaign ${campaign.id}: ${msg}`);
+              await supabase
+                .from("campaigns")
+                .update({ status: "failed", completed_at: new Date().toISOString() })
+                .eq("id", campaign.id);
+
+              await supabase
+                .from("campaign_recipients")
+                .update({
+                  status: "failed",
+                  error_message: `Campaign failed: ${msg}`,
+                })
+                .eq("campaign_id", campaign.id)
+                .eq("status", "pending");
+
+              criticalError = true;
+              break;
+            }
+          } finally {
+            if (client) {
+              try {
+                await client.close();
+              } catch (closeError) {
+                console.warn("Error closing SMTP connection:", closeError);
+              }
             }
           }
         }
+
+        if (criticalError) break;
       }
 
-      // If critical error occurred, don't continue with this campaign
       if (criticalError) {
         console.log(`Campaign ${campaign.id} stopped due to critical error`);
       }
