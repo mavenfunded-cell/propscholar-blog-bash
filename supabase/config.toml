@@ -51,5 +51,14 @@ verify_jwt = false
 [functions.admin-update-ticket-status]
 verify_jwt = false
 
+[functions.track-campaign-open]
+verify_jwt = false
+
+[functions.track-campaign-click]
+verify_jwt = false
+
+[functions.campaign-unsubscribe]
+verify_jwt = false
+
 [functions.suggest-ticket-reply]
 verify_jwt = true

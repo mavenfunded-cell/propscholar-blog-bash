@@ -168,9 +168,13 @@ const handler = async (req: Request): Promise<Response> => {
             html = html.replace(/\{\{email\}\}/g, recipient.email);
             html = html.replace(/\{\{subject\}\}/g, campaign.subject);
 
-            // Add tracking pixel
+            // Add tracking pixel (robust to missing/uppercase </body>)
             const trackingPixel = `<img src="${trackingBaseUrl}/track-campaign-open?t=${recipient.tracking_id}" width="1" height="1" style="display:none;" />`;
-            html = html.replace("</body>", `${trackingPixel}</body>`);
+            if (/<\/body>/i.test(html)) {
+              html = html.replace(/<\/body>/i, `${trackingPixel}</body>`);
+            } else {
+              html = `${html}${trackingPixel}`;
+            }
 
             // Replace links with tracking links
             html = html.replace(/href="([^"]+)"/g, (match: string, linkUrl: string) => {
