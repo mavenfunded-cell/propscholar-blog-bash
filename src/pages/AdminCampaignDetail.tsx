@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,15 +32,16 @@ import {
 import {
   ArrowLeft, Edit, Pause, Play, XCircle, Send, Eye,
   TrendingUp, MousePointer, AlertTriangle, Users, Clock,
-  CheckCircle, Mail, TestTube
+  CheckCircle, Mail, TestTube, RefreshCw, BarChart3, Calendar
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO, getHours, getDay, startOfHour, subHours } from 'date-fns';
 import { toast } from 'sonner';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
 
 interface Campaign {
@@ -69,6 +70,7 @@ interface CampaignEvent {
   device_type: string | null;
   country: string | null;
   created_at: string;
+  user_agent: string | null;
 }
 
 interface CampaignRecipient {
@@ -79,6 +81,7 @@ interface CampaignRecipient {
   sent_at: string | null;
   opened_at: string | null;
   clicked_at: string | null;
+  error_message: string | null;
 }
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -88,9 +91,11 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   sent: { label: 'Sent', color: 'bg-green-500/20 text-green-400' },
   paused: { label: 'Paused', color: 'bg-orange-500/20 text-orange-400' },
   cancelled: { label: 'Cancelled', color: 'bg-red-500/20 text-red-400' },
+  failed: { label: 'Failed', color: 'bg-red-500/20 text-red-400' },
 };
 
-const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444'];
+const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AdminCampaignDetail() {
   const { id } = useParams();
@@ -141,7 +146,7 @@ export default function AdminCampaignDetail() {
   }, [adminNavigate, authLoading, email, getDashboardPath, getLoginPath, isLoggedIn]);
 
 
-  const { data: campaign, isLoading } = useQuery({
+  const { data: campaign, isLoading, refetch: refetchCampaign } = useQuery({
     queryKey: ['campaign', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -153,9 +158,11 @@ export default function AdminCampaignDetail() {
       return data as Campaign;
     },
     enabled: hasAccess === true && !!id,
+    refetchInterval: (query) => 
+      query.state.data?.status === 'sending' ? 5000 : false,
   });
 
-  const { data: events } = useQuery({
+  const { data: events, refetch: refetchEvents } = useQuery({
     queryKey: ['campaign-events', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -163,14 +170,15 @@ export default function AdminCampaignDetail() {
         .select('*')
         .eq('campaign_id', id)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       if (error) throw error;
       return data as CampaignEvent[];
     },
     enabled: hasAccess === true && !!campaign && campaign.status !== 'draft',
+    refetchInterval: campaign?.status === 'sending' || campaign?.status === 'sent' ? 10000 : false,
   });
 
-  const { data: recipients } = useQuery({
+  const { data: recipients, refetch: refetchRecipients } = useQuery({
     queryKey: ['campaign-recipients', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -178,12 +186,124 @@ export default function AdminCampaignDetail() {
         .select('*')
         .eq('campaign_id', id)
         .order('sent_at', { ascending: false })
-        .limit(100);
+        .limit(200);
       if (error) throw error;
       return data as CampaignRecipient[];
     },
     enabled: hasAccess === true && !!campaign && campaign.status !== 'draft',
+    refetchInterval: campaign?.status === 'sending' ? 5000 : false,
   });
+
+  const handleRefresh = () => {
+    refetchCampaign();
+    refetchEvents();
+    refetchRecipients();
+    toast.success('Data refreshed');
+  };
+
+  // Advanced analytics calculations
+  const analytics = useMemo(() => {
+    if (!events?.length) return null;
+
+    const openEvents = events.filter(e => e.event_type === 'open');
+    const clickEvents = events.filter(e => e.event_type === 'click');
+
+    // Hourly heatmap (0-23 hours)
+    const hourlyOpens: number[] = Array(24).fill(0);
+    const hourlyClicks: number[] = Array(24).fill(0);
+    
+    openEvents.forEach(e => {
+      const hour = getHours(parseISO(e.created_at));
+      hourlyOpens[hour]++;
+    });
+    
+    clickEvents.forEach(e => {
+      const hour = getHours(parseISO(e.created_at));
+      hourlyClicks[hour]++;
+    });
+
+    // Best hour to send
+    const bestHourForOpens = hourlyOpens.indexOf(Math.max(...hourlyOpens));
+    const bestHourForClicks = hourlyClicks.indexOf(Math.max(...hourlyClicks));
+
+    // Day of week analysis
+    const dayOpens: number[] = Array(7).fill(0);
+    const dayClicks: number[] = Array(7).fill(0);
+    
+    openEvents.forEach(e => {
+      const day = getDay(parseISO(e.created_at));
+      dayOpens[day]++;
+    });
+    
+    clickEvents.forEach(e => {
+      const day = getDay(parseISO(e.created_at));
+      dayClicks[day]++;
+    });
+
+    const bestDayForOpens = dayOpens.indexOf(Math.max(...dayOpens));
+
+    // Device breakdown
+    const devices: Record<string, number> = {};
+    events.forEach(e => {
+      const device = e.device_type || 'unknown';
+      devices[device] = (devices[device] || 0) + 1;
+    });
+
+    // Timeline data (last 24 hours grouped by hour)
+    const timelineData: { time: string; opens: number; clicks: number }[] = [];
+    const now = new Date();
+    for (let i = 23; i >= 0; i--) {
+      const hourStart = startOfHour(subHours(now, i));
+      const hourEnd = startOfHour(subHours(now, i - 1));
+      const hourLabel = format(hourStart, 'HH:mm');
+      
+      const opens = openEvents.filter(e => {
+        const eventTime = parseISO(e.created_at);
+        return eventTime >= hourStart && eventTime < hourEnd;
+      }).length;
+      
+      const clicks = clickEvents.filter(e => {
+        const eventTime = parseISO(e.created_at);
+        return eventTime >= hourStart && eventTime < hourEnd;
+      }).length;
+      
+      timelineData.push({ time: hourLabel, opens, clicks });
+    }
+
+    // Link performance
+    const linkPerformance: Record<string, number> = {};
+    clickEvents.forEach(e => {
+      if (e.link_url) {
+        linkPerformance[e.link_url] = (linkPerformance[e.link_url] || 0) + 1;
+      }
+    });
+
+    // First and last engagement times
+    const sortedOpens = [...openEvents].sort((a, b) => 
+      parseISO(a.created_at).getTime() - parseISO(b.created_at).getTime()
+    );
+    const firstOpen = sortedOpens[0]?.created_at;
+    const lastOpen = sortedOpens[sortedOpens.length - 1]?.created_at;
+
+    return {
+      hourlyOpens,
+      hourlyClicks,
+      bestHourForOpens,
+      bestHourForClicks,
+      dayOpens,
+      dayClicks,
+      bestDayForOpens,
+      devices,
+      timelineData,
+      linkPerformance,
+      firstOpen,
+      lastOpen,
+      totalOpens: openEvents.length,
+      uniqueOpens: campaign?.open_count || 0,
+      totalClicks: clickEvents.length,
+      uniqueClicks: campaign?.click_count || 0,
+    };
+  }, [events, campaign]);
 
   const pauseCampaignMutation = useMutation({
     mutationFn: async () => {
@@ -315,6 +435,9 @@ export default function AdminCampaignDetail() {
   const clickRate = campaign.open_count > 0 
     ? ((campaign.click_count / campaign.open_count) * 100).toFixed(1) 
     : '0';
+  const clickToSentRate = campaign.sent_count > 0
+    ? ((campaign.click_count / campaign.sent_count) * 100).toFixed(1)
+    : '0';
   const bounceRate = campaign.sent_count > 0 
     ? ((campaign.bounce_count / campaign.sent_count) * 100).toFixed(1) 
     : '0';
@@ -326,49 +449,34 @@ export default function AdminCampaignDetail() {
     ? (campaign.sent_count / campaign.total_recipients) * 100 
     : 0;
 
-  // Group events by hour for chart
-  const hourlyData = events?.reduce((acc, event) => {
-    const hour = format(new Date(event.created_at), 'HH:00');
-    const existing = acc.find(d => d.hour === hour);
-    if (existing) {
-      if (event.event_type === 'open') existing.opens++;
-      if (event.event_type === 'click') existing.clicks++;
-    } else {
-      acc.push({
-        hour,
-        opens: event.event_type === 'open' ? 1 : 0,
-        clicks: event.event_type === 'click' ? 1 : 0,
-      });
-    }
-    return acc;
-  }, [] as { hour: string; opens: number; clicks: number }[]) || [];
+  // Hourly heatmap data for chart
+  const hourlyChartData = analytics ? 
+    analytics.hourlyOpens.map((opens, hour) => ({
+      hour: `${hour.toString().padStart(2, '0')}:00`,
+      opens,
+      clicks: analytics.hourlyClicks[hour],
+    })) : [];
+
+  // Day of week data
+  const dayChartData = analytics ?
+    DAY_NAMES.map((name, i) => ({
+      day: name,
+      opens: analytics.dayOpens[i],
+      clicks: analytics.dayClicks[i],
+    })) : [];
 
   // Device breakdown
-  const deviceData = events?.reduce((acc, event) => {
-    const device = event.device_type || 'Unknown';
-    const existing = acc.find(d => d.name === device);
-    if (existing) {
-      existing.value++;
-    } else {
-      acc.push({ name: device, value: 1 });
-    }
-    return acc;
-  }, [] as { name: string; value: number }[]) || [];
+  const deviceData = analytics ?
+    Object.entries(analytics.devices).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+    })) : [];
 
-  // Link clicks
-  const linkClicks = events
-    ?.filter(e => e.event_type === 'click' && e.link_url)
-    .reduce((acc, event) => {
-      const url = event.link_url!;
-      const existing = acc.find(l => l.url === url);
-      if (existing) {
-        existing.clicks++;
-      } else {
-        acc.push({ url, clicks: 1 });
-      }
-      return acc;
-    }, [] as { url: string; clicks: number }[])
-    .sort((a, b) => b.clicks - a.clicks) || [];
+  // Link clicks sorted
+  const linkClicks = analytics ?
+    Object.entries(analytics.linkPerformance)
+      .map(([url, clicks]) => ({ url, clicks }))
+      .sort((a, b) => b.clicks - a.clicks) : [];
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -391,6 +499,9 @@ export default function AdminCampaignDetail() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4" />
+            </Button>
             {campaign.status === 'draft' && (
               <>
                 <Button variant="outline" onClick={() => setShowTestDialog(true)}>
@@ -493,7 +604,7 @@ export default function AdminCampaignDetail() {
                 <MousePointer className="w-8 h-8 text-purple-500" />
                 <div>
                   <p className="text-2xl font-bold">{clickRate}%</p>
-                  <p className="text-xs text-muted-foreground">Clicks ({campaign.click_count})</p>
+                  <p className="text-xs text-muted-foreground">CTR ({campaign.click_count})</p>
                 </div>
               </div>
             </CardContent>
@@ -528,6 +639,7 @@ export default function AdminCampaignDetail() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="analytics">Advanced Analytics</TabsTrigger>
             <TabsTrigger value="recipients">Recipients</TabsTrigger>
             <TabsTrigger value="links">Link Performance</TabsTrigger>
             <TabsTrigger value="content">Email Content</TabsTrigger>
@@ -535,17 +647,20 @@ export default function AdminCampaignDetail() {
 
           <TabsContent value="overview" className="space-y-6 mt-6">
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Engagement Chart */}
+              {/* Engagement Timeline */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Engagement Over Time</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Engagement Timeline (Last 24h)
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {hourlyData.length > 0 ? (
+                  {analytics?.timelineData?.length ? (
                     <ResponsiveContainer width="100%" height={250}>
-                      <AreaChart data={hourlyData}>
-                        <XAxis dataKey="hour" />
-                        <YAxis />
+                      <AreaChart data={analytics.timelineData}>
+                        <XAxis dataKey="time" fontSize={10} />
+                        <YAxis fontSize={10} />
                         <Tooltip />
                         <Area 
                           type="monotone" 
@@ -609,6 +724,44 @@ export default function AdminCampaignDetail() {
               </Card>
             </div>
 
+            {/* Engagement Stats */}
+            {analytics && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">First Open</p>
+                    <p className="font-semibold">
+                      {analytics.firstOpen 
+                        ? format(parseISO(analytics.firstOpen), 'MMM d, h:mm a')
+                        : 'N/A'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Last Open</p>
+                    <p className="font-semibold">
+                      {analytics.lastOpen 
+                        ? format(parseISO(analytics.lastOpen), 'MMM d, h:mm a')
+                        : 'N/A'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Opens</p>
+                    <p className="font-semibold">{analytics.totalOpens} ({analytics.uniqueOpens} unique)</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Clicks</p>
+                    <p className="font-semibold">{analytics.totalClicks} ({analytics.uniqueClicks} unique)</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Timeline */}
             <Card>
               <CardHeader>
@@ -671,6 +824,99 @@ export default function AdminCampaignDetail() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="analytics" className="space-y-6 mt-6">
+            {analytics ? (
+              <>
+                {/* Best Time Insights */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Clock className="w-6 h-6 text-primary" />
+                        <h3 className="font-semibold">Best Hour for Opens</h3>
+                      </div>
+                      <p className="text-3xl font-bold">{analytics.bestHourForOpens}:00</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {analytics.hourlyOpens[analytics.bestHourForOpens]} opens at this hour
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <MousePointer className="w-6 h-6 text-green-500" />
+                        <h3 className="font-semibold">Best Hour for Clicks</h3>
+                      </div>
+                      <p className="text-3xl font-bold">{analytics.bestHourForClicks}:00</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {analytics.hourlyClicks[analytics.bestHourForClicks]} clicks at this hour
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Calendar className="w-6 h-6 text-purple-500" />
+                        <h3 className="font-semibold">Best Day for Opens</h3>
+                      </div>
+                      <p className="text-3xl font-bold">{DAY_NAMES[analytics.bestDayForOpens]}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {analytics.dayOpens[analytics.bestDayForOpens]} opens on this day
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Hourly Heatmap */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      Engagement by Hour of Day
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={hourlyChartData}>
+                        <XAxis dataKey="hour" fontSize={10} interval={2} />
+                        <YAxis fontSize={10} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="opens" fill="#6366f1" name="Opens" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="clicks" fill="#22c55e" name="Clicks" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Day of Week Analysis */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Engagement by Day of Week</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={dayChartData}>
+                        <XAxis dataKey="day" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="opens" fill="#6366f1" name="Opens" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="clicks" fill="#22c55e" name="Clicks" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  No analytics data available yet. Send the campaign to start tracking.
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="recipients" className="mt-6">
             <Card>
               <CardContent className="p-0">
@@ -683,6 +929,7 @@ export default function AdminCampaignDetail() {
                       <TableHead>Sent</TableHead>
                       <TableHead>Opened</TableHead>
                       <TableHead>Clicked</TableHead>
+                      <TableHead>Error</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -696,6 +943,7 @@ export default function AdminCampaignDetail() {
                             recipient.status === 'opened' ? 'secondary' :
                             recipient.status === 'sent' ? 'outline' :
                             recipient.status === 'bounced' ? 'destructive' :
+                            recipient.status === 'failed' ? 'destructive' :
                             'outline'
                           }>
                             {recipient.status}
@@ -709,6 +957,9 @@ export default function AdminCampaignDetail() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {recipient.clicked_at ? format(new Date(recipient.clicked_at), 'MMM d, h:mm a') : '-'}
+                        </TableCell>
+                        <TableCell className="text-destructive text-xs max-w-[200px] truncate">
+                          {recipient.error_message || '-'}
                         </TableCell>
                       </TableRow>
                     ))}

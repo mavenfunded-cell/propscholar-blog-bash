@@ -14,9 +14,12 @@ const handler = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
   const trackingId = url.searchParams.get("t");
 
+  console.log(`[OPEN TRACK] Request received with tracking_id: ${trackingId}`);
+
   if (!trackingId) {
+    console.log("[OPEN TRACK] No tracking ID provided");
     return new Response(TRACKING_PIXEL, {
-      headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
+      headers: { "Content-Type": "image/gif", "Cache-Control": "no-store, no-cache, must-revalidate" },
     });
   }
 
@@ -28,30 +31,36 @@ const handler = async (req: Request): Promise<Response> => {
     // Get recipient by tracking ID
     const { data: recipient, error: recipientError } = await supabase
       .from("campaign_recipients")
-      .select("id, campaign_id, audience_user_id, opened_at")
+      .select("id, campaign_id, audience_user_id, opened_at, email")
       .eq("tracking_id", trackingId)
       .single();
 
     if (recipientError || !recipient) {
-      console.log("Recipient not found for tracking ID:", trackingId);
+      console.log(`[OPEN TRACK] Recipient not found for tracking ID: ${trackingId}`, recipientError?.message);
       return new Response(TRACKING_PIXEL, {
-        headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
+        headers: { "Content-Type": "image/gif", "Cache-Control": "no-store, no-cache, must-revalidate" },
       });
     }
 
+    console.log(`[OPEN TRACK] Found recipient: ${recipient.email}, campaign: ${recipient.campaign_id}`);
+
     // Get user agent and IP for analytics
     const userAgent = req.headers.get("user-agent") || "";
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || 
-               req.headers.get("cf-connecting-ip") || "";
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+               req.headers.get("cf-connecting-ip") || 
+               req.headers.get("x-real-ip") || "";
 
     // Detect device type
     let deviceType = "desktop";
-    if (/mobile|android|iphone|ipad/i.test(userAgent)) {
-      deviceType = /ipad|tablet/i.test(userAgent) ? "tablet" : "mobile";
+    const ua = userAgent.toLowerCase();
+    if (/mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(ua)) {
+      deviceType = "mobile";
+    } else if (/ipad|tablet|playbook|silk/i.test(ua)) {
+      deviceType = "tablet";
     }
 
-    // Record the open event
-    await supabase.from("campaign_events").insert({
+    // Record the open event (always record for analytics)
+    const { error: eventError } = await supabase.from("campaign_events").insert({
       campaign_id: recipient.campaign_id,
       recipient_id: recipient.id,
       audience_user_id: recipient.audience_user_id,
@@ -61,9 +70,15 @@ const handler = async (req: Request): Promise<Response> => {
       device_type: deviceType,
     });
 
-    // Update recipient if first open
+    if (eventError) {
+      console.error(`[OPEN TRACK] Failed to insert event:`, eventError.message);
+    } else {
+      console.log(`[OPEN TRACK] Event recorded for ${recipient.email}`);
+    }
+
+    // Update recipient if first open AND increment campaign open count
     if (!recipient.opened_at) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("campaign_recipients")
         .update({ 
           status: "opened", 
@@ -71,25 +86,69 @@ const handler = async (req: Request): Promise<Response> => {
         })
         .eq("id", recipient.id);
 
-      // Increment campaign open count
-      await supabase.rpc("increment_campaign_open", { 
-        campaign_id: recipient.campaign_id 
-      });
+      if (updateError) {
+        console.error(`[OPEN TRACK] Failed to update recipient:`, updateError.message);
+      } else {
+        console.log(`[OPEN TRACK] First open - updated recipient ${recipient.email}`);
+      }
+
+      // Increment campaign open count using direct update for reliability
+      const { data: campaign } = await supabase
+        .from("campaigns")
+        .select("open_count")
+        .eq("id", recipient.campaign_id)
+        .single();
+
+      if (campaign) {
+        const { error: campaignError } = await supabase
+          .from("campaigns")
+          .update({ open_count: (campaign.open_count || 0) + 1 })
+          .eq("id", recipient.campaign_id);
+
+        if (campaignError) {
+          console.error(`[OPEN TRACK] Failed to update campaign open_count:`, campaignError.message);
+        } else {
+          console.log(`[OPEN TRACK] Campaign open_count updated to ${(campaign.open_count || 0) + 1}`);
+        }
+      }
 
       // Update audience user engagement
-      await supabase.rpc("increment_audience_opens", { 
-        user_id: recipient.audience_user_id 
-      });
+      try {
+        const { data: audienceUser } = await supabase
+          .from("audience_users")
+          .select("total_opens")
+          .eq("id", recipient.audience_user_id)
+          .single();
+
+        if (audienceUser) {
+          await supabase
+            .from("audience_users")
+            .update({ 
+              total_opens: (audienceUser.total_opens || 0) + 1,
+              last_engaged_at: new Date().toISOString()
+            })
+            .eq("id", recipient.audience_user_id);
+        }
+      } catch (e) {
+        console.warn(`[OPEN TRACK] Failed to update audience user:`, e);
+      }
+
+      console.log(`[OPEN TRACK] FIRST OPEN tracked successfully for ${recipient.email}`);
+    } else {
+      console.log(`[OPEN TRACK] Repeat open for ${recipient.email} (first open was at ${recipient.opened_at})`);
     }
 
-    console.log(`Open tracked for recipient ${recipient.id}`);
-
-  } catch (error) {
-    console.error("Error tracking open:", error);
+  } catch (error: any) {
+    console.error("[OPEN TRACK] Error:", error.message);
   }
 
   return new Response(TRACKING_PIXEL, {
-    headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
+    headers: { 
+      "Content-Type": "image/gif", 
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0"
+    },
   });
 };
 
