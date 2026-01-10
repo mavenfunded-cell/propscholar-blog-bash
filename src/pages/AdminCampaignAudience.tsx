@@ -272,52 +272,67 @@ export default function AdminCampaignAudience() {
   const unsubscribedCount = users?.filter(u => u.unsubscribed_at).length || 0;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => adminNavigate('/admin/campaigns')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">Audience Manager</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your marketing contacts
-            </p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-border/50 bg-background/95 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => adminNavigate('/admin/campaigns')}
+              className="rounded-full hover:bg-muted/50"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold tracking-tight">Audience Manager</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage your marketing contacts
+              </p>
+            </div>
           </div>
         </div>
+      </header>
 
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <Users className="w-8 h-8 text-primary" />
+                <div className="p-2.5 rounded-xl bg-primary/10">
+                  <Users className="w-5 h-5 text-primary" />
+                </div>
                 <div>
-                  <p className="text-2xl font-bold">{users?.length || 0}</p>
-                  <p className="text-sm text-muted-foreground">Total Contacts</p>
+                  <p className="text-2xl font-semibold tabular-nums">{users?.length || 0}</p>
+                  <p className="text-xs text-muted-foreground">Total Contacts</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <Mail className="w-8 h-8 text-green-500" />
+                <div className="p-2.5 rounded-xl bg-emerald-500/10">
+                  <Mail className="w-5 h-5 text-emerald-400" />
+                </div>
                 <div>
-                  <p className="text-2xl font-bold">{activeCount}</p>
-                  <p className="text-sm text-muted-foreground">Active Subscribers</p>
+                  <p className="text-2xl font-semibold tabular-nums">{activeCount}</p>
+                  <p className="text-xs text-muted-foreground">Active Subscribers</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <UserMinus className="w-8 h-8 text-red-500" />
+                <div className="p-2.5 rounded-xl bg-red-500/10">
+                  <UserMinus className="w-5 h-5 text-red-400" />
+                </div>
                 <div>
-                  <p className="text-2xl font-bold">{unsubscribedCount}</p>
-                  <p className="text-sm text-muted-foreground">Unsubscribed</p>
+                  <p className="text-2xl font-semibold tabular-nums">{unsubscribedCount}</p>
+                  <p className="text-xs text-muted-foreground">Unsubscribed</p>
                 </div>
               </div>
             </CardContent>
@@ -565,7 +580,7 @@ export default function AdminCampaignAudience() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 }

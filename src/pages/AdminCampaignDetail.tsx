@@ -479,26 +479,32 @@ export default function AdminCampaignDetail() {
       .sort((a, b) => b.clicks - a.clicks) : [];
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => adminNavigate('/admin/campaigns')}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">{campaign.name}</h1>
-                <Badge className={statusConfig[campaign.status]?.color}>
-                  {statusConfig[campaign.status]?.label}
-                </Badge>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-border/50 bg-background/95 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => adminNavigate('/admin/campaigns')}
+                className="rounded-full hover:bg-muted/50"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-semibold tracking-tight">{campaign.name}</h1>
+                  <Badge className={`${statusConfig[campaign.status]?.color} rounded-full px-3`}>
+                    {statusConfig[campaign.status]?.label}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{campaign.subject}</p>
               </div>
-              <p className="text-muted-foreground">{campaign.subject}</p>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={handleRefresh}>
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -542,9 +548,12 @@ export default function AdminCampaignDetail() {
                 </Button>
               </>
             )}
+            </div>
           </div>
         </div>
+      </header>
 
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Progress (for sending campaigns) */}
         {campaign.status === 'sending' && (
           <Card>
@@ -1018,7 +1027,7 @@ export default function AdminCampaignDetail() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
 
       {/* Send Confirmation Dialog */}
       <AlertDialog open={showSendConfirm} onOpenChange={setShowSendConfirm}>
