@@ -342,28 +342,42 @@ export default function AdminCampaignBuilder() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-card sticky top-0 z-10">
+      <header className="sticky top-0 z-20 border-b border-border/50 bg-background/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => adminNavigate('/admin/campaigns')}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => adminNavigate('/admin/campaigns')}
+              className="rounded-full hover:bg-muted/50"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">
+              <h1 className="text-xl font-semibold tracking-tight">
                 {isNew ? 'New Campaign' : campaign.name || 'Edit Campaign'}
               </h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="w-4 h-4" />
-                <span>{audienceCount} recipients</span>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4" />
+                  <span>{audienceCount} recipients</span>
+                </div>
                 {campaign.status === 'draft' && (
-                  <Badge variant="secondary">Draft</Badge>
+                  <Badge variant="secondary" className="rounded-full px-2 py-0 text-xs">
+                    Draft
+                  </Badge>
                 )}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => saveMutation.mutate()} disabled={isSaving}>
+            <Button 
+              variant="outline" 
+              onClick={() => saveMutation.mutate()} 
+              disabled={isSaving}
+              className="rounded-lg border-border/50"
+            >
               {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Save
             </Button>
@@ -372,12 +386,12 @@ export default function AdminCampaignBuilder() {
               <>
                 <Dialog open={testEmailDialogOpen} onOpenChange={setTestEmailDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" className="rounded-lg border-border/50">
                       <Mail className="w-4 h-4 mr-2" />
                       Send Test
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="border-border/50">
                     <DialogHeader>
                       <DialogTitle>Send Test Email</DialogTitle>
                     </DialogHeader>
@@ -389,10 +403,11 @@ export default function AdminCampaignBuilder() {
                           placeholder="test@example.com"
                           value={testEmail}
                           onChange={(e) => setTestEmail(e.target.value)}
+                          className="mt-1.5"
                         />
                       </div>
                       <Button 
-                        className="w-full" 
+                        className="w-full rounded-lg" 
                         onClick={() => sendTestMutation.mutate()}
                         disabled={sendTestMutation.isPending}
                       >
@@ -405,26 +420,26 @@ export default function AdminCampaignBuilder() {
 
                 <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="rounded-lg bg-foreground text-background hover:bg-foreground/90">
                       <Calendar className="w-4 h-4 mr-2" />
                       Schedule
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="border-border/50">
                     <DialogHeader>
                       <DialogTitle>Schedule Campaign</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       {!campaign.test_sent_at && (
                         <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                          <AlertTriangle className="w-5 h-5 text-amber-500" />
+                          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
                           <span className="text-sm">You must send a test email first</span>
                         </div>
                       )}
 
                       {campaign.test_sent_at && (
-                        <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                          <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
                           <span className="text-sm">
                             Test sent to {campaign.test_sent_to} on{' '}
                             {format(new Date(campaign.test_sent_at), 'MMM d, h:mm a')}
@@ -439,6 +454,7 @@ export default function AdminCampaignBuilder() {
                           value={scheduleDate}
                           onChange={(e) => setScheduleDate(e.target.value)}
                           min={format(new Date(), 'yyyy-MM-dd')}
+                          className="mt-1.5"
                         />
                       </div>
                       <div>
@@ -447,18 +463,19 @@ export default function AdminCampaignBuilder() {
                           type="time"
                           value={scheduleTime}
                           onChange={(e) => setScheduleTime(e.target.value)}
+                          className="mt-1.5"
                         />
                       </div>
 
-                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                        <Users className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                        <Users className="w-5 h-5 text-muted-foreground shrink-0" />
                         <span className="text-sm">
                           Will be sent to <strong>{audienceCount}</strong> recipients
                         </span>
                       </div>
 
                       <Button 
-                        className="w-full" 
+                        className="w-full rounded-lg" 
                         onClick={() => scheduleMutation.mutate()}
                         disabled={!campaign.test_sent_at || scheduleMutation.isPending}
                       >
@@ -472,7 +489,7 @@ export default function AdminCampaignBuilder() {
             )}
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-6">
