@@ -548,6 +548,7 @@ export default function AdminCampaignDetail() {
                 </Button>
               </>
             )}
+            </div>
           </div>
         </div>
       </header>
