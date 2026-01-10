@@ -1027,7 +1027,7 @@ export default function AdminCampaignDetail() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
 
       {/* Send Confirmation Dialog */}
       <AlertDialog open={showSendConfirm} onOpenChange={setShowSendConfirm}>
