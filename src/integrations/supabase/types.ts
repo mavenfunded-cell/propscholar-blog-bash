@@ -458,8 +458,56 @@ export type Database = {
           },
         ]
       }
+      campaign_variants: {
+        Row: {
+          campaign_id: string
+          click_count: number | null
+          created_at: string
+          html_content: string
+          id: string
+          open_count: number | null
+          percentage: number
+          sent_count: number | null
+          subject: string
+          variant_name: string
+        }
+        Insert: {
+          campaign_id: string
+          click_count?: number | null
+          created_at?: string
+          html_content: string
+          id?: string
+          open_count?: number | null
+          percentage?: number
+          sent_count?: number | null
+          subject: string
+          variant_name?: string
+        }
+        Update: {
+          campaign_id?: string
+          click_count?: number | null
+          created_at?: string
+          html_content?: string
+          id?: string
+          open_count?: number | null
+          percentage?: number
+          sent_count?: number | null
+          subject?: string
+          variant_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_variants_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
+          ab_test_winner_id: string | null
           bounce_count: number | null
           click_count: number | null
           completed_at: string | null
@@ -468,11 +516,14 @@ export type Database = {
           exclude_tags: string[] | null
           html_content: string
           id: string
+          is_ab_test: boolean | null
           name: string
           open_count: number | null
           plain_text_content: string | null
           preheader: string | null
+          recurring_schedule: Json | null
           scheduled_at: string | null
+          send_optimal_time: boolean | null
           sender_email: string | null
           sender_name: string | null
           sent_count: number | null
@@ -483,11 +534,13 @@ export type Database = {
           target_tags: string[] | null
           test_sent_at: string | null
           test_sent_to: string | null
+          timezone: string | null
           total_recipients: number | null
           unsubscribe_count: number | null
           updated_at: string
         }
         Insert: {
+          ab_test_winner_id?: string | null
           bounce_count?: number | null
           click_count?: number | null
           completed_at?: string | null
@@ -496,11 +549,14 @@ export type Database = {
           exclude_tags?: string[] | null
           html_content: string
           id?: string
+          is_ab_test?: boolean | null
           name: string
           open_count?: number | null
           plain_text_content?: string | null
           preheader?: string | null
+          recurring_schedule?: Json | null
           scheduled_at?: string | null
+          send_optimal_time?: boolean | null
           sender_email?: string | null
           sender_name?: string | null
           sent_count?: number | null
@@ -511,11 +567,13 @@ export type Database = {
           target_tags?: string[] | null
           test_sent_at?: string | null
           test_sent_to?: string | null
+          timezone?: string | null
           total_recipients?: number | null
           unsubscribe_count?: number | null
           updated_at?: string
         }
         Update: {
+          ab_test_winner_id?: string | null
           bounce_count?: number | null
           click_count?: number | null
           completed_at?: string | null
@@ -524,11 +582,14 @@ export type Database = {
           exclude_tags?: string[] | null
           html_content?: string
           id?: string
+          is_ab_test?: boolean | null
           name?: string
           open_count?: number | null
           plain_text_content?: string | null
           preheader?: string | null
+          recurring_schedule?: Json | null
           scheduled_at?: string | null
+          send_optimal_time?: boolean | null
           sender_email?: string | null
           sender_name?: string | null
           sent_count?: number | null
@@ -539,11 +600,20 @@ export type Database = {
           target_tags?: string[] | null
           test_sent_at?: string | null
           test_sent_to?: string | null
+          timezone?: string | null
           total_recipients?: number | null
           unsubscribe_count?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_ab_test_winner_id_fkey"
+            columns: ["ab_test_winner_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_variants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       canned_messages: {
         Row: {
@@ -827,6 +897,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          html_content: string
+          id: string
+          is_default: boolean | null
+          name: string
+          plain_text_content: string | null
+          subject: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          html_content: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          plain_text_content?: string | null
+          subject?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          html_content?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          plain_text_content?: string | null
+          subject?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       events: {
         Row: {
@@ -2073,6 +2185,22 @@ export type Database = {
           subject: string
         }[]
       }
+      get_all_email_templates: {
+        Args: never
+        Returns: {
+          category: string
+          created_at: string
+          created_by: string
+          html_content: string
+          id: string
+          is_default: boolean
+          name: string
+          plain_text_content: string
+          subject: string
+          thumbnail_url: string
+          updated_at: string
+        }[]
+      }
       get_all_events: {
         Args: never
         Returns: {
@@ -2305,6 +2433,21 @@ export type Database = {
           user_email: string
           winner_id: string
           winner_type: string
+        }[]
+      }
+      get_campaign_variants: {
+        Args: { _campaign_id: string }
+        Returns: {
+          campaign_id: string
+          click_count: number
+          created_at: string
+          html_content: string
+          id: string
+          open_count: number
+          percentage: number
+          sent_count: number
+          subject: string
+          variant_name: string
         }[]
       }
       get_course_videos: {
