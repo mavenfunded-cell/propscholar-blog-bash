@@ -580,7 +580,7 @@ export default function AdminCampaignAudience() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 }
