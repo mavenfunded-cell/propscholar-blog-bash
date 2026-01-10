@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from '@/components/ui/dialog';
@@ -21,10 +22,20 @@ import {
 } from '@/components/ui/select';
 import {
   ArrowLeft, Save, Eye, Smartphone, Monitor, Calendar,
-  Users, AlertTriangle, CheckCircle, Loader2, Mail
+  Users, AlertTriangle, CheckCircle, Loader2, Mail, Copy,
+  History, LayoutTemplate, Wand2, TestTube, Clock, ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { TemplateLibrary } from '@/components/admin/TemplateLibrary';
+import { VisualEmailEditor } from '@/components/admin/VisualEmailEditor';
+import { ABTestingPanel } from '@/components/admin/ABTestingPanel';
+import { AdvancedScheduling } from '@/components/admin/AdvancedScheduling';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface Campaign {
   id: string;
@@ -104,6 +115,24 @@ export default function AdminCampaignBuilder() {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [isSaving, setIsSaving] = useState(false);
+  const [previousCampaignsOpen, setPreviousCampaignsOpen] = useState(false);
+  const [advancedFeaturesTab, setAdvancedFeaturesTab] = useState<string>('editor');
+  const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false);
+  
+  // A/B Testing state
+  const [abTestEnabled, setAbTestEnabled] = useState(false);
+  const [abVariants, setAbVariants] = useState([
+    { id: '1', name: 'Variant A', subject: '', percentage: 50 },
+    { id: '2', name: 'Variant B', subject: '', percentage: 50 },
+  ]);
+  
+  // Advanced Scheduling state
+  const [advScheduleDate, setAdvScheduleDate] = useState('');
+  const [advScheduleTime, setAdvScheduleTime] = useState('09:00');
+  const [advTimezone, setAdvTimezone] = useState('UTC');
+  const [sendOptimalTime, setSendOptimalTime] = useState(false);
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState('weekly');
 
   useEffect(() => {
     if (authLoading) return;
@@ -182,6 +211,22 @@ export default function AdminCampaignBuilder() {
 
       if (error) throw error;
       return count || 0;
+    },
+    enabled: hasAccess === true,
+  });
+
+  // Fetch previous campaigns for copy feature
+  const { data: previousCampaigns } = useQuery({
+    queryKey: ['previous-campaigns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('id, name, subject, html_content, created_at, status, sent_count, open_count')
+        .neq('id', id || '')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
     },
     enabled: hasAccess === true,
   });
@@ -329,6 +374,23 @@ export default function AdminCampaignBuilder() {
     html = html.replace(/\{\{subject\}\}/g, campaign.subject || '');
     html = html.replace(/\{\{unsubscribe_url\}\}/g, '#');
     return html;
+  };
+
+  const copyFromCampaign = (campaignToCopy: any) => {
+    setCampaign(prev => ({
+      ...prev,
+      html_content: campaignToCopy.html_content,
+    }));
+    setPreviousCampaignsOpen(false);
+    toast.success(`Copied content from "${campaignToCopy.name}"`);
+  };
+
+  const handleTemplateSelect = (template: any) => {
+    setCampaign(prev => ({
+      ...prev,
+      html_content: template.html_content,
+      subject: template.subject || prev.subject,
+    }));
   };
 
   if (isLoading) {
@@ -496,8 +558,80 @@ export default function AdminCampaignBuilder() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Editor */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
+            {/* Previous Campaigns - Collapsible */}
+            <Collapsible open={previousCampaignsOpen} onOpenChange={setPreviousCampaignsOpen}>
+              <Card className="border-border/50">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <History className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">Copy from Previous Campaign</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {previousCampaigns?.length || 0} campaigns available
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${previousCampaignsOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <ScrollArea className="h-[250px]">
+                      {previousCampaigns?.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No previous campaigns found</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {previousCampaigns?.map((prev) => (
+                            <div
+                              key={prev.id}
+                              className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/30 transition-all group"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{prev.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{prev.subject}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    {prev.status}
+                                  </Badge>
+                                  {prev.sent_count && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {prev.sent_count} sent • {((prev.open_count || 0) / prev.sent_count * 100).toFixed(0)}% opened
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {format(new Date(prev.created_at), 'MMM d, yyyy')}
+                                  </span>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => copyFromCampaign(prev)}
+                              >
+                                <Copy className="w-4 h-4 mr-1" />
+                                Copy
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            <Card className="border-border/50">
+              <CardHeader className="pb-4">
                 <CardTitle>Campaign Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -507,6 +641,7 @@ export default function AdminCampaignBuilder() {
                     placeholder="Q1 Newsletter"
                     value={campaign.name}
                     onChange={(e) => setCampaign(p => ({ ...p, name: e.target.value }))}
+                    className="mt-1.5"
                   />
                 </div>
                 <div>
@@ -515,6 +650,7 @@ export default function AdminCampaignBuilder() {
                     placeholder="Your subject here..."
                     value={campaign.subject}
                     onChange={(e) => setCampaign(p => ({ ...p, subject: e.target.value }))}
+                    className="mt-1.5"
                   />
                 </div>
                 <div>
@@ -523,6 +659,7 @@ export default function AdminCampaignBuilder() {
                     placeholder="Preview text shown in inbox..."
                     value={campaign.preheader || ''}
                     onChange={(e) => setCampaign(p => ({ ...p, preheader: e.target.value }))}
+                    className="mt-1.5"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -531,6 +668,7 @@ export default function AdminCampaignBuilder() {
                     <Input 
                       value={campaign.sender_name}
                       onChange={(e) => setCampaign(p => ({ ...p, sender_name: e.target.value }))}
+                      className="mt-1.5"
                     />
                   </div>
                   <div>
@@ -538,44 +676,120 @@ export default function AdminCampaignBuilder() {
                     <Input 
                       value={campaign.sender_email}
                       onChange={(e) => setCampaign(p => ({ ...p, sender_email: e.target.value }))}
+                      className="mt-1.5"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Content</CardTitle>
+            {/* Email Content with Advanced Features */}
+            <Card className="border-border/50">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle>Email Content</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <TemplateLibrary 
+                      onSelect={handleTemplateSelect}
+                      currentHtml={campaign.html_content}
+                    />
+                    <Button
+                      variant={showAdvancedFeatures ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setShowAdvancedFeatures(!showAdvancedFeatures)}
+                    >
+                      <Wand2 className="w-4 h-4 mr-1.5" />
+                      Advanced
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>HTML Content</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Variables: {'{{first_name}}'}, {'{{email}}'}, {'{{unsubscribe_url}}'}
-                  </p>
-                  <Textarea 
-                    className="font-mono text-sm min-h-[300px]"
-                    value={campaign.html_content}
-                    onChange={(e) => setCampaign(p => ({ ...p, html_content: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Plain Text (fallback)</Label>
-                  <Textarea 
-                    className="min-h-[100px]"
-                    placeholder="Plain text version..."
-                    value={campaign.plain_text_content || ''}
-                    onChange={(e) => setCampaign(p => ({ ...p, plain_text_content: e.target.value }))}
-                  />
-                </div>
+                {showAdvancedFeatures && (
+                  <div className="border border-border/50 rounded-lg p-4 bg-muted/20">
+                    <Tabs value={advancedFeaturesTab} onValueChange={setAdvancedFeaturesTab}>
+                      <TabsList className="mb-4 w-full grid grid-cols-3">
+                        <TabsTrigger value="editor" className="text-xs gap-1.5">
+                          <LayoutTemplate className="w-3.5 h-3.5" />
+                          Visual Editor
+                        </TabsTrigger>
+                        <TabsTrigger value="abtest" className="text-xs gap-1.5">
+                          <TestTube className="w-3.5 h-3.5" />
+                          A/B Testing
+                        </TabsTrigger>
+                        <TabsTrigger value="schedule" className="text-xs gap-1.5">
+                          <Clock className="w-3.5 h-3.5" />
+                          Scheduling
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="editor" className="mt-0">
+                        <VisualEmailEditor
+                          value={campaign.html_content || ''}
+                          onChange={(val) => setCampaign(p => ({ ...p, html_content: val }))}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="abtest" className="mt-0">
+                        <ABTestingPanel
+                          enabled={abTestEnabled}
+                          onEnabledChange={setAbTestEnabled}
+                          variants={abVariants}
+                          onVariantsChange={setAbVariants}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="schedule" className="mt-0">
+                        <AdvancedScheduling
+                          scheduleDate={advScheduleDate}
+                          scheduleTime={advScheduleTime}
+                          timezone={advTimezone}
+                          sendOptimalTime={sendOptimalTime}
+                          recurringEnabled={recurringEnabled}
+                          recurringFrequency={recurringFrequency}
+                          onScheduleDateChange={setAdvScheduleDate}
+                          onScheduleTimeChange={setAdvScheduleTime}
+                          onTimezoneChange={setAdvTimezone}
+                          onSendOptimalTimeChange={setSendOptimalTime}
+                          onRecurringEnabledChange={setRecurringEnabled}
+                          onRecurringFrequencyChange={setRecurringFrequency}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                )}
+
+                {!showAdvancedFeatures && (
+                  <>
+                    <div>
+                      <Label>HTML Content</Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Variables: {'{{first_name}}'}, {'{{email}}'}, {'{{unsubscribe_url}}'}
+                      </p>
+                      <Textarea 
+                        className="font-mono text-sm min-h-[300px]"
+                        value={campaign.html_content}
+                        onChange={(e) => setCampaign(p => ({ ...p, html_content: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Plain Text (fallback)</Label>
+                      <Textarea 
+                        className="min-h-[100px] mt-1.5"
+                        placeholder="Plain text version..."
+                        value={campaign.plain_text_content || ''}
+                        onChange={(e) => setCampaign(p => ({ ...p, plain_text_content: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Preview */}
           <div className="space-y-4">
-            <Card className="sticky top-24">
+            <Card className="sticky top-24 border-border/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Preview</CardTitle>
@@ -584,6 +798,7 @@ export default function AdminCampaignBuilder() {
                       variant={previewMode === 'desktop' ? 'default' : 'outline'} 
                       size="sm"
                       onClick={() => setPreviewMode('desktop')}
+                      className="rounded-lg"
                     >
                       <Monitor className="w-4 h-4" />
                     </Button>
@@ -591,6 +806,7 @@ export default function AdminCampaignBuilder() {
                       variant={previewMode === 'mobile' ? 'default' : 'outline'} 
                       size="sm"
                       onClick={() => setPreviewMode('mobile')}
+                      className="rounded-lg"
                     >
                       <Smartphone className="w-4 h-4" />
                     </Button>
@@ -599,13 +815,13 @@ export default function AdminCampaignBuilder() {
               </CardHeader>
               <CardContent>
                 <div 
-                  className={`border rounded-lg overflow-hidden bg-white mx-auto transition-all ${
+                  className={`border border-border/50 rounded-lg overflow-hidden bg-white mx-auto transition-all ${
                     previewMode === 'mobile' ? 'max-w-[375px]' : 'w-full'
                   }`}
                 >
                   <div className="p-3 border-b bg-muted/50">
                     <p className="text-xs text-muted-foreground">From: {campaign.sender_name} &lt;{campaign.sender_email}&gt;</p>
-                    <p className="font-medium text-sm">{campaign.subject || 'No subject'}</p>
+                    <p className="font-medium text-sm text-foreground">{campaign.subject || 'No subject'}</p>
                     {campaign.preheader && (
                       <p className="text-xs text-muted-foreground">{campaign.preheader}</p>
                     )}
