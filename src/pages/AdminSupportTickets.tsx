@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft,
   Mail,
@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
@@ -53,14 +54,13 @@ interface Ticket {
   last_reply_by: string;
 }
 
-// Display status - treat awaiting_support and awaiting_user as "open"
 const getDisplayStatus = (status: TicketStatus): "open" | "closed" => {
   return status === "closed" ? "closed" : "open";
 };
 
 const statusColors: Record<"open" | "closed", string> = {
-  open: "bg-green-500/20 text-green-400 border-green-500/30",
-  closed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  open: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+  closed: "bg-muted/80 text-muted-foreground border border-border/50",
 };
 
 const statusLabels: Record<"open" | "closed", string> = {
@@ -69,10 +69,10 @@ const statusLabels: Record<"open" | "closed", string> = {
 };
 
 const priorityColors: Record<TicketPriority, string> = {
-  low: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  medium: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  high: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  urgent: "bg-red-500/20 text-red-400 border-red-500/30",
+  low: "bg-muted/80 text-muted-foreground border border-border/50",
+  medium: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+  high: "bg-orange-500/15 text-orange-400 border border-orange-500/30",
+  urgent: "bg-red-500/15 text-red-400 border border-red-500/30",
 };
 
 const AdminSupportTickets = () => {
@@ -193,37 +193,44 @@ const AdminSupportTickets = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => adminNavigate("/dashboard")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Mail className="h-8 w-8 text-primary" />
-              Support Tickets
-            </h1>
-            <p className="text-muted-foreground mt-1">Manage customer support requests</p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-border/50 bg-background/95 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => adminNavigate("/dashboard")}
+                className="rounded-full hover:bg-muted/50"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-primary" />
+                  Support Tickets
+                </h1>
+                <p className="text-sm text-muted-foreground">Manage customer support requests</p>
+              </div>
+            </div>
+            <AdminNotificationBell />
           </div>
-          <AdminNotificationBell />
         </div>
+      </header>
 
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {/* Email Sync Section */}
-        <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardContent className="p-4">
+        <Card className="border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent overflow-hidden">
+          <CardContent className="p-5">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10">
-                  <Inbox className="h-6 w-6 text-primary" />
+                <div className="p-3 rounded-xl bg-primary/10">
+                  <Inbox className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Email Inbox Sync</h3>
+                  <h3 className="font-medium">Email Inbox Sync</h3>
                   <p className="text-sm text-muted-foreground">
                     Syncing support@propscholar.com (Hostinger)
                   </p>
@@ -231,20 +238,19 @@ const AdminSupportTickets = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                {/* Auto-sync status indicator */}
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                   <div className="relative">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <div className="absolute inset-0 h-2 w-2 rounded-full bg-green-500 animate-ping opacity-75" />
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <div className="absolute inset-0 h-2 w-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
                   </div>
-                  <span className="text-xs font-medium text-green-400">Auto-sync active</span>
+                  <span className="text-xs font-medium text-emerald-400">Auto-sync active</span>
                   <span className="text-xs text-muted-foreground">(every 1 min)</span>
                 </div>
 
                 {lastSyncResult && (
                   <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-muted/50">
                     {lastSyncResult.success ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                     ) : (
                       <AlertCircle className="h-4 w-4 text-red-500" />
                     )}
@@ -254,7 +260,7 @@ const AdminSupportTickets = () => {
                     {lastSyncResult.processed > 0 && (
                       <Badge
                         variant="outline"
-                        className="bg-green-500/20 text-green-400 border-green-500/30"
+                        className="rounded-full bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                       >
                         +{lastSyncResult.processed}
                       </Badge>
@@ -267,7 +273,7 @@ const AdminSupportTickets = () => {
                   disabled={syncInboxMutation.isPending}
                   size="sm"
                   variant="outline"
-                  className="gap-2"
+                  className="rounded-lg gap-2 border-border/50"
                 >
                   {syncInboxMutation.isPending ? (
                     <>
@@ -287,49 +293,53 @@ const AdminSupportTickets = () => {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { key: "open", label: "Open", count: ticketCounts.open, icon: Mail },
-            { key: "all", label: "All Tickets", count: ticketCounts.all, icon: MessageSquare },
-            { key: "closed", label: "Closed", count: ticketCounts.closed, icon: CheckCircle2 },
+            { key: "open", label: "Open", count: ticketCounts.open, icon: Mail, color: "text-emerald-400" },
+            { key: "all", label: "All Tickets", count: ticketCounts.all, icon: MessageSquare, color: "text-muted-foreground" },
+            { key: "closed", label: "Closed", count: ticketCounts.closed, icon: CheckCircle2, color: "text-muted-foreground" },
           ].map((stat) => (
             <Card
               key={stat.key}
-              className={`cursor-pointer transition-all hover:border-primary/50 ${
-                statusFilter === stat.key ? "border-primary bg-primary/5" : ""
+              className={`cursor-pointer transition-all border-border/50 bg-card/50 hover:bg-card/80 hover:border-border/80 ${
+                statusFilter === stat.key ? "border-primary/50 bg-primary/5" : ""
               }`}
               onClick={() => setStatusFilter(stat.key)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-2xl font-bold">{stat.count}</p>
-                  <stat.icon
-                    className={`h-5 w-5 ${
-                      statusFilter === stat.key ? "text-primary" : "text-muted-foreground"
-                    }`}
-                  />
+                  <div>
+                    <p className="text-2xl font-semibold tabular-nums">{stat.count}</p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-xl ${statusFilter === stat.key ? 'bg-primary/10' : 'bg-muted/50'}`}>
+                    <stat.icon
+                      className={`h-5 w-5 ${
+                        statusFilter === stat.key ? "text-primary" : stat.color
+                      }`}
+                    />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="border-border/50 bg-card/50">
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by subject, email, or ticket #"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 rounded-lg border-border/50 bg-background/50"
                 />
               </div>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-full md:w-40">
+                <SelectTrigger className="w-full sm:w-40 rounded-lg border-border/50">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -340,7 +350,7 @@ const AdminSupportTickets = () => {
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => refetch()}>
+              <Button variant="outline" onClick={() => refetch()} className="rounded-lg border-border/50">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
@@ -349,93 +359,98 @@ const AdminSupportTickets = () => {
         </Card>
 
         {/* Tickets Table */}
-        <Card>
+        <Card className="border-border/50 bg-card/50 overflow-hidden">
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">
+              <div className="p-12 text-center text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
                 Loading tickets...
               </div>
             ) : filteredTickets?.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No tickets found</p>
-                <p className="text-sm mt-2">Click "Sync Now" to check for new emails</p>
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-lg font-medium mb-1">No tickets found</h3>
+                <p className="text-sm text-muted-foreground">Click "Sync Now" to check for new emails</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-20">#</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>From</TableHead>
-                    <TableHead className="w-40">Status</TableHead>
-                    <TableHead className="w-28">Priority</TableHead>
-                    <TableHead className="w-40">Last Reply</TableHead>
-                    <TableHead className="w-28 text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets?.map((ticket) => {
-                    const isClosed = ticket.status === "closed";
-                    return (
-                      <TableRow
-                        key={ticket.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
-                      >
-                        <TableCell className="font-mono text-muted-foreground">
-                          #{ticket.ticket_number}
-                        </TableCell>
-                        <TableCell className="font-medium">{ticket.subject}</TableCell>
-                        <TableCell className="text-muted-foreground">{ticket.user_email}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={statusColors[getDisplayStatus(ticket.status)]}
-                          >
-                            {statusLabels[getDisplayStatus(ticket.status)]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={priorityColors[ticket.priority]}
-                          >
-                            {ticket.priority}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          <div>
-                            {formatDistanceToNow(new Date(ticket.last_reply_at), {
-                              addSuffix: true,
-                            })}
-                          </div>
-                          <div className="text-xs opacity-70">by {ticket.last_reply_by}</div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isClosed || closeTicketMutation.isPending}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              closeTicketMutation.mutate(ticket.id);
-                            }}
-                          >
-                            {isClosed ? "Closed" : "Close"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border/50 hover:bg-transparent">
+                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">#</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground">Subject</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground">From</TableHead>
+                      <TableHead className="w-28 text-xs font-medium text-muted-foreground">Status</TableHead>
+                      <TableHead className="w-24 text-xs font-medium text-muted-foreground">Priority</TableHead>
+                      <TableHead className="w-36 text-xs font-medium text-muted-foreground">Last Reply</TableHead>
+                      <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTickets?.map((ticket) => {
+                      const isClosed = ticket.status === "closed";
+                      return (
+                        <TableRow
+                          key={ticket.id}
+                          className="cursor-pointer border-border/30 hover:bg-muted/30"
+                          onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
+                        >
+                          <TableCell className="font-mono text-sm text-muted-foreground">
+                            #{ticket.ticket_number}
+                          </TableCell>
+                          <TableCell className="font-medium">{ticket.subject}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{ticket.user_email}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={`rounded-full px-2.5 ${statusColors[getDisplayStatus(ticket.status)]}`}
+                            >
+                              {statusLabels[getDisplayStatus(ticket.status)]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={`rounded-full px-2.5 capitalize ${priorityColors[ticket.priority]}`}
+                            >
+                              {ticket.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div className="text-muted-foreground">
+                              {formatDistanceToNow(new Date(ticket.last_reply_at), {
+                                addSuffix: true,
+                              })}
+                            </div>
+                            <div className="text-xs text-muted-foreground/60">by {ticket.last_reply_by}</div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-lg h-8 border-border/50"
+                              disabled={isClosed || closeTicketMutation.isPending}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                closeTicketMutation.mutate(ticket.id);
+                              }}
+                            >
+                              {isClosed ? "Closed" : "Close"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 };
