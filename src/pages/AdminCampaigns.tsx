@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,10 +11,11 @@ import {
   Mail, Users, Plus, Eye, Copy,
   Calendar, CheckCircle, Clock, Pause, XCircle,
   TrendingUp, MousePointer, AlertTriangle, ArrowLeft,
-  Sparkles, Send
+  Sparkles, Send, Zap, BarChart3
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO, getHours, getDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface Campaign {
   id: string;
@@ -30,6 +31,11 @@ interface Campaign {
   created_at: string;
 }
 
+interface CampaignEvent {
+  event_type: string;
+  created_at: string;
+}
+
 const statusConfig: Record<string, { label: string; color: string; icon: React.ComponentType<any> }> = {
   draft: { label: 'Draft', color: 'bg-muted/80 text-muted-foreground border border-border', icon: Clock },
   scheduled: { label: 'Scheduled', color: 'bg-blue-500/15 text-blue-400 border border-blue-500/30', icon: Calendar },
@@ -39,11 +45,14 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.C
   cancelled: { label: 'Cancelled', color: 'bg-red-500/15 text-red-400 border border-red-500/30', icon: XCircle },
 };
 
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export default function AdminCampaigns() {
   const { adminNavigate, getDashboardPath, getLoginPath } = useAdminNavigation();
   const { isLoggedIn, loading: authLoading, email } = useAdminAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -95,6 +104,80 @@ export default function AdminCampaigns() {
     },
     enabled: hasAccess === true,
   });
+
+  // Fetch all campaign events for analytics
+  const { data: allEvents } = useQuery({
+    queryKey: ['all-campaign-events'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaign_events')
+        .select('event_type, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5000);
+
+      if (error) throw error;
+      return data as CampaignEvent[];
+    },
+    enabled: hasAccess === true,
+  });
+
+  // Calculate best send time analytics
+  const sendTimeAnalytics = useMemo(() => {
+    if (!allEvents?.length) return null;
+
+    const openEvents = allEvents.filter(e => e.event_type === 'open');
+    const clickEvents = allEvents.filter(e => e.event_type === 'click');
+
+    // Hourly analysis
+    const hourlyOpens: number[] = Array(24).fill(0);
+    const hourlyClicks: number[] = Array(24).fill(0);
+
+    openEvents.forEach(e => {
+      const hour = getHours(parseISO(e.created_at));
+      hourlyOpens[hour]++;
+    });
+
+    clickEvents.forEach(e => {
+      const hour = getHours(parseISO(e.created_at));
+      hourlyClicks[hour]++;
+    });
+
+    // Day of week analysis
+    const dayOpens: number[] = Array(7).fill(0);
+
+    openEvents.forEach(e => {
+      const day = getDay(parseISO(e.created_at));
+      dayOpens[day]++;
+    });
+
+    const bestHourIndex = hourlyOpens.indexOf(Math.max(...hourlyOpens));
+    const bestDayIndex = dayOpens.indexOf(Math.max(...dayOpens));
+
+    // Hourly chart data
+    const hourlyData = hourlyOpens.map((opens, hour) => ({
+      hour: `${hour.toString().padStart(2, '0')}:00`,
+      opens,
+      clicks: hourlyClicks[hour],
+    }));
+
+    // Day chart data
+    const dayData = DAY_NAMES.map((name, i) => ({
+      day: name,
+      opens: dayOpens[i],
+    }));
+
+    return {
+      bestHour: bestHourIndex,
+      bestDay: DAY_NAMES[bestDayIndex],
+      bestDayIndex,
+      hourlyData,
+      dayData,
+      totalOpens: openEvents.length,
+      totalClicks: clickEvents.length,
+      hourlyOpens,
+      dayOpens,
+    };
+  }, [allEvents]);
 
 
   const { data: audienceCount } = useQuery({
@@ -195,6 +278,106 @@ export default function AdminCampaigns() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Best Send Time Recommendation */}
+        {sendTimeAnalytics && sendTimeAnalytics.totalOpens > 10 && (
+          <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-primary/20">
+                    <Zap className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      Best Time to Send
+                      <Badge variant="secondary" className="text-xs">AI Recommended</Badge>
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Based on {sendTimeAnalytics.totalOpens} email opens analyzed
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-primary">
+                      {sendTimeAnalytics.bestHour}:00
+                    </p>
+                    <p className="text-xs text-muted-foreground">Best Hour</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-primary">
+                      {sendTimeAnalytics.bestDay}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Best Day</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAnalytics(!showAnalytics)}
+                    className="ml-4"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    {showAnalytics ? 'Hide' : 'View'} Analytics
+                  </Button>
+                </div>
+              </div>
+
+              {showAnalytics && (
+                <div className="mt-6 grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium mb-3 text-sm">Opens by Hour of Day</h4>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={sendTimeAnalytics.hourlyData}>
+                        <XAxis dataKey="hour" fontSize={9} interval={3} />
+                        <YAxis fontSize={10} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Bar dataKey="opens" radius={[2, 2, 0, 0]}>
+                          {sendTimeAnalytics.hourlyData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={index === sendTimeAnalytics.bestHour ? '#6366f1' : '#6366f140'}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-3 text-sm">Opens by Day of Week</h4>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={sendTimeAnalytics.dayData}>
+                        <XAxis dataKey="day" fontSize={10} />
+                        <YAxis fontSize={10} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Bar dataKey="opens" radius={[4, 4, 0, 0]}>
+                          {sendTimeAnalytics.dayData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={index === sendTimeAnalytics.bestDayIndex ? '#22c55e' : '#22c55e40'}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatsCard
