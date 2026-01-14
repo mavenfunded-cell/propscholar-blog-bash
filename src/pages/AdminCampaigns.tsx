@@ -533,11 +533,11 @@ export default function AdminCampaigns() {
                           {statusConfig[campaign.status]?.label}
                         </Badge>
 
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1">
                           <Button 
                             size="icon" 
                             variant="ghost"
-                            className="h-8 w-8 rounded-lg"
+                            className="h-9 w-9 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedCampaign(campaign);
@@ -545,11 +545,11 @@ export default function AdminCampaigns() {
                             }}
                           >
                             <Eye className="w-4 h-4" />
-                           </Button>
+                          </Button>
                           <Button 
                             size="icon" 
                             variant="ghost"
-                            className="h-8 w-8 rounded-lg"
+                            className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDuplicate(campaign);
