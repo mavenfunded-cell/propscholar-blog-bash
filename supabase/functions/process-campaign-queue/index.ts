@@ -2,6 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
+// Declare EdgeRuntime for TypeScript
+declare const EdgeRuntime: {
+  waitUntil(promise: Promise<unknown>): void;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -101,7 +106,8 @@ const handler = async (req: Request): Promise<Response> => {
       // Process recipients in a loop so the campaign doesn't get stuck in "sending"
       // (edge functions are short-lived, so we stop when we near the runtime limit)
       const campaignStart = Date.now();
-      const MAX_RUNTIME_MS = 55_000;
+      const MAX_RUNTIME_MS = 50_000; // 50 seconds to leave time for self-invoke
+      let shouldContinue = false;
 
       while (Date.now() - campaignStart < MAX_RUNTIME_MS) {
         // Get pending recipients (batch)
@@ -139,9 +145,10 @@ const handler = async (req: Request): Promise<Response> => {
             break;
           }
 
-          // Stop if we're near runtime limit
+          // Stop if we're near runtime limit - flag for continuation
           if (Date.now() - campaignStart >= MAX_RUNTIME_MS) {
-            console.log(`Campaign ${campaign.id}: runtime limit reached, will continue next run`);
+            console.log(`Campaign ${campaign.id}: runtime limit reached, will self-invoke to continue`);
+            shouldContinue = true;
             break;
           }
 
@@ -295,11 +302,36 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        if (criticalError) break;
+        if (criticalError || shouldContinue) break;
       }
 
       if (criticalError) {
         console.log(`Campaign ${campaign.id} stopped due to critical error`);
+      }
+
+      // Self-invoke to continue processing if we hit runtime limit
+      if (shouldContinue && !criticalError) {
+        console.log(`Self-invoking to continue campaign ${campaign.id}...`);
+        // Use EdgeRuntime.waitUntil for background continuation
+        const continueProcessing = async () => {
+          try {
+            const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+            await fetch(`${supabaseUrl}/functions/v1/process-campaign-queue`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${anonKey}`,
+              },
+              body: JSON.stringify({ continue: true }),
+            });
+            console.log("Continuation request sent successfully");
+          } catch (err) {
+            console.error("Failed to self-invoke for continuation:", err);
+          }
+        };
+        
+        // Fire and forget - don't await
+        EdgeRuntime.waitUntil(continueProcessing());
       }
     }
 
