@@ -7,8 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
 import {
   Mail, Users, Plus, Eye, Copy,
   Calendar, CheckCircle, Clock, Pause, XCircle,
@@ -569,134 +567,159 @@ export default function AdminCampaigns() {
           </CardContent>
         </Card>
 
-        {/* Campaign Stats Popup */}
-        <Dialog open={showStatsPopup} onOpenChange={setShowStatsPopup}>
-          <DialogContent className="max-w-2xl p-0 overflow-hidden border-border/50 bg-gradient-to-b from-card to-background">
-            {selectedCampaign && (
-              <>
-                {/* Header with gradient */}
-                <div className="relative p-6 pb-4 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-b border-border/50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                        <Mail className="w-7 h-7 text-primary-foreground" />
-                      </div>
-                      <div>
-                        <DialogTitle className="text-xl font-semibold mb-1">
-                          {selectedCampaign.name}
-                        </DialogTitle>
-                        <p className="text-sm text-muted-foreground truncate max-w-[300px]">
-                          {selectedCampaign.subject}
-                        </p>
-                      </div>
+        {/* Campaign Stats Card Overlay */}
+        {showStatsPopup && selectedCampaign && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+              onClick={() => setShowStatsPopup(false)}
+            />
+            
+            {/* Card Popup */}
+            <Card className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto border-border/50 bg-card shadow-2xl shadow-black/50 animate-in zoom-in-95 fade-in duration-200">
+              {/* Close button */}
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full hover:bg-muted"
+                onClick={() => setShowStatsPopup(false)}
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+
+              {/* Header with gradient */}
+              <div className="relative p-6 pb-4 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-b border-border/50">
+                <div className="flex items-start justify-between pr-10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                      <Mail className="w-7 h-7 text-primary-foreground" />
                     </div>
-                    <Badge className={`${statusConfig[selectedCampaign.status]?.color} rounded-full px-3 py-1`}>
-                      {statusConfig[selectedCampaign.status]?.label}
-                    </Badge>
+                    <div>
+                      <h2 className="text-xl font-semibold mb-1">
+                        {selectedCampaign.name}
+                      </h2>
+                      <p className="text-sm text-muted-foreground truncate max-w-[300px]">
+                        {selectedCampaign.subject}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className={`${statusConfig[selectedCampaign.status]?.color} rounded-full px-3 py-1`}>
+                    {statusConfig[selectedCampaign.status]?.label}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <CardContent className="p-6 space-y-6">
+                {/* Main Metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatMetricCard
+                    icon={Send}
+                    value={selectedCampaign.sent_count}
+                    label="Sent"
+                    color="blue"
+                    percentage={100}
+                  />
+                  <StatMetricCard
+                    icon={MailOpen}
+                    value={selectedCampaign.open_count}
+                    label="Opened"
+                    color="emerald"
+                    percentage={selectedCampaign.sent_count > 0 
+                      ? (selectedCampaign.open_count / selectedCampaign.sent_count) * 100 
+                      : 0}
+                  />
+                  <StatMetricCard
+                    icon={MousePointer}
+                    value={selectedCampaign.click_count}
+                    label="Clicked"
+                    color="violet"
+                    percentage={selectedCampaign.open_count > 0 
+                      ? (selectedCampaign.click_count / selectedCampaign.open_count) * 100 
+                      : 0}
+                  />
+                  <StatMetricCard
+                    icon={Ban}
+                    value={selectedCampaign.bounce_count}
+                    label="Bounced"
+                    color="red"
+                    percentage={selectedCampaign.sent_count > 0 
+                      ? (selectedCampaign.bounce_count / selectedCampaign.sent_count) * 100 
+                      : 0}
+                  />
+                </div>
+
+                {/* Engagement Funnel */}
+                <div className="bg-muted/30 rounded-2xl p-5 border border-border/50">
+                  <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary" />
+                    Engagement Funnel
+                  </h4>
+                  <div className="space-y-3">
+                    <FunnelBar 
+                      label="Delivered" 
+                      value={selectedCampaign.sent_count - selectedCampaign.bounce_count}
+                      max={selectedCampaign.sent_count}
+                      color="bg-blue-500"
+                    />
+                    <FunnelBar 
+                      label="Opened" 
+                      value={selectedCampaign.open_count}
+                      max={selectedCampaign.sent_count}
+                      color="bg-emerald-500"
+                    />
+                    <FunnelBar 
+                      label="Clicked" 
+                      value={selectedCampaign.click_count}
+                      max={selectedCampaign.sent_count}
+                      color="bg-violet-500"
+                    />
                   </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="p-6 space-y-6">
-                  {/* Main Metrics */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatMetricCard
-                      icon={Send}
-                      value={selectedCampaign.sent_count}
-                      label="Sent"
-                      color="blue"
-                      percentage={100}
-                    />
-                    <StatMetricCard
-                      icon={MailOpen}
-                      value={selectedCampaign.open_count}
-                      label="Opened"
-                      color="emerald"
-                      percentage={selectedCampaign.sent_count > 0 
-                        ? (selectedCampaign.open_count / selectedCampaign.sent_count) * 100 
-                        : 0}
-                    />
-                    <StatMetricCard
-                      icon={MousePointer}
-                      value={selectedCampaign.click_count}
-                      label="Clicked"
-                      color="violet"
-                      percentage={selectedCampaign.open_count > 0 
-                        ? (selectedCampaign.click_count / selectedCampaign.open_count) * 100 
-                        : 0}
-                    />
-                    <StatMetricCard
-                      icon={Ban}
-                      value={selectedCampaign.bounce_count}
-                      label="Bounced"
-                      color="red"
-                      percentage={selectedCampaign.sent_count > 0 
-                        ? (selectedCampaign.bounce_count / selectedCampaign.sent_count) * 100 
-                        : 0}
-                    />
-                  </div>
-
-                  {/* Engagement Funnel */}
-                  <div className="bg-muted/30 rounded-2xl p-5 border border-border/50">
-                    <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
-                      <Target className="w-4 h-4 text-primary" />
-                      Engagement Funnel
-                    </h4>
-                    <div className="space-y-3">
-                      <FunnelBar 
-                        label="Delivered" 
-                        value={selectedCampaign.sent_count - selectedCampaign.bounce_count}
-                        max={selectedCampaign.sent_count}
-                        color="bg-blue-500"
-                      />
-                      <FunnelBar 
-                        label="Opened" 
-                        value={selectedCampaign.open_count}
-                        max={selectedCampaign.sent_count}
-                        color="bg-emerald-500"
-                      />
-                      <FunnelBar 
-                        label="Clicked" 
-                        value={selectedCampaign.click_count}
-                        max={selectedCampaign.sent_count}
-                        color="bg-violet-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Quick Rates */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                      <p className="text-3xl font-bold text-emerald-400 tabular-nums">
-                        {selectedCampaign.sent_count > 0 
-                          ? ((selectedCampaign.open_count / selectedCampaign.sent_count) * 100).toFixed(1) 
-                          : '0'}%
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">Open Rate</p>
-                    </div>
-                    <div className="text-center p-4 bg-violet-500/10 rounded-xl border border-violet-500/20">
-                      <p className="text-3xl font-bold text-violet-400 tabular-nums">
-                        {selectedCampaign.open_count > 0 
-                          ? ((selectedCampaign.click_count / selectedCampaign.open_count) * 100).toFixed(1) 
-                          : '0'}%
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">Click Rate</p>
-                    </div>
-                    <div className="text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">
-                      <p className="text-3xl font-bold text-red-400 tabular-nums">
-                        {selectedCampaign.sent_count > 0 
-                          ? ((selectedCampaign.bounce_count / selectedCampaign.sent_count) * 100).toFixed(1) 
-                          : '0'}%
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">Bounce Rate</p>
-                    </div>
-                  </div>
-
-                  {/* Footer Actions */}
-                  <div className="flex items-center justify-between pt-2">
-                    <p className="text-xs text-muted-foreground">
-                      Created {format(new Date(selectedCampaign.created_at), 'MMM d, yyyy h:mm a')}
+                {/* Quick Rates */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                    <p className="text-3xl font-bold text-emerald-400 tabular-nums">
+                      {selectedCampaign.sent_count > 0 
+                        ? ((selectedCampaign.open_count / selectedCampaign.sent_count) * 100).toFixed(1) 
+                        : '0'}%
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">Open Rate</p>
+                  </div>
+                  <div className="text-center p-4 bg-violet-500/10 rounded-xl border border-violet-500/20">
+                    <p className="text-3xl font-bold text-violet-400 tabular-nums">
+                      {selectedCampaign.open_count > 0 
+                        ? ((selectedCampaign.click_count / selectedCampaign.open_count) * 100).toFixed(1) 
+                        : '0'}%
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Click Rate</p>
+                  </div>
+                  <div className="text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">
+                    <p className="text-3xl font-bold text-red-400 tabular-nums">
+                      {selectedCampaign.sent_count > 0 
+                        ? ((selectedCampaign.bounce_count / selectedCampaign.sent_count) * 100).toFixed(1) 
+                        : '0'}%
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Bounce Rate</p>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="flex items-center justify-between pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Created {format(new Date(selectedCampaign.created_at), 'MMM d, yyyy h:mm a')}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowStatsPopup(false)}
+                      className="rounded-lg"
+                    >
+                      Close
+                    </Button>
                     <Button
                       onClick={() => {
                         setShowStatsPopup(false);
@@ -709,10 +732,10 @@ export default function AdminCampaigns() {
                     </Button>
                   </div>
                 </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </main>
     </div>
   );
