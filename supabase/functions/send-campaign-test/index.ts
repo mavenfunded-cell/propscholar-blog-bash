@@ -18,6 +18,14 @@ interface SendTestRequest {
   htmlContent: string;
   senderEmail: string;
   senderName: string;
+  preheader?: string;
+}
+
+// Generate preheader HTML that shows as preview text in email clients
+function generatePreheaderHtml(preheader: string): string {
+  if (!preheader) return "";
+  // Hidden preheader text with zero-width spacing to prevent showing in email body
+  return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}${"&#8204; &zwnj; ".repeat(30)}</div>`;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -26,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { testEmail, subject, htmlContent, senderEmail, senderName }: SendTestRequest = await req.json();
+    const { testEmail, subject, htmlContent, senderEmail, senderName, preheader }: SendTestRequest = await req.json();
 
     if (!testEmail || !subject || !htmlContent) {
       return new Response(
@@ -53,6 +61,17 @@ const handler = async (req: Request): Promise<Response> => {
     processedHtml = processedHtml.replace(/\{\{email\}\}/g, testEmail);
     processedHtml = processedHtml.replace(/\{\{unsubscribe_url\}\}/g, "#");
     processedHtml = processedHtml.replace(/\{\{subject\}\}/g, subject);
+
+    // Inject preheader right after <body> tag
+    if (preheader) {
+      const preheaderHtml = generatePreheaderHtml(preheader);
+      if (/<body[^>]*>/i.test(processedHtml)) {
+        processedHtml = processedHtml.replace(/(<body[^>]*>)/i, `$1${preheaderHtml}`);
+      } else {
+        // If no body tag, prepend to content
+        processedHtml = preheaderHtml + processedHtml;
+      }
+    }
 
     const client = new SMTPClient({
       connection: {

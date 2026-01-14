@@ -289,6 +289,7 @@ export default function AdminCampaignBuilder() {
           htmlContent: campaign.html_content,
           senderEmail: campaign.sender_email,
           senderName: campaign.sender_name,
+          preheader: campaign.preheader,
         },
       });
       if (error) throw error;

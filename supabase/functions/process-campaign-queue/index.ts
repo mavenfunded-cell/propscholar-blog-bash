@@ -12,6 +12,13 @@ const SMTP_PORT = 465;
 const BATCH_SIZE = 10;
 const DELAY_BETWEEN_EMAILS_MS = 2000;
 const MAX_BOUNCE_RATE = 0.05;
+
+// Generate preheader HTML that shows as preview text in email clients
+function generatePreheaderHtml(preheader: string): string {
+  if (!preheader) return "";
+  // Hidden preheader text with zero-width spacing to prevent showing in email body
+  return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}${"&#8204; &zwnj; ".repeat(30)}</div>`;
+}
 const MAX_CONSECUTIVE_FAILURES = 3; // Stop after 3 consecutive SMTP failures
 
 const handler = async (req: Request): Promise<Response> => {
@@ -167,6 +174,17 @@ const handler = async (req: Request): Promise<Response> => {
             html = html.replace(/\{\{first_name\}\}/g, recipient.first_name || "there");
             html = html.replace(/\{\{email\}\}/g, recipient.email);
             html = html.replace(/\{\{subject\}\}/g, campaign.subject);
+
+            // Inject preheader right after <body> tag
+            if (campaign.preheader) {
+              const preheaderHtml = generatePreheaderHtml(campaign.preheader);
+              if (/<body[^>]*>/i.test(html)) {
+                html = html.replace(/(<body[^>]*>)/i, `$1${preheaderHtml}`);
+              } else {
+                // If no body tag, prepend to content
+                html = preheaderHtml + html;
+              }
+            }
 
             // Add tracking pixel (robust to missing/uppercase </body>)
             const trackingPixel = `<img src="${trackingBaseUrl}/track-campaign-open?t=${recipient.tracking_id}" width="1" height="1" style="display:none;" />`;
