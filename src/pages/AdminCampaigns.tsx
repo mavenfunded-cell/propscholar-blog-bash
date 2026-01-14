@@ -533,12 +533,14 @@ export default function AdminCampaigns() {
                           {statusConfig[campaign.status]?.label}
                         </Badge>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button 
+                            type="button"
                             size="icon" 
                             variant="ghost"
                             className="h-9 w-9 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               setSelectedCampaign(campaign);
                               setShowStatsPopup(true);
