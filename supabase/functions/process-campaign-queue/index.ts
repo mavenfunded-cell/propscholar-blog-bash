@@ -14,8 +14,8 @@ const corsHeaders = {
 
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
-const BATCH_SIZE = 10;
-const DELAY_BETWEEN_EMAILS_MS = 2000;
+const BATCH_SIZE = 20; // Increased from 10
+const DELAY_BETWEEN_EMAILS_MS = 500; // Reduced from 2000ms to 500ms
 const MAX_BOUNCE_RATE = 0.05;
 
 // Generate preheader HTML that shows as preview text in email clients
@@ -234,8 +234,8 @@ const handler = async (req: Request): Promise<Response> => {
             // Reset consecutive failures on success
             consecutiveFailures = 0;
 
-            // Add delay
-            const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 1000;
+            // Add small delay to avoid rate limits
+            const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 200;
             await new Promise((resolve) => setTimeout(resolve, delay));
           } catch (emailError: any) {
             console.error(`Failed to send to ${recipient.email}:`, emailError?.message || emailError);
