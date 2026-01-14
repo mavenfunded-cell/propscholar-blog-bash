@@ -7,15 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import {
   Mail, Users, Plus, Eye, Copy,
   Calendar, CheckCircle, Clock, Pause, XCircle,
   TrendingUp, MousePointer, AlertTriangle, ArrowLeft,
-  Sparkles, Send, Zap, BarChart3
+  Sparkles, Send, Zap, BarChart3, ExternalLink,
+  MailOpen, Target, Ban, UserMinus
 } from 'lucide-react';
 import { format, parseISO, getHours, getDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 interface Campaign {
   id: string;
@@ -27,8 +30,11 @@ interface Campaign {
   open_count: number;
   click_count: number;
   bounce_count: number;
+  unsubscribe_count?: number;
   total_recipients: number;
   created_at: string;
+  started_at?: string;
+  completed_at?: string;
 }
 
 interface CampaignEvent {
@@ -53,6 +59,8 @@ export default function AdminCampaigns() {
   const [activeTab, setActiveTab] = useState('all');
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [showStatsPopup, setShowStatsPopup] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -532,11 +540,12 @@ export default function AdminCampaigns() {
                             className="h-8 w-8 rounded-lg"
                             onClick={(e) => {
                               e.stopPropagation();
-                              adminNavigate(`/admin/campaigns/${campaign.id}`);
+                              setSelectedCampaign(campaign);
+                              setShowStatsPopup(true);
                             }}
                           >
                             <Eye className="w-4 h-4" />
-                          </Button>
+                           </Button>
                           <Button 
                             size="icon" 
                             variant="ghost"
@@ -557,6 +566,151 @@ export default function AdminCampaigns() {
             )}
           </CardContent>
         </Card>
+
+        {/* Campaign Stats Popup */}
+        <Dialog open={showStatsPopup} onOpenChange={setShowStatsPopup}>
+          <DialogContent className="max-w-2xl p-0 overflow-hidden border-border/50 bg-gradient-to-b from-card to-background">
+            {selectedCampaign && (
+              <>
+                {/* Header with gradient */}
+                <div className="relative p-6 pb-4 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-b border-border/50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                        <Mail className="w-7 h-7 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold mb-1">
+                          {selectedCampaign.name}
+                        </DialogTitle>
+                        <p className="text-sm text-muted-foreground truncate max-w-[300px]">
+                          {selectedCampaign.subject}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={`${statusConfig[selectedCampaign.status]?.color} rounded-full px-3 py-1`}>
+                      {statusConfig[selectedCampaign.status]?.label}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="p-6 space-y-6">
+                  {/* Main Metrics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatMetricCard
+                      icon={Send}
+                      value={selectedCampaign.sent_count}
+                      label="Sent"
+                      color="blue"
+                      percentage={100}
+                    />
+                    <StatMetricCard
+                      icon={MailOpen}
+                      value={selectedCampaign.open_count}
+                      label="Opened"
+                      color="emerald"
+                      percentage={selectedCampaign.sent_count > 0 
+                        ? (selectedCampaign.open_count / selectedCampaign.sent_count) * 100 
+                        : 0}
+                    />
+                    <StatMetricCard
+                      icon={MousePointer}
+                      value={selectedCampaign.click_count}
+                      label="Clicked"
+                      color="violet"
+                      percentage={selectedCampaign.open_count > 0 
+                        ? (selectedCampaign.click_count / selectedCampaign.open_count) * 100 
+                        : 0}
+                    />
+                    <StatMetricCard
+                      icon={Ban}
+                      value={selectedCampaign.bounce_count}
+                      label="Bounced"
+                      color="red"
+                      percentage={selectedCampaign.sent_count > 0 
+                        ? (selectedCampaign.bounce_count / selectedCampaign.sent_count) * 100 
+                        : 0}
+                    />
+                  </div>
+
+                  {/* Engagement Funnel */}
+                  <div className="bg-muted/30 rounded-2xl p-5 border border-border/50">
+                    <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-primary" />
+                      Engagement Funnel
+                    </h4>
+                    <div className="space-y-3">
+                      <FunnelBar 
+                        label="Delivered" 
+                        value={selectedCampaign.sent_count - selectedCampaign.bounce_count}
+                        max={selectedCampaign.sent_count}
+                        color="bg-blue-500"
+                      />
+                      <FunnelBar 
+                        label="Opened" 
+                        value={selectedCampaign.open_count}
+                        max={selectedCampaign.sent_count}
+                        color="bg-emerald-500"
+                      />
+                      <FunnelBar 
+                        label="Clicked" 
+                        value={selectedCampaign.click_count}
+                        max={selectedCampaign.sent_count}
+                        color="bg-violet-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Rates */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                      <p className="text-3xl font-bold text-emerald-400 tabular-nums">
+                        {selectedCampaign.sent_count > 0 
+                          ? ((selectedCampaign.open_count / selectedCampaign.sent_count) * 100).toFixed(1) 
+                          : '0'}%
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Open Rate</p>
+                    </div>
+                    <div className="text-center p-4 bg-violet-500/10 rounded-xl border border-violet-500/20">
+                      <p className="text-3xl font-bold text-violet-400 tabular-nums">
+                        {selectedCampaign.open_count > 0 
+                          ? ((selectedCampaign.click_count / selectedCampaign.open_count) * 100).toFixed(1) 
+                          : '0'}%
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Click Rate</p>
+                    </div>
+                    <div className="text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">
+                      <p className="text-3xl font-bold text-red-400 tabular-nums">
+                        {selectedCampaign.sent_count > 0 
+                          ? ((selectedCampaign.bounce_count / selectedCampaign.sent_count) * 100).toFixed(1) 
+                          : '0'}%
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Bounce Rate</p>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Created {format(new Date(selectedCampaign.created_at), 'MMM d, yyyy h:mm a')}
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setShowStatsPopup(false);
+                        adminNavigate(`/admin/campaigns/${selectedCampaign.id}`);
+                      }}
+                      className="rounded-lg"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View Full Details
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
@@ -589,5 +743,98 @@ function StatsCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Stat metric card for popup
+function StatMetricCard({ 
+  icon: Icon, 
+  value, 
+  label, 
+  color,
+  percentage
+}: { 
+  icon: React.ComponentType<any>; 
+  value: number; 
+  label: string;
+  color: 'blue' | 'emerald' | 'violet' | 'red';
+  percentage: number;
+}) {
+  const colorMap = {
+    blue: {
+      bg: 'bg-blue-500/10',
+      border: 'border-blue-500/20',
+      text: 'text-blue-400',
+      iconBg: 'bg-blue-500/20',
+    },
+    emerald: {
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-500/20',
+      text: 'text-emerald-400',
+      iconBg: 'bg-emerald-500/20',
+    },
+    violet: {
+      bg: 'bg-violet-500/10',
+      border: 'border-violet-500/20',
+      text: 'text-violet-400',
+      iconBg: 'bg-violet-500/20',
+    },
+    red: {
+      bg: 'bg-red-500/10',
+      border: 'border-red-500/20',
+      text: 'text-red-400',
+      iconBg: 'bg-red-500/20',
+    },
+  };
+
+  const colors = colorMap[color];
+
+  return (
+    <div className={`p-4 rounded-xl ${colors.bg} border ${colors.border} relative overflow-hidden`}>
+      <div className="flex items-center gap-3 mb-2">
+        <div className={`p-2 rounded-lg ${colors.iconBg}`}>
+          <Icon className={`w-4 h-4 ${colors.text}`} />
+        </div>
+      </div>
+      <p className={`text-2xl font-bold tabular-nums ${colors.text}`}>
+        {value.toLocaleString()}
+      </p>
+      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+      <p className="text-[10px] text-muted-foreground/70 mt-1">
+        {percentage.toFixed(1)}%
+      </p>
+    </div>
+  );
+}
+
+// Funnel bar for engagement visualization
+function FunnelBar({ 
+  label, 
+  value, 
+  max, 
+  color 
+}: { 
+  label: string; 
+  value: number; 
+  max: number; 
+  color: string;
+}) {
+  const percentage = max > 0 ? (value / max) * 100 : 0;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium tabular-nums">
+          {value.toLocaleString()} <span className="text-muted-foreground text-xs">({percentage.toFixed(1)}%)</span>
+        </span>
+      </div>
+      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+        <div 
+          className={`h-full ${color} rounded-full transition-all duration-500`}
+          style={{ width: `${Math.max(percentage, 0)}%` }}
+        />
+      </div>
+    </div>
   );
 }
