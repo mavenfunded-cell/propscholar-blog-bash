@@ -3,18 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, Plus, Upload, Download, Search, Tag, Trash2,
-  Mail, UserMinus, ArrowLeft, Filter
+  Mail, UserMinus, ArrowLeft, Filter, Copy, CheckCircle, AlertCircle, Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Progress } from '@/components/ui/progress';
 
 interface AudienceUser {
   id: string;
@@ -45,6 +47,13 @@ interface AudienceTag {
   color: string;
 }
 
+interface BulkImportResult {
+  total: number;
+  added: number;
+  duplicates: number;
+  invalid: number;
+}
+
 export default function AdminCampaignAudience() {
   const { adminNavigate, getLoginPath, getDashboardPath } = useAdminNavigation();
   const { isLoggedIn, loading: authLoading, email } = useAdminAuth();
@@ -56,6 +65,10 @@ export default function AdminCampaignAudience() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkImportResult | null>(null);
   const [newUser, setNewUser] = useState({ email: '', first_name: '', last_name: '' });
   const [newTag, setNewTag] = useState({ name: '', color: '#6366F1' });
   const [filterTag, setFilterTag] = useState<string | null>(null);
@@ -191,54 +204,161 @@ export default function AdminCampaignAudience() {
     },
   });
 
+  // Helper to extract and validate emails
+  const extractEmails = (text: string): { valid: string[]; invalid: number } => {
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const allMatches = text.match(emailRegex) || [];
+    const uniqueEmails = [...new Set(allMatches.map(e => e.toLowerCase().trim()))];
+    const lines = text.split(/[\n,;]+/).filter(l => l.trim());
+    const invalidCount = lines.filter(l => l.trim() && !l.match(emailRegex)).length;
+    return { valid: uniqueEmails, invalid: invalidCount };
+  };
+
+  // Bulk email import handler
+  const handleBulkImport = async () => {
+    if (!bulkEmails.trim()) {
+      toast.error('Please enter some emails');
+      return;
+    }
+
+    setBulkImporting(true);
+    setBulkResult(null);
+
+    try {
+      const { valid: validEmails, invalid: invalidCount } = extractEmails(bulkEmails);
+      
+      if (validEmails.length === 0) {
+        toast.error('No valid emails found');
+        setBulkImporting(false);
+        return;
+      }
+
+      // Check for existing emails in database
+      const { data: existingUsers } = await supabase
+        .from('audience_users')
+        .select('email')
+        .in('email', validEmails);
+
+      const existingEmails = new Set(existingUsers?.map(u => u.email.toLowerCase()) || []);
+      const duplicateCount = validEmails.filter(e => existingEmails.has(e)).length;
+      const newEmails = validEmails.filter(e => !existingEmails.has(e));
+
+      // Insert only new emails
+      if (newEmails.length > 0) {
+        const usersToInsert = newEmails.map(email => ({
+          email,
+          source: 'bulk_import',
+          is_marketing_allowed: true,
+        }));
+
+        const { error } = await supabase
+          .from('audience_users')
+          .insert(usersToInsert);
+
+        if (error) throw error;
+      }
+
+      setBulkResult({
+        total: validEmails.length,
+        added: newEmails.length,
+        duplicates: duplicateCount,
+        invalid: invalidCount,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      toast.success(`Added ${newEmails.length} new emails`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to import emails');
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
   const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const text = await file.text();
-    const lines = text.split('\n').filter(l => l.trim());
-    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
-    
-    const emailIndex = headers.findIndex(h => h === 'email');
-    const firstNameIndex = headers.findIndex(h => h === 'first_name' || h === 'firstname');
-    const lastNameIndex = headers.findIndex(h => h === 'last_name' || h === 'lastname');
+    setBulkImporting(true);
+    setBulkResult(null);
 
-    if (emailIndex === -1) {
-      toast.error('CSV must have an "email" column');
-      return;
-    }
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
+      
+      const emailIndex = headers.findIndex(h => h === 'email');
+      const firstNameIndex = headers.findIndex(h => h === 'first_name' || h === 'firstname');
+      const lastNameIndex = headers.findIndex(h => h === 'last_name' || h === 'lastname');
 
-    const usersToImport = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-      const email = values[emailIndex];
-      if (email && email.includes('@')) {
-        usersToImport.push({
-          email,
-          first_name: firstNameIndex >= 0 ? values[firstNameIndex] || null : null,
-          last_name: lastNameIndex >= 0 ? values[lastNameIndex] || null : null,
-          source: 'csv_import',
-        });
+      if (emailIndex === -1) {
+        toast.error('CSV must have an "email" column');
+        setBulkImporting(false);
+        return;
       }
-    }
 
-    if (usersToImport.length === 0) {
-      toast.error('No valid emails found in CSV');
-      return;
-    }
+      const usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
+      const seenEmails = new Set<string>();
+      let invalidCount = 0;
 
-    const { error } = await supabase
-      .from('audience_users')
-      .upsert(usersToImport, { onConflict: 'email', ignoreDuplicates: true });
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const email = values[emailIndex]?.toLowerCase().trim();
+        
+        if (email && email.includes('@') && !seenEmails.has(email)) {
+          seenEmails.add(email);
+          usersToImport.push({
+            email,
+            first_name: firstNameIndex >= 0 ? values[firstNameIndex] || null : null,
+            last_name: lastNameIndex >= 0 ? values[lastNameIndex] || null : null,
+            source: 'csv_import',
+          });
+        } else if (values[emailIndex]?.trim()) {
+          invalidCount++;
+        }
+      }
 
-    if (error) {
-      toast.error('Failed to import: ' + error.message);
-    } else {
+      const duplicatesInFile = lines.length - 1 - usersToImport.length - invalidCount;
+
+      if (usersToImport.length === 0) {
+        toast.error('No valid emails found in CSV');
+        setBulkImporting(false);
+        return;
+      }
+
+      // Check for existing emails in database
+      const { data: existingUsers } = await supabase
+        .from('audience_users')
+        .select('email')
+        .in('email', usersToImport.map(u => u.email));
+
+      const existingEmails = new Set(existingUsers?.map(u => u.email.toLowerCase()) || []);
+      const duplicatesInDb = usersToImport.filter(u => existingEmails.has(u.email)).length;
+      const newUsers = usersToImport.filter(u => !existingEmails.has(u.email));
+
+      if (newUsers.length > 0) {
+        const { error } = await supabase
+          .from('audience_users')
+          .insert(newUsers);
+
+        if (error) throw error;
+      }
+
+      setBulkDialogOpen(true);
+      setBulkResult({
+        total: usersToImport.length,
+        added: newUsers.length,
+        duplicates: duplicatesInDb + duplicatesInFile,
+        invalid: invalidCount,
+      });
+
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
-      toast.success(`Imported ${usersToImport.length} users`);
+      toast.success(`Added ${newUsers.length} new contacts`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to import CSV');
+    } finally {
+      setBulkImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleExport = () => {
@@ -495,6 +615,103 @@ export default function AdminCampaignAudience() {
                         Add to Audience
                       </Button>
                     </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Bulk Import Dialog */}
+                <Dialog open={bulkDialogOpen} onOpenChange={(open) => {
+                  setBulkDialogOpen(open);
+                  if (!open) {
+                    setBulkEmails('');
+                    setBulkResult(null);
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Copy className="w-4 h-4 mr-2" />
+                      Bulk Add
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                      <DialogTitle>Bulk Email Import</DialogTitle>
+                      <DialogDescription>
+                        Paste a list of emails. They can be separated by commas, new lines, or semicolons. Duplicates will be automatically filtered.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    {!bulkResult ? (
+                      <div className="space-y-4">
+                        <Textarea 
+                          placeholder="john@example.com&#10;jane@example.com&#10;bob@example.com"
+                          value={bulkEmails}
+                          onChange={(e) => setBulkEmails(e.target.value)}
+                          className="min-h-[200px] font-mono text-sm"
+                        />
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span>
+                            {extractEmails(bulkEmails).valid.length} valid emails detected
+                          </span>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            onClick={handleBulkImport} 
+                            disabled={bulkImporting || !bulkEmails.trim()}
+                          >
+                            {bulkImporting ? (
+                              <>Processing...</>
+                            ) : (
+                              <>
+                                <Upload className="w-4 h-4 mr-2" />
+                                Import Emails
+                              </>
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="text-center py-4">
+                          <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-3" />
+                          <h3 className="text-lg font-semibold">Import Complete!</h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <Card className="border-green-500/30 bg-green-500/10">
+                            <CardContent className="p-4 text-center">
+                              <p className="text-3xl font-bold text-green-400">{bulkResult.added}</p>
+                              <p className="text-sm text-muted-foreground">New emails added</p>
+                            </CardContent>
+                          </Card>
+                          <Card className="border-amber-500/30 bg-amber-500/10">
+                            <CardContent className="p-4 text-center">
+                              <p className="text-3xl font-bold text-amber-400">{bulkResult.duplicates}</p>
+                              <p className="text-sm text-muted-foreground">Duplicates skipped</p>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {bulkResult.invalid > 0 && (
+                          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
+                            <AlertCircle className="w-4 h-4 text-red-400" />
+                            <span>{bulkResult.invalid} invalid entries were skipped</span>
+                          </div>
+                        )}
+
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Total processed: {bulkResult.total} emails
+                          </p>
+                          <Button onClick={() => {
+                            setBulkDialogOpen(false);
+                            setBulkEmails('');
+                            setBulkResult(null);
+                          }}>
+                            Done
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </DialogContent>
                 </Dialog>
               </div>
