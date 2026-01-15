@@ -41,6 +41,7 @@ import {
   BarChart3,
   GraduationCap,
   Megaphone,
+  TrendingDown,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -75,6 +76,7 @@ interface EventWithCount extends Event {
 
 // Quick link configuration for cleaner rendering
 const quickLinks = [
+  { to: '/admin/conversion', icon: TrendingDown, label: 'Conversion Intel', color: 'text-rose-400', borderColor: 'border-rose-500/30', gradient: 'from-rose-500/10 to-red-500/5', highlight: true },
   { to: '/admin/rewards', icon: Settings, label: 'Reward Settings', color: 'text-amber-400', borderColor: 'border-amber-500/20' },
   { to: '/admin/coupons', icon: Ticket, label: 'Coupon Management', color: 'text-violet-400', borderColor: 'border-violet-500/20' },
   { to: '/admin/users-coins', icon: Coins, label: 'User Coins', color: 'text-yellow-400', borderColor: 'border-yellow-500/20' },
