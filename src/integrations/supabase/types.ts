@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          abandoned_at: string | null
+          anonymous_id: string
+          cart_items: Json | null
+          cart_value: number | null
+          checkout_started: boolean | null
+          checkout_started_at: string | null
+          created_at: string
+          drop_off_reason: string | null
+          emails_sent: number | null
+          id: string
+          last_activity_at: string
+          recovered: boolean | null
+          recovered_at: string | null
+          recovery_status: string | null
+          session_id: string | null
+          user_email: string | null
+        }
+        Insert: {
+          abandoned_at?: string | null
+          anonymous_id: string
+          cart_items?: Json | null
+          cart_value?: number | null
+          checkout_started?: boolean | null
+          checkout_started_at?: string | null
+          created_at?: string
+          drop_off_reason?: string | null
+          emails_sent?: number | null
+          id?: string
+          last_activity_at?: string
+          recovered?: boolean | null
+          recovered_at?: string | null
+          recovery_status?: string | null
+          session_id?: string | null
+          user_email?: string | null
+        }
+        Update: {
+          abandoned_at?: string | null
+          anonymous_id?: string
+          cart_items?: Json | null
+          cart_value?: number | null
+          checkout_started?: boolean | null
+          checkout_started_at?: string | null
+          created_at?: string
+          drop_off_reason?: string | null
+          emails_sent?: number | null
+          id?: string
+          last_activity_at?: string
+          recovered?: boolean | null
+          recovered_at?: string | null
+          recovery_status?: string | null
+          session_id?: string | null
+          user_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_carts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_campaign_access: {
         Row: {
           admin_email: string
@@ -645,6 +710,97 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_items: {
+        Row: {
+          account_size: string | null
+          added_at: string
+          anonymous_id: string
+          discount_applied: number | null
+          id: string
+          platform_type: string | null
+          price: number | null
+          product_name: string
+          purchased: boolean | null
+          purchased_at: string | null
+          removed_at: string | null
+          session_id: string | null
+        }
+        Insert: {
+          account_size?: string | null
+          added_at?: string
+          anonymous_id: string
+          discount_applied?: number | null
+          id?: string
+          platform_type?: string | null
+          price?: number | null
+          product_name: string
+          purchased?: boolean | null
+          purchased_at?: string | null
+          removed_at?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          account_size?: string | null
+          added_at?: string
+          anonymous_id?: string
+          discount_applied?: number | null
+          id?: string
+          platform_type?: string | null
+          price?: number | null
+          product_name?: string
+          purchased?: boolean | null
+          purchased_at?: string | null
+          removed_at?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cart_recovery_emails: {
+        Row: {
+          abandoned_cart_id: string | null
+          clicked_at: string | null
+          converted: boolean | null
+          email_type: string
+          id: string
+          opened_at: string | null
+          sent_at: string
+        }
+        Insert: {
+          abandoned_cart_id?: string | null
+          clicked_at?: string | null
+          converted?: boolean | null
+          email_type: string
+          id?: string
+          opened_at?: string | null
+          sent_at?: string
+        }
+        Update: {
+          abandoned_cart_id?: string | null
+          clicked_at?: string | null
+          converted?: boolean | null
+          email_type?: string
+          id?: string
+          opened_at?: string | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_recovery_emails_abandoned_cart_id_fkey"
+            columns: ["abandoned_cart_id"]
+            isOneToOne: false
+            referencedRelation: "abandoned_carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coin_transactions: {
         Row: {
           amount: number
@@ -675,6 +831,167 @@ export type Database = {
           source_id?: string | null
           transaction_type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      conversion_events: {
+        Row: {
+          anonymous_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          page_title: string | null
+          page_url: string | null
+          scroll_depth: number | null
+          session_id: string | null
+          time_on_page_seconds: number | null
+          timestamp: string
+        }
+        Insert: {
+          anonymous_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          page_title?: string | null
+          page_url?: string | null
+          scroll_depth?: number | null
+          session_id?: string | null
+          time_on_page_seconds?: number | null
+          timestamp?: string
+        }
+        Update: {
+          anonymous_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          page_title?: string | null
+          page_url?: string | null
+          scroll_depth?: number | null
+          session_id?: string | null
+          time_on_page_seconds?: number | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversion_insights: {
+        Row: {
+          date_range_end: string | null
+          date_range_start: string | null
+          generated_at: string
+          id: string
+          insight_text: string
+          insight_type: string
+          is_active: boolean | null
+          metric_label: string | null
+          metric_value: number | null
+          severity: string | null
+        }
+        Insert: {
+          date_range_end?: string | null
+          date_range_start?: string | null
+          generated_at?: string
+          id?: string
+          insight_text: string
+          insight_type: string
+          is_active?: boolean | null
+          metric_label?: string | null
+          metric_value?: number | null
+          severity?: string | null
+        }
+        Update: {
+          date_range_end?: string | null
+          date_range_start?: string | null
+          generated_at?: string
+          id?: string
+          insight_text?: string
+          insight_type?: string
+          is_active?: boolean | null
+          metric_label?: string | null
+          metric_value?: number | null
+          severity?: string | null
+        }
+        Relationships: []
+      }
+      conversion_sessions: {
+        Row: {
+          anonymous_id: string
+          city: string | null
+          converted: boolean | null
+          converted_at: string | null
+          country: string | null
+          first_seen_at: string
+          id: string
+          landing_page: string | null
+          last_seen_at: string
+          referrer: string | null
+          total_page_views: number | null
+          total_time_seconds: number | null
+          user_agent: string | null
+          user_email: string | null
+        }
+        Insert: {
+          anonymous_id: string
+          city?: string | null
+          converted?: boolean | null
+          converted_at?: string | null
+          country?: string | null
+          first_seen_at?: string
+          id?: string
+          landing_page?: string | null
+          last_seen_at?: string
+          referrer?: string | null
+          total_page_views?: number | null
+          total_time_seconds?: number | null
+          user_agent?: string | null
+          user_email?: string | null
+        }
+        Update: {
+          anonymous_id?: string
+          city?: string | null
+          converted?: boolean | null
+          converted_at?: string | null
+          country?: string | null
+          first_seen_at?: string
+          id?: string
+          landing_page?: string | null
+          last_seen_at?: string
+          referrer?: string | null
+          total_page_views?: number | null
+          total_time_seconds?: number | null
+          user_agent?: string | null
+          user_email?: string | null
+        }
+        Relationships: []
+      }
+      conversion_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2107,6 +2424,33 @@ export type Database = {
           title: string
         }[]
       }
+      get_all_abandoned_carts: {
+        Args: never
+        Returns: {
+          abandoned_at: string | null
+          anonymous_id: string
+          cart_items: Json | null
+          cart_value: number | null
+          checkout_started: boolean | null
+          checkout_started_at: string | null
+          created_at: string
+          drop_off_reason: string | null
+          emails_sent: number | null
+          id: string
+          last_activity_at: string
+          recovered: boolean | null
+          recovered_at: string | null
+          recovery_status: string | null
+          session_id: string | null
+          user_email: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "abandoned_carts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_all_ai_knowledge: {
         Args: never
         Returns: {
@@ -2129,6 +2473,27 @@ export type Database = {
           shortcut: string
           title: string
         }[]
+      }
+      get_all_conversion_insights: {
+        Args: never
+        Returns: {
+          date_range_end: string | null
+          date_range_start: string | null
+          generated_at: string
+          id: string
+          insight_text: string
+          insight_type: string
+          is_active: boolean | null
+          metric_label: string | null
+          metric_value: number | null
+          severity: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "conversion_insights"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_all_coupons: {
         Args: never
@@ -2450,6 +2815,22 @@ export type Database = {
           variant_name: string
         }[]
       }
+      get_conversion_dashboard_stats: { Args: never; Returns: Json }
+      get_conversion_settings: {
+        Args: never
+        Returns: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "conversion_settings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_course_videos: {
         Args: { _course_id: string }
         Returns: {
@@ -2465,6 +2846,7 @@ export type Database = {
           video_url: string
         }[]
       }
+      get_dropoff_analysis: { Args: never; Returns: Json }
       get_event_submission_counts: {
         Args: never
         Returns: {
@@ -2645,6 +3027,10 @@ export type Database = {
           _source_id?: string
           _user_id: string
         }
+        Returns: boolean
+      }
+      update_conversion_setting: {
+        Args: { _key: string; _value: Json }
         Returns: boolean
       }
     }
