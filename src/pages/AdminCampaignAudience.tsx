@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import * as XLSX from 'xlsx';
 import {
   Users, Plus, Upload, Download, Search, Tag, Trash2,
   Mail, UserMinus, ArrowLeft, Filter, Copy, CheckCircle, AlertCircle, Clock
@@ -227,7 +228,41 @@ export default function AdminCampaignAudience() {
     return { valid: uniqueEmails, invalid: invalidCount };
   };
 
-  // Bulk email import handler
+  const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+    if (size <= 0) return [arr];
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    return chunks;
+  };
+
+  const fetchExistingEmails = async (emails: string[]) => {
+    const existing = new Set<string>();
+    const chunks = chunkArray(emails, 500);
+    for (const batch of chunks) {
+      const { data, error } = await supabase
+        .from('audience_users')
+        .select('email')
+        .in('email', batch);
+      if (error) throw error;
+      (data || []).forEach((u) => existing.add(String(u.email).toLowerCase()));
+    }
+    return existing;
+  };
+
+  const insertUsersInBatches = async (
+    usersToInsert: { email: string; first_name?: string | null; last_name?: string | null; source: string; is_marketing_allowed?: boolean }[]
+  ) => {
+    const chunks = chunkArray(usersToInsert, 500);
+    for (const batch of chunks) {
+      const { error } = await supabase
+        .from('audience_users')
+        // upsert with ignoreDuplicates prevents unique constraint errors if another import runs simultaneously
+        .upsert(batch, { onConflict: 'email', ignoreDuplicates: true });
+      if (error) throw error;
+    }
+  };
+
+  // Bulk email import handler (paste)
   const handleBulkImport = async () => {
     if (!bulkEmails.trim()) {
       toast.error('Please enter some emails');
@@ -239,24 +274,19 @@ export default function AdminCampaignAudience() {
 
     try {
       const { valid: validEmails, invalid: invalidCount } = extractEmails(bulkEmails);
-      
+
       if (validEmails.length === 0) {
         toast.error('No valid emails found');
         setBulkImporting(false);
         return;
       }
 
-      // Check for existing emails in database
-      const { data: existingUsers } = await supabase
-        .from('audience_users')
-        .select('email')
-        .in('email', validEmails);
+      // IMPORTANT: chunked lookup because the backend has practical limits on large IN() lists
+      const existingEmails = await fetchExistingEmails(validEmails);
 
-      const existingEmails = new Set(existingUsers?.map(u => u.email.toLowerCase()) || []);
       const duplicateCount = validEmails.filter(e => existingEmails.has(e)).length;
       const newEmails = validEmails.filter(e => !existingEmails.has(e));
 
-      // Insert only new emails
       if (newEmails.length > 0) {
         const usersToInsert = newEmails.map(email => ({
           email,
@@ -264,11 +294,7 @@ export default function AdminCampaignAudience() {
           is_marketing_allowed: true,
         }));
 
-        const { error } = await supabase
-          .from('audience_users')
-          .insert(usersToInsert);
-
-        if (error) throw error;
+        await insertUsersInBatches(usersToInsert);
       }
 
       setBulkResult({
@@ -287,89 +313,170 @@ export default function AdminCampaignAudience() {
     }
   };
 
-  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const normalizeHeader = (h: string) => h.toLowerCase().trim().replace(/\s+/g, '_');
 
+  const parseFullName = (name: string | null | undefined) => {
+    const cleaned = (name || '').trim();
+    if (!cleaned) return { first_name: null as string | null, last_name: null as string | null };
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return { first_name: parts[0], last_name: null };
+    return { first_name: parts[0], last_name: parts.slice(1).join(' ') };
+  };
+
+  const importContacts = async (
+    usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[],
+    {
+      invalidCount,
+      duplicatesInFile,
+    }: { invalidCount: number; duplicatesInFile: number }
+  ) => {
+    if (usersToImport.length === 0) {
+      toast.error('No valid emails found');
+      return;
+    }
+
+    // Chunked lookup so large imports (1100+) don't get cut off
+    const existingEmails = await fetchExistingEmails(usersToImport.map(u => u.email));
+
+    const duplicatesInDb = usersToImport.filter(u => existingEmails.has(u.email)).length;
+    const newUsers = usersToImport.filter(u => !existingEmails.has(u.email));
+
+    if (newUsers.length > 0) {
+      await insertUsersInBatches(newUsers);
+    }
+
+    setBulkDialogOpen(true);
+    setBulkResult({
+      total: usersToImport.length,
+      added: newUsers.length,
+      duplicates: duplicatesInDb + duplicatesInFile,
+      invalid: invalidCount,
+    });
+
+    queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+    toast.success(`Added ${newUsers.length} new contacts`);
+  };
+
+  const handleSpreadsheetImport = async (file: File) => {
     setBulkImporting(true);
     setBulkResult(null);
 
     try {
-      const text = await file.text();
-      const lines = text.split('\n').filter(l => l.trim());
-      const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
-      
-      const emailIndex = headers.findIndex(h => h === 'email');
-      const firstNameIndex = headers.findIndex(h => h === 'first_name' || h === 'firstname');
-      const lastNameIndex = headers.findIndex(h => h === 'last_name' || h === 'lastname');
+      const ext = file.name.toLowerCase().split('.').pop();
 
-      if (emailIndex === -1) {
-        toast.error('CSV must have an "email" column');
-        setBulkImporting(false);
-        return;
-      }
+      if (ext === 'csv') {
+        const text = await file.text();
+        const lines = text.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(',').map(h => normalizeHeader(h));
 
-      const usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
-      const seenEmails = new Set<string>();
-      let invalidCount = 0;
+        const emailIndex = headers.findIndex(h => h === 'email');
+        const firstNameIndex = headers.findIndex(h => h === 'first_name' || h === 'firstname');
+        const lastNameIndex = headers.findIndex(h => h === 'last_name' || h === 'lastname');
+        const nameIndex = headers.findIndex(h => h === 'name' || h === 'full_name');
 
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const email = values[emailIndex]?.toLowerCase().trim();
-        
-        if (email && email.includes('@') && !seenEmails.has(email)) {
-          seenEmails.add(email);
-          usersToImport.push({
-            email,
-            first_name: firstNameIndex >= 0 ? values[firstNameIndex] || null : null,
-            last_name: lastNameIndex >= 0 ? values[lastNameIndex] || null : null,
-            source: 'csv_import',
-          });
-        } else if (values[emailIndex]?.trim()) {
-          invalidCount++;
+        if (emailIndex === -1) {
+          toast.error('CSV must have an "email" column');
+          return;
         }
-      }
 
-      const duplicatesInFile = lines.length - 1 - usersToImport.length - invalidCount;
+        const usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
+        const seenEmails = new Set<string>();
+        let invalidCount = 0;
 
-      if (usersToImport.length === 0) {
-        toast.error('No valid emails found in CSV');
-        setBulkImporting(false);
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const email = values[emailIndex]?.toLowerCase().trim();
+
+          if (email && email.includes('@') && !seenEmails.has(email)) {
+            seenEmails.add(email);
+
+            const nameFromFile = nameIndex >= 0 ? values[nameIndex] : null;
+            const parsedName = parseFullName(nameFromFile);
+
+            usersToImport.push({
+              email,
+              first_name: firstNameIndex >= 0 ? (values[firstNameIndex] || null) : parsedName.first_name,
+              last_name: lastNameIndex >= 0 ? (values[lastNameIndex] || null) : parsedName.last_name,
+              source: 'csv_import',
+            });
+          } else if (values[emailIndex]?.trim()) {
+            invalidCount++;
+          }
+        }
+
+        const duplicatesInFile = lines.length - 1 - usersToImport.length - invalidCount;
+        await importContacts(usersToImport, { invalidCount, duplicatesInFile });
         return;
       }
 
-      // Check for existing emails in database
-      const { data: existingUsers } = await supabase
-        .from('audience_users')
-        .select('email')
-        .in('email', usersToImport.map(u => u.email));
+      // XLSX / XLS
+      if (ext === 'xlsx' || ext === 'xls') {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const ws = workbook.Sheets[sheetName];
 
-      const existingEmails = new Set(existingUsers?.map(u => u.email.toLowerCase()) || []);
-      const duplicatesInDb = usersToImport.filter(u => existingEmails.has(u.email)).length;
-      const newUsers = usersToImport.filter(u => !existingEmails.has(u.email));
+        // sheet_to_json with header: 1 gives rows as arrays, first row headers
+        const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false }) as string[][];
+        const headerRow = (rows[0] || []).map(h => normalizeHeader(String(h || '')));
 
-      if (newUsers.length > 0) {
-        const { error } = await supabase
-          .from('audience_users')
-          .insert(newUsers);
+        const emailIndex = headerRow.findIndex(h => h === 'email');
+        const nameIndex = headerRow.findIndex(h => h === 'name' || h === 'full_name');
+        const firstNameIndex = headerRow.findIndex(h => h === 'first_name' || h === 'firstname');
+        const lastNameIndex = headerRow.findIndex(h => h === 'last_name' || h === 'lastname');
 
-        if (error) throw error;
+        if (emailIndex === -1) {
+          toast.error('XLSX must have an "Email" column');
+          return;
+        }
+
+        const usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
+        const seenEmails = new Set<string>();
+        let invalidCount = 0;
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i] || [];
+          const email = String(row[emailIndex] || '').toLowerCase().trim();
+          if (email && email.includes('@') && !seenEmails.has(email)) {
+            seenEmails.add(email);
+
+            const nameFromFile = nameIndex >= 0 ? String(row[nameIndex] || '') : '';
+            const parsedName = parseFullName(nameFromFile);
+
+            const firstName = firstNameIndex >= 0 ? (String(row[firstNameIndex] || '').trim() || null) : parsedName.first_name;
+            const lastName = lastNameIndex >= 0 ? (String(row[lastNameIndex] || '').trim() || null) : parsedName.last_name;
+
+            usersToImport.push({
+              email,
+              first_name: firstName,
+              last_name: lastName,
+              source: 'xlsx_import',
+            });
+          } else if (String(row[emailIndex] || '').trim()) {
+            invalidCount++;
+          }
+        }
+
+        const duplicatesInFile = rows.length - 1 - usersToImport.length - invalidCount;
+        await importContacts(usersToImport, { invalidCount, duplicatesInFile });
+        return;
       }
 
-      setBulkDialogOpen(true);
-      setBulkResult({
-        total: usersToImport.length,
-        added: newUsers.length,
-        duplicates: duplicatesInDb + duplicatesInFile,
-        invalid: invalidCount,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
-      toast.success(`Added ${newUsers.length} new contacts`);
+      toast.error('Unsupported file type. Please upload a CSV or XLSX file.');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to import CSV');
+      toast.error(error.message || 'Failed to import file');
     } finally {
       setBulkImporting(false);
+    }
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await handleSpreadsheetImport(file);
+    } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -571,13 +678,13 @@ export default function AdminCampaignAudience() {
                 <input 
                   ref={fileInputRef}
                   type="file" 
-                  accept=".csv" 
+                  accept=".csv,.xlsx,.xls" 
                   className="hidden" 
-                  onChange={handleCSVImport}
+                  onChange={handleFileImport}
                 />
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                   <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
+                  Import File
                 </Button>
 
                 <Button variant="outline" onClick={handleExport}>
