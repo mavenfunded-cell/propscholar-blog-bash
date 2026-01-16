@@ -23,7 +23,8 @@ import {
 import {
   ArrowLeft, Save, Eye, Smartphone, Monitor, Calendar,
   Users, AlertTriangle, CheckCircle, Loader2, Mail, Copy,
-  History, LayoutTemplate, Wand2, TestTube, Clock, ChevronDown
+  History, LayoutTemplate, Wand2, TestTube, Clock, ChevronDown,
+  Sparkles, PanelRightClose, PanelRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ import { TemplateLibrary } from '@/components/admin/TemplateLibrary';
 import { VisualEmailEditor } from '@/components/admin/VisualEmailEditor';
 import { ABTestingPanel } from '@/components/admin/ABTestingPanel';
 import { AdvancedScheduling } from '@/components/admin/AdvancedScheduling';
+import { EmailAIEnhancer } from '@/components/admin/EmailAIEnhancer';
 import {
   Collapsible,
   CollapsibleContent,
@@ -133,6 +135,9 @@ export default function AdminCampaignBuilder() {
   const [sendOptimalTime, setSendOptimalTime] = useState(false);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState('weekly');
+  
+  // AI Enhancer state
+  const [showAIEnhancer, setShowAIEnhancer] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -435,6 +440,14 @@ export default function AdminCampaignBuilder() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant={showAIEnhancer ? 'default' : 'outline'}
+              onClick={() => setShowAIEnhancer(!showAIEnhancer)}
+              className="rounded-lg border-border/50"
+            >
+              {showAIEnhancer ? <PanelRightClose className="w-4 h-4 mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              AI Assist
+            </Button>
             <Button 
               variant="outline" 
               onClick={() => saveMutation.mutate()} 
@@ -555,10 +568,12 @@ export default function AdminCampaignBuilder() {
       </header>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Editor */}
-          <div className="space-y-6">
+      <div className="flex">
+        <div className={`flex-1 transition-all ${showAIEnhancer ? 'mr-80' : ''}`}>
+          <div className="max-w-7xl mx-auto p-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Editor */}
+              <div className="space-y-6">
             {/* Previous Campaigns - Collapsible */}
             <Collapsible open={previousCampaignsOpen} onOpenChange={setPreviousCampaignsOpen}>
               <Card className="border-border/50">
@@ -834,9 +849,23 @@ export default function AdminCampaignBuilder() {
                   />
                 </div>
               </CardContent>
-            </Card>
+                </Card>
+              </div>
+            </div>
           </div>
         </div>
+        
+        {/* AI Enhancer Sidebar */}
+        {showAIEnhancer && (
+          <div className="fixed right-0 top-0 bottom-0 w-80 z-30 shadow-2xl">
+            <EmailAIEnhancer
+              htmlContent={campaign.html_content || ''}
+              subject={campaign.subject || ''}
+              onUpdateContent={(html) => setCampaign(p => ({ ...p, html_content: html }))}
+              onUpdateSubject={(subj) => setCampaign(p => ({ ...p, subject: subj }))}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
