@@ -150,10 +150,23 @@ export default function AdminCampaignAudience() {
 
   const addUserMutation = useMutation({
     mutationFn: async (user: typeof newUser) => {
+      const emailToAdd = user.email.toLowerCase().trim();
+      
+      // Check if email already exists
+      const { data: existing } = await supabase
+        .from('audience_users')
+        .select('id')
+        .eq('email', emailToAdd)
+        .maybeSingle();
+      
+      if (existing) {
+        throw new Error('This email already exists in your audience');
+      }
+      
       const { error } = await supabase
         .from('audience_users')
         .insert({
-          email: user.email,
+          email: emailToAdd,
           first_name: user.first_name || null,
           last_name: user.last_name || null,
           source: 'manual',
