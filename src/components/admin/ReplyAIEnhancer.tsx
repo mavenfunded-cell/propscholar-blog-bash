@@ -126,42 +126,40 @@ export const AIOptionsPanel = ({ options, selectedType, onSelectOption }: AIOpti
   if (options.length === 0) return null;
 
   return (
-    <div className="bg-muted/50 rounded-lg border border-border p-3 space-y-3 mb-3">
+    <div className="space-y-2">
       <p className="text-xs text-muted-foreground font-medium">
-        Choose a version to use:
+        Choose a version:
       </p>
-      <div className="grid gap-2">
-        {options.map((option) => (
-          <div
-            key={option.type}
-            className={`p-3 rounded-lg border cursor-pointer transition-all hover:border-primary/50 ${
-              selectedType === option.type
-                ? "border-primary bg-primary/10"
-                : "border-border bg-background"
-            }`}
-            onClick={() => onSelectOption(option)}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-md ${
-                  option.type === "short" ? "bg-blue-500/20 text-blue-400" :
-                  option.type === "detailed" ? "bg-purple-500/20 text-purple-400" :
-                  "bg-pink-500/20 text-pink-400"
-                }`}>
-                  {option.icon}
-                </div>
-                <span className="font-medium text-sm">{option.label}</span>
+      {options.map((option) => (
+        <div
+          key={option.type}
+          className={`p-3 rounded-lg border cursor-pointer transition-all hover:border-primary/50 ${
+            selectedType === option.type
+              ? "border-primary bg-primary/10"
+              : "border-border bg-background"
+          }`}
+          onClick={() => onSelectOption(option)}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-md ${
+                option.type === "short" ? "bg-blue-500/20 text-blue-400" :
+                option.type === "detailed" ? "bg-purple-500/20 text-purple-400" :
+                "bg-pink-500/20 text-pink-400"
+              }`}>
+                {option.icon}
               </div>
-              {selectedType === option.type && (
-                <Check className="h-4 w-4 text-primary" />
-              )}
+              <span className="font-medium text-sm">{option.label}</span>
             </div>
-            <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-              {option.content}
-            </p>
+            {selectedType === option.type && (
+              <Check className="h-4 w-4 text-primary" />
+            )}
           </div>
-        ))}
-      </div>
+          <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+            {option.content}
+          </p>
+        </div>
+      ))}
     </div>
   );
 };
