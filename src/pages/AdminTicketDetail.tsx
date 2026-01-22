@@ -39,6 +39,7 @@ import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ReactMarkdown from "react-markdown";
 import { MarkdownToolbar } from "@/components/MarkdownToolbar";
+import { ReplyAIEnhancer } from "@/components/admin/ReplyAIEnhancer";
 
 interface Attachment {
   url: string;
@@ -772,6 +773,16 @@ const AdminTicketDetail = () => {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* AI Enhancer - only for replies */}
+                {!isInternalNote && replyBody.trim() && (
+                  <div className="mb-3">
+                    <ReplyAIEnhancer
+                      originalText={replyBody}
+                      onSelectOption={(content) => setReplyBody(content)}
+                    />
                   </div>
                 )}
 
