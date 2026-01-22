@@ -788,18 +788,6 @@ const AdminTicketDetail = () => {
                   </div>
                 )}
 
-                {/* AI Options Panel - only for replies when options exist */}
-                {!isInternalNote && aiEnhancer.options.length > 0 && (
-                  <AIOptionsPanel
-                    options={aiEnhancer.options}
-                    selectedType={aiEnhancer.selectedType}
-                    onSelectOption={(option) => {
-                      aiEnhancer.setSelectedType(option.type);
-                      setReplyBody(option.content);
-                      toast.success(`${option.label} version applied`);
-                    }}
-                  />
-                )}
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -923,6 +911,28 @@ const AdminTicketDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* AI Enhanced Options Panel */}
+            {!isInternalNote && aiEnhancer.options.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="text-primary">✨</span> AI Suggestions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AIOptionsPanel
+                    options={aiEnhancer.options}
+                    selectedType={aiEnhancer.selectedType}
+                    onSelectOption={(option) => {
+                      aiEnhancer.setSelectedType(option.type);
+                      setReplyBody(option.content);
+                      toast.success(`${option.label} version applied`);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
         </div>
