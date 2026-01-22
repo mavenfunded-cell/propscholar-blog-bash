@@ -39,7 +39,7 @@ import AISuggestionsSidebar from "@/components/AISuggestionsSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ReactMarkdown from "react-markdown";
 import { MarkdownToolbar } from "@/components/MarkdownToolbar";
-import { ReplyAIEnhancer } from "@/components/admin/ReplyAIEnhancer";
+import { FixWithAIButton, AIOptionsPanel, useReplyAIEnhancer } from "@/components/admin/ReplyAIEnhancer";
 
 interface Attachment {
   url: string;
@@ -115,6 +115,9 @@ const AdminTicketDetail = () => {
   const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // AI Enhancer hook
+  const aiEnhancer = useReplyAIEnhancer();
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
@@ -637,6 +640,15 @@ const AdminTicketDetail = () => {
                     <StickyNote className="h-4 w-4 mr-1" />
                     Internal Note
                   </Button>
+                  
+                  {/* Fix with AI Button */}
+                  {!isInternalNote && (
+                    <FixWithAIButton
+                      onClick={() => aiEnhancer.handleEnhance(replyBody)}
+                      isLoading={aiEnhancer.isLoading}
+                      disabled={!replyBody.trim()}
+                    />
+                  )}
                 </div>
                 
                 {/* Markdown Toolbar - only for replies */}
@@ -776,14 +788,17 @@ const AdminTicketDetail = () => {
                   </div>
                 )}
 
-                {/* AI Enhancer - only for replies */}
-                {!isInternalNote && replyBody.trim() && (
-                  <div className="mb-3">
-                    <ReplyAIEnhancer
-                      originalText={replyBody}
-                      onSelectOption={(content) => setReplyBody(content)}
-                    />
-                  </div>
+                {/* AI Options Panel - only for replies when options exist */}
+                {!isInternalNote && aiEnhancer.options.length > 0 && (
+                  <AIOptionsPanel
+                    options={aiEnhancer.options}
+                    selectedType={aiEnhancer.selectedType}
+                    onSelectOption={(option) => {
+                      aiEnhancer.setSelectedType(option.type);
+                      setReplyBody(option.content);
+                      toast.success(`${option.label} version applied`);
+                    }}
+                  />
                 )}
 
                 <div className="flex items-center justify-between">
