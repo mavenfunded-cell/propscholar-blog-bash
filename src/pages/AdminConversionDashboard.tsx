@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { TrackerSetupGuide } from '@/components/admin/TrackerSetupGuide';
 import { 
   ArrowLeft, 
   RefreshCw, 
@@ -25,6 +26,7 @@ import {
   Zap,
   Settings,
   Play,
+  Code,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -237,6 +239,15 @@ export default function AdminConversionDashboard() {
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => document.getElementById('tracker-setup')?.scrollIntoView({ behavior: 'smooth' })}
+              className="rounded-lg"
+            >
+              <Code className="w-4 h-4 mr-2" />
+              Tracker Code
             </Button>
           </div>
         </div>
@@ -558,6 +569,11 @@ export default function AdminConversionDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tracker Setup Guide */}
+            <div id="tracker-setup">
+              <TrackerSetupGuide />
+            </div>
           </>
         )}
       </main>
