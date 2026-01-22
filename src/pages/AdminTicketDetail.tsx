@@ -32,6 +32,8 @@ import {
   ImageIcon,
   Download,
   FileText,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
@@ -48,6 +50,14 @@ interface Attachment {
   size: number;
 }
 
+interface ChatMessage {
+  role: "user" | "bot" | "assistant";
+  content: string;
+  timestamp?: string;
+}
+
+type TicketSource = "email" | "chatbot" | "form";
+
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
 
@@ -59,6 +69,10 @@ interface Ticket {
   user_id: string | null;
   status: TicketStatus;
   priority: TicketPriority;
+  source?: TicketSource;
+  phone?: string;
+  session_id?: string;
+  chat_history?: ChatMessage[];
   created_at: string;
   updated_at: string;
   last_reply_at: string;
@@ -277,7 +291,14 @@ const AdminTicketDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_ticket_details', { _ticket_id: id });
       if (error) throw error;
-      return data?.[0] as Ticket;
+      const rawTicket = data?.[0];
+      if (!rawTicket) return null;
+      
+      // Parse chat_history from JSON - cast through unknown for type safety
+      return {
+        ...rawTicket,
+        chat_history: rawTicket.chat_history ? (rawTicket.chat_history as unknown as ChatMessage[]) : undefined,
+      } as Ticket;
     },
     enabled: !!id && isAdmin === true,
   });
@@ -895,6 +916,17 @@ const AdminTicketDetail = () => {
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{ticket.user_email}</span>
                 </div>
+                {ticket.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a 
+                      href={`tel:${ticket.phone}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {ticket.phone}
+                    </a>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
@@ -909,8 +941,59 @@ const AdminTicketDetail = () => {
                     </span>
                   </div>
                 )}
+                {ticket.source && ticket.source !== "email" && (
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-purple-400" />
+                    <span className="text-sm text-purple-400 font-medium capitalize">
+                      {ticket.source} Ticket
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
+
+            {/* Chatbot Context Card - Only for chatbot/form tickets */}
+            {ticket.source && ticket.source !== "email" && ticket.chat_history && ticket.chat_history.length > 0 && (
+              <Card className="border-purple-500/30 bg-purple-500/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-purple-400" />
+                    Chatbot Context
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {ticket.session_id && (
+                    <div className="text-xs text-muted-foreground">
+                      Session: <span className="font-mono">{ticket.session_id}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {ticket.chat_history.map((msg, idx) => (
+                      <div 
+                        key={idx}
+                        className={`p-2.5 rounded-lg text-sm ${
+                          msg.role === "user" 
+                            ? "bg-foreground/10 ml-4" 
+                            : "bg-purple-500/10 mr-4"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {msg.role === "user" ? (
+                            <User className="h-3 w-3 text-muted-foreground" />
+                          ) : (
+                            <Bot className="h-3 w-3 text-purple-400" />
+                          )}
+                          <span className="text-xs font-medium text-muted-foreground capitalize">
+                            {msg.role}
+                          </span>
+                        </div>
+                        <p className="text-foreground/90">{msg.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* AI Enhanced Options Panel */}
             {!isInternalNote && aiEnhancer.options.length > 0 && (

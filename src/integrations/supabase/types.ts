@@ -1946,13 +1946,17 @@ export type Database = {
       }
       support_tickets: {
         Row: {
+          chat_history: Json | null
           closed_at: string | null
           created_at: string
           id: string
           last_reply_at: string | null
           last_reply_by: string | null
           original_message_id: string | null
+          phone: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
+          session_id: string | null
+          source: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           subject: string
           ticket_number: number
@@ -1961,13 +1965,17 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          chat_history?: Json | null
           closed_at?: string | null
           created_at?: string
           id?: string
           last_reply_at?: string | null
           last_reply_by?: string | null
           original_message_id?: string | null
+          phone?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
+          session_id?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           subject: string
           ticket_number?: number
@@ -1976,13 +1984,17 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          chat_history?: Json | null
           closed_at?: string | null
           created_at?: string
           id?: string
           last_reply_at?: string | null
           last_reply_by?: string | null
           original_message_id?: string | null
+          phone?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
+          session_id?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           subject?: string
           ticket_number?: number
@@ -2741,13 +2753,14 @@ export type Database = {
         }[]
       }
       get_all_support_tickets: {
-        Args: { _priority_filter?: string; _status_filter?: string }
+        Args: { _priority_filter: string; _status_filter: string }
         Returns: {
           created_at: string
           id: string
           last_reply_at: string
           last_reply_by: string
           priority: Database["public"]["Enums"]["ticket_priority"]
+          source: string
           status: Database["public"]["Enums"]["ticket_status"]
           subject: string
           ticket_number: number
@@ -2902,12 +2915,16 @@ export type Database = {
       get_ticket_details: {
         Args: { _ticket_id: string }
         Returns: {
+          chat_history: Json
           closed_at: string
           created_at: string
           id: string
           last_reply_at: string
           last_reply_by: string
+          phone: string
           priority: Database["public"]["Enums"]["ticket_priority"]
+          session_id: string
+          source: string
           status: Database["public"]["Enums"]["ticket_status"]
           subject: string
           ticket_number: number

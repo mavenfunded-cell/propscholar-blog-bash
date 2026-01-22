@@ -33,6 +33,8 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
+  Bot,
+  FileText,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
@@ -40,6 +42,7 @@ import { AdminNotificationBell } from "@/components/AdminNotificationBell";
 
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
+type TicketSource = "email" | "chatbot" | "form";
 
 interface Ticket {
   id: string;
@@ -48,11 +51,36 @@ interface Ticket {
   user_email: string;
   status: TicketStatus;
   priority: TicketPriority;
+  source?: TicketSource;
   created_at: string;
   updated_at: string;
   last_reply_at: string;
   last_reply_by: string;
 }
+
+const sourceColors: Record<TicketSource, string> = {
+  email: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+  chatbot: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
+  form: "bg-green-500/15 text-green-400 border border-green-500/30",
+};
+
+const sourceLabels: Record<TicketSource, string> = {
+  email: "Email",
+  chatbot: "Chatbot",
+  form: "Form",
+};
+
+const SourceIcon = ({ source }: { source: TicketSource }) => {
+  const iconClass = "h-3 w-3";
+  switch (source) {
+    case "chatbot":
+      return <Bot className={iconClass} />;
+    case "form":
+      return <FileText className={iconClass} />;
+    default:
+      return <Mail className={iconClass} />;
+  }
+};
 
 const getDisplayStatus = (status: TicketStatus): "open" | "closed" => {
   return status === "closed" ? "closed" : "open";
@@ -81,6 +109,7 @@ const AdminSupportTickets = () => {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSyncResult, setLastSyncResult] = useState<{
     success: boolean;
@@ -177,6 +206,10 @@ const AdminSupportTickets = () => {
   });
 
   const filteredTickets = tickets?.filter((ticket) => {
+    // Source filter
+    if (sourceFilter !== "all" && ticket.source !== sourceFilter) return false;
+    
+    // Search filter
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -190,6 +223,12 @@ const AdminSupportTickets = () => {
     all: tickets?.length || 0,
     open: tickets?.filter((t) => t.status !== "closed").length || 0,
     closed: tickets?.filter((t) => t.status === "closed").length || 0,
+  };
+
+  const sourceCounts = {
+    all: tickets?.length || 0,
+    email: tickets?.filter((t) => !t.source || t.source === "email").length || 0,
+    chatbot: tickets?.filter((t) => t.source === "chatbot" || t.source === "form").length || 0,
   };
 
   return (
@@ -292,6 +331,35 @@ const AdminSupportTickets = () => {
           </CardContent>
         </Card>
 
+        {/* Source Tabs */}
+        <div className="flex gap-2 p-1 bg-muted/30 rounded-xl w-fit">
+          {[
+            { key: "all", label: "All Tickets", icon: MessageSquare, count: sourceCounts.all },
+            { key: "email", label: "Email", icon: Mail, count: sourceCounts.email },
+            { key: "chatbot", label: "Chatbot/Form", icon: Bot, count: sourceCounts.chatbot },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setSourceFilter(tab.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                sourceFilter === tab.key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              <span>{tab.label}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                sourceFilter === tab.key 
+                  ? "bg-primary-foreground/20 text-primary-foreground" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -380,6 +448,7 @@ const AdminSupportTickets = () => {
                   <TableHeader>
                     <TableRow className="border-border/50 hover:bg-transparent">
                       <TableHead className="w-20 text-xs font-medium text-muted-foreground">#</TableHead>
+                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">Source</TableHead>
                       <TableHead className="text-xs font-medium text-muted-foreground">Subject</TableHead>
                       <TableHead className="text-xs font-medium text-muted-foreground">From</TableHead>
                       <TableHead className="w-28 text-xs font-medium text-muted-foreground">Status</TableHead>
@@ -399,6 +468,15 @@ const AdminSupportTickets = () => {
                         >
                           <TableCell className="font-mono text-sm text-muted-foreground">
                             #{ticket.ticket_number}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={`rounded-full px-2 gap-1 ${sourceColors[ticket.source || 'email']}`}
+                            >
+                              <SourceIcon source={ticket.source || 'email'} />
+                              {sourceLabels[ticket.source || 'email']}
+                            </Badge>
                           </TableCell>
                           <TableCell className="font-medium">{ticket.subject}</TableCell>
                           <TableCell className="text-muted-foreground text-sm">{ticket.user_email}</TableCell>
