@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import FingerprintLoader from "@/components/FingerprintLoader";
 
 const AuthVerify = () => {
   const [searchParams] = useSearchParams();
@@ -67,10 +67,10 @@ const AuthVerify = () => {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="text-center space-y-4 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-6 p-8">
         {status === "verifying" && (
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+          <FingerprintLoader />
         )}
         {status === "success" && (
           <div className="h-12 w-12 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
