@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         user_email: email,
         subject: problem.slice(0, 100) + (problem.length > 100 ? "..." : ""),
-        status: "new",
+        status: "open",
         priority: "medium",
         source: "chatbot",
         phone: phone || null,
