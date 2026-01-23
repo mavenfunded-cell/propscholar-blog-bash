@@ -102,7 +102,7 @@ const handler = async (req: Request): Promise<Response> => {
         body: JSON.stringify({
           ticketId: ticket.id,
           ticketNumber: ticket.ticket_number,
-          userEmail: email,
+          to: email,
           subject: problem.slice(0, 100),
         }),
       });
