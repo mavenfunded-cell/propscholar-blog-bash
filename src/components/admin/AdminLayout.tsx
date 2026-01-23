@@ -101,6 +101,7 @@ const navGroups: NavGroup[] = [
       { label: 'AI Knowledge', icon: Brain, href: '/admin/ai-knowledge' },
       { label: 'AI Usage', icon: BarChart3, href: '/admin/ai-usage' },
       { label: 'User Analytics', icon: Clock, href: '/admin/analytics' },
+      { label: 'UTM Tracking', icon: Share2, href: '/admin/utm-tracking' },
     ],
   },
   {

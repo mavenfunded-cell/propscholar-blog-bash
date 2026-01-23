@@ -76,6 +76,7 @@ interface EventWithCount extends Event {
 
 // Quick link configuration for cleaner rendering
 const quickLinks = [
+  { to: '/admin/utm-tracking', icon: Share2, label: 'UTM Tracking', color: 'text-sky-400', borderColor: 'border-sky-500/30', gradient: 'from-sky-500/10 to-blue-500/5', highlight: true },
   { to: '/admin/conversion', icon: TrendingDown, label: 'Conversion Intel', color: 'text-rose-400', borderColor: 'border-rose-500/30', gradient: 'from-rose-500/10 to-red-500/5', highlight: true },
   { to: '/admin/rewards', icon: Settings, label: 'Reward Settings', color: 'text-amber-400', borderColor: 'border-amber-500/20' },
   { to: '/admin/coupons', icon: Ticket, label: 'Coupon Management', color: 'text-violet-400', borderColor: 'border-violet-500/20' },

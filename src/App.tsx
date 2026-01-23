@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
+import { useUtmTracking } from "@/hooks/useUtmTracking";
 import { AdminTicketNotification } from "@/components/AdminTicketNotification";
 import { isAdminSubdomain, useAdminSubdomainSEO } from "@/hooks/useAdminSubdomain";
 import RedirectToAdminSubdomain from "@/components/RedirectToAdminSubdomain";
@@ -55,6 +56,7 @@ import AdminCampaignAudience from "./pages/AdminCampaignAudience";
 import AdminCampaignBuilder from "./pages/AdminCampaignBuilder";
 import AdminCampaignDetail from "./pages/AdminCampaignDetail";
 import AdminConversionDashboard from "./pages/AdminConversionDashboard";
+import AdminUtmTracking from "./pages/AdminUtmTracking";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,7 @@ const queryClient = new QueryClient();
 function AppEffects() {
   const { pathname } = useLocation();
   useSessionTracking();
+  useUtmTracking();
   useAdminSubdomainSEO();
   
   useEffect(() => {
@@ -107,6 +110,7 @@ function getAdminRoutes(basePath = "") {
     <Route key="campaigns-edit" path={`${basePath}/campaigns/:id/edit`} element={<AdminCampaignBuilder />} />,
     <Route key="campaigns-detail" path={`${basePath}/campaigns/:id`} element={<AdminCampaignDetail />} />,
     <Route key="conversion" path={`${basePath}/conversion`} element={<AdminConversionDashboard />} />,
+    <Route key="utm-tracking" path={`${basePath}/utm-tracking`} element={<AdminUtmTracking />} />,
   ];
 }
 
