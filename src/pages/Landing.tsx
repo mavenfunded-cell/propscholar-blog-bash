@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, PenTool, Video, Sparkles, ExternalLink, Coins, Gift, Award, BookOpen, ShoppingBag } from 'lucide-react';
 import { useSEO } from '@/hooks/useSEO';
+import SupportChatWidget from '@/components/SupportChatWidget';
 
 const competitions = [
   {
@@ -566,6 +567,7 @@ export default function Landing() {
         </section>
 
         <Footer />
+        <SupportChatWidget />
       </div>
     </div>
   );
