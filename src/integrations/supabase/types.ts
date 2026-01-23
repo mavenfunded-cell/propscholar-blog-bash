@@ -2195,6 +2195,111 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sources: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_session_id: string
+          first_utm_campaign: string | null
+          first_utm_medium: string | null
+          first_utm_source: string | null
+          id: string
+          last_session_id: string
+          last_utm_campaign: string | null
+          last_utm_medium: string | null
+          last_utm_source: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_session_id: string
+          first_utm_campaign?: string | null
+          first_utm_medium?: string | null
+          first_utm_source?: string | null
+          id?: string
+          last_session_id: string
+          last_utm_campaign?: string | null
+          last_utm_medium?: string | null
+          last_utm_source?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_session_id?: string
+          first_utm_campaign?: string | null
+          first_utm_medium?: string | null
+          first_utm_source?: string | null
+          id?: string
+          last_session_id?: string
+          last_utm_campaign?: string | null
+          last_utm_medium?: string | null
+          last_utm_source?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      utm_sessions: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          landing_page: string | null
+          last_seen_at: string
+          referrer: string | null
+          session_id: string
+          user_agent: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string
+          utm_source: string
+          utm_term: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          landing_page?: string | null
+          last_seen_at?: string
+          referrer?: string | null
+          session_id: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string
+          utm_source?: string
+          utm_term?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          landing_page?: string | null
+          last_seen_at?: string
+          referrer?: string | null
+          session_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string
+          utm_source?: string
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       winner_claims: {
         Row: {
           admin_notes: string | null
