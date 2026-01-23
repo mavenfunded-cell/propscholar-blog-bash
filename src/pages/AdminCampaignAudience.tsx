@@ -13,10 +13,13 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
 import * as XLSX from 'xlsx';
 import {
   Users, Plus, Upload, Download, Search, Tag, Trash2,
-  Mail, UserMinus, ArrowLeft, Filter, Copy, CheckCircle, AlertCircle, Clock
+  Mail, UserMinus, ArrowLeft, Filter, Copy, CheckCircle, AlertCircle, Clock, UserPlus, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -24,7 +27,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 
@@ -73,6 +76,12 @@ export default function AdminCampaignAudience() {
   const [newUser, setNewUser] = useState({ email: '', first_name: '', last_name: '' });
   const [newTag, setNewTag] = useState({ name: '', color: '#6366F1' });
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  
+  // New state for tag assignment
+  const [assignTagDialogOpen, setAssignTagDialogOpen] = useState(false);
+  const [selectedTagForAssign, setSelectedTagForAssign] = useState<string>('');
+  const [bulkImportTag, setBulkImportTag] = useState<string>('');
+  const [isAssigningTags, setIsAssigningTags] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -218,6 +227,99 @@ export default function AdminCampaignAudience() {
     },
   });
 
+  // Assign tag to selected users
+  const assignTagToUsersMutation = useMutation({
+    mutationFn: async ({ userIds, tagId }: { userIds: string[]; tagId: string }) => {
+      // Get current tags for all selected users
+      const { data: usersData, error: fetchError } = await supabase
+        .from('audience_users')
+        .select('id, tags')
+        .in('id', userIds);
+      
+      if (fetchError) throw fetchError;
+      
+      // Update each user - add tag if not already present
+      for (const user of usersData || []) {
+        const currentTags = user.tags || [];
+        if (!currentTags.includes(tagId)) {
+          const { error } = await supabase
+            .from('audience_users')
+            .update({ tags: [...currentTags, tagId] })
+            .eq('id', user.id);
+          if (error) throw error;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      setSelectedUsers([]);
+      setAssignTagDialogOpen(false);
+      setSelectedTagForAssign('');
+      toast.success('Tag assigned to selected users');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to assign tag');
+    },
+  });
+
+  // Remove tag from selected users
+  const removeTagFromUsersMutation = useMutation({
+    mutationFn: async ({ userIds, tagId }: { userIds: string[]; tagId: string }) => {
+      const { data: usersData, error: fetchError } = await supabase
+        .from('audience_users')
+        .select('id, tags')
+        .in('id', userIds);
+      
+      if (fetchError) throw fetchError;
+      
+      for (const user of usersData || []) {
+        const currentTags = user.tags || [];
+        const newTags = currentTags.filter((t: string) => t !== tagId);
+        const { error } = await supabase
+          .from('audience_users')
+          .update({ tags: newTags })
+          .eq('id', user.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      setSelectedUsers([]);
+      toast.success('Tag removed from selected users');
+    },
+  });
+
+  // Delete tag mutation
+  const deleteTagMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      // First remove tag from all users
+      const { data: usersWithTag } = await supabase
+        .from('audience_users')
+        .select('id, tags')
+        .contains('tags', [tagId]);
+      
+      for (const user of usersWithTag || []) {
+        const newTags = (user.tags || []).filter((t: string) => t !== tagId);
+        await supabase
+          .from('audience_users')
+          .update({ tags: newTags })
+          .eq('id', user.id);
+      }
+      
+      // Then delete the tag
+      const { error } = await supabase
+        .from('audience_tags')
+        .delete()
+        .eq('id', tagId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      toast.success('Group deleted');
+    },
+  });
+
   // Helper to extract and validate emails
   const extractEmails = (text: string): { valid: string[]; invalid: number } => {
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -250,7 +352,7 @@ export default function AdminCampaignAudience() {
   };
 
   const insertUsersInBatches = async (
-    usersToInsert: { email: string; first_name?: string | null; last_name?: string | null; source: string; is_marketing_allowed?: boolean }[]
+    usersToInsert: { email: string; first_name?: string | null; last_name?: string | null; source: string; is_marketing_allowed?: boolean; tags?: string[] }[]
   ) => {
     const chunks = chunkArray(usersToInsert, 500);
     for (const batch of chunks) {
@@ -262,7 +364,29 @@ export default function AdminCampaignAudience() {
     }
   };
 
-  // Bulk email import handler (paste)
+  // Assign tag to existing emails (for bulk import with tag)
+  const assignTagToEmails = async (emails: string[], tagId: string) => {
+    const chunks = chunkArray(emails, 100);
+    for (const batch of chunks) {
+      // Get users with these emails
+      const { data: usersData } = await supabase
+        .from('audience_users')
+        .select('id, tags')
+        .in('email', batch);
+      
+      for (const user of usersData || []) {
+        const currentTags = user.tags || [];
+        if (!currentTags.includes(tagId)) {
+          await supabase
+            .from('audience_users')
+            .update({ tags: [...currentTags, tagId] })
+            .eq('id', user.id);
+        }
+      }
+    }
+  };
+
+  // Bulk email import handler (paste) - with optional tag
   const handleBulkImport = async () => {
     if (!bulkEmails.trim()) {
       toast.error('Please enter some emails');
@@ -287,14 +411,26 @@ export default function AdminCampaignAudience() {
       const duplicateCount = validEmails.filter(e => existingEmails.has(e)).length;
       const newEmails = validEmails.filter(e => !existingEmails.has(e));
 
+      // Insert new users (with tag if selected)
+      const tagToAssign = bulkImportTag && bulkImportTag !== 'none' ? bulkImportTag : null;
+      
       if (newEmails.length > 0) {
         const usersToInsert = newEmails.map(email => ({
           email,
           source: 'bulk_import',
           is_marketing_allowed: true,
+          tags: tagToAssign ? [tagToAssign] : [],
         }));
 
         await insertUsersInBatches(usersToInsert);
+      }
+
+      // Also assign tag to existing emails if tag is selected
+      if (tagToAssign) {
+        const existingEmailsList = validEmails.filter(e => existingEmails.has(e));
+        if (existingEmailsList.length > 0) {
+          await assignTagToEmails(existingEmailsList, tagToAssign);
+        }
       }
 
       setBulkResult({
@@ -305,7 +441,7 @@ export default function AdminCampaignAudience() {
       });
 
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
-      toast.success(`Added ${newEmails.length} new emails`);
+      toast.success(`Added ${newEmails.length} new emails${bulkImportTag ? ' and assigned to group' : ''}`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to import emails');
     } finally {
@@ -617,56 +753,132 @@ export default function AdminCampaignAudience() {
                 </DropdownMenu>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {selectedUsers.length > 0 && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => deleteUsersMutation.mutate(selectedUsers)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete ({selectedUsers.length})
-                  </Button>
+                  <>
+                    {/* Assign Tag to Selected */}
+                    <Dialog open={assignTagDialogOpen} onOpenChange={setAssignTagDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Add to Group ({selectedUsers.length})
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add to Group</DialogTitle>
+                          <DialogDescription>
+                            Assign {selectedUsers.length} selected contacts to a group/tag
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Select Group</Label>
+                            <Select value={selectedTagForAssign} onValueChange={setSelectedTagForAssign}>
+                              <SelectTrigger className="mt-1.5">
+                                <SelectValue placeholder="Choose a group..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {tags?.map(tag => (
+                                  <SelectItem key={tag.id} value={tag.id}>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full" 
+                                        style={{ backgroundColor: tag.color }}
+                                      />
+                                      {tag.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <DialogFooter>
+                            <Button 
+                              onClick={() => assignTagToUsersMutation.mutate({ 
+                                userIds: selectedUsers, 
+                                tagId: selectedTagForAssign 
+                              })}
+                              disabled={!selectedTagForAssign || assignTagToUsersMutation.isPending}
+                            >
+                              {assignTagToUsersMutation.isPending ? 'Assigning...' : 'Add to Group'}
+                            </Button>
+                          </DialogFooter>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => deleteUsersMutation.mutate(selectedUsers)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete ({selectedUsers.length})
+                    </Button>
+                  </>
                 )}
 
                 <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline">
                       <Tag className="w-4 h-4 mr-2" />
-                      Tags
+                      Groups
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Manage Tags</DialogTitle>
+                      <DialogTitle>Manage Groups</DialogTitle>
+                      <DialogDescription>
+                        Create groups to organize contacts and target campaigns
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div className="flex flex-wrap gap-2">
-                        {tags?.map(tag => (
-                          <Badge 
-                            key={tag.id} 
-                            style={{ backgroundColor: tag.color }}
-                            className="text-white"
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="grid gap-3">
-                        <Label>New Tag</Label>
+                      {tags && tags.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">Existing Groups</Label>
+                          <div className="space-y-2">
+                            {tags.map(tag => (
+                              <div key={tag.id} className="flex items-center justify-between p-2 rounded-lg border border-border/50 bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-4 h-4 rounded-full" 
+                                    style={{ backgroundColor: tag.color }}
+                                  />
+                                  <span className="font-medium">{tag.name}</span>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    if (confirm(`Delete group "${tag.name}"? This will remove it from all contacts.`)) {
+                                      deleteTagMutation.mutate(tag.id);
+                                    }
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid gap-3 pt-2 border-t border-border/50">
+                        <Label>Create New Group</Label>
                         <div className="flex gap-2">
                           <Input 
-                            placeholder="Tag name"
+                            placeholder="Group name (e.g. VIP Traders)"
                             value={newTag.name}
                             onChange={(e) => setNewTag(p => ({ ...p, name: e.target.value }))}
                           />
                           <Input 
                             type="color"
-                            className="w-14"
+                            className="w-14 cursor-pointer"
                             value={newTag.color}
                             onChange={(e) => setNewTag(p => ({ ...p, color: e.target.value }))}
                           />
-                          <Button onClick={() => addTagMutation.mutate(newTag)}>
+                          <Button onClick={() => addTagMutation.mutate(newTag)} disabled={!newTag.name.trim()}>
                             Add
                           </Button>
                         </div>
@@ -744,6 +956,7 @@ export default function AdminCampaignAudience() {
                   if (!open) {
                     setBulkEmails('');
                     setBulkResult(null);
+                    setBulkImportTag('');
                   }
                 }}>
                   <DialogTrigger asChild>
@@ -756,22 +969,59 @@ export default function AdminCampaignAudience() {
                     <DialogHeader>
                       <DialogTitle>Bulk Email Import</DialogTitle>
                       <DialogDescription>
-                        Paste a list of emails. They can be separated by commas, new lines, or semicolons. Duplicates will be automatically filtered.
+                        Paste a list of emails and optionally assign them to a group. Duplicates will be automatically filtered.
                       </DialogDescription>
                     </DialogHeader>
                     
                     {!bulkResult ? (
                       <div className="space-y-4">
+                        {/* Group selector */}
+                        <div>
+                          <Label>Assign to Group (Optional)</Label>
+                          <Select value={bulkImportTag} onValueChange={setBulkImportTag}>
+                            <SelectTrigger className="mt-1.5">
+                              <SelectValue placeholder="No group - just import emails" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No group</SelectItem>
+                              {tags?.map(tag => (
+                                <SelectItem key={tag.id} value={tag.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full" 
+                                      style={{ backgroundColor: tag.color }}
+                                    />
+                                    {tag.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {bulkImportTag && bulkImportTag !== 'none' && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              All emails will be added to this group (including existing contacts)
+                            </p>
+                          )}
+                        </div>
+
                         <Textarea 
-                          placeholder="john@example.com&#10;jane@example.com&#10;bob@example.com"
+                          placeholder="rasakmomodu@yahoo.com&#10;ujjwalyadav86768@gmail.com&#10;ahsandevil003@gmail.com"
                           value={bulkEmails}
                           onChange={(e) => setBulkEmails(e.target.value)}
-                          className="min-h-[200px] font-mono text-sm"
+                          className="min-h-[180px] font-mono text-sm"
                         />
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
                           <span>
                             {extractEmails(bulkEmails).valid.length} valid emails detected
                           </span>
+                          {bulkImportTag && bulkImportTag !== 'none' && tags && (
+                            <Badge 
+                              style={{ backgroundColor: tags.find(t => t.id === bulkImportTag)?.color }}
+                              className="text-white"
+                            >
+                              → {tags.find(t => t.id === bulkImportTag)?.name}
+                            </Badge>
+                          )}
                         </div>
                         <DialogFooter>
                           <Button 
@@ -783,7 +1033,7 @@ export default function AdminCampaignAudience() {
                             ) : (
                               <>
                                 <Upload className="w-4 h-4 mr-2" />
-                                Import Emails
+                                Import {bulkImportTag ? 'to Group' : 'Emails'}
                               </>
                             )}
                           </Button>
@@ -853,8 +1103,8 @@ export default function AdminCampaignAudience() {
                   </TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Groups</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Source</TableHead>
                   <TableHead>Engagement</TableHead>
                   <TableHead>Added</TableHead>
                 </TableRow>
@@ -882,24 +1132,41 @@ export default function AdminCampaignAudience() {
                       }
                     </TableCell>
                     <TableCell>
-                      {user.unsubscribed_at ? (
-                        <Badge variant="destructive">Unsubscribed</Badge>
-                      ) : user.is_marketing_allowed ? (
-                        <Badge className="bg-green-500/20 text-green-400">Subscribed</Badge>
+                      {user.tags && user.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {user.tags.map(tagId => {
+                            const tag = tags?.find(t => t.id === tagId);
+                            return tag ? (
+                              <Badge 
+                                key={tagId}
+                                style={{ backgroundColor: tag.color }}
+                                className="text-white text-xs px-1.5 py-0"
+                              >
+                                {tag.name}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
                       ) : (
-                        <Badge variant="secondary">Inactive</Badge>
+                        <span className="text-muted-foreground text-sm">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{user.source}</Badge>
+                      {user.unsubscribed_at ? (
+                        <Badge variant="destructive">Unsubscribed</Badge>
+                      ) : user.is_marketing_allowed ? (
+                        <Badge className="bg-green-500/20 text-green-400">Active</Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
                         {user.total_opens} opens · {user.total_clicks} clicks
                       </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {format(new Date(user.created_at), 'MMM d, yyyy')}
+                    <TableCell className="text-muted-foreground text-sm">
+                      {format(new Date(user.created_at), 'MMM d')}
                     </TableCell>
                   </TableRow>
                 ))}
