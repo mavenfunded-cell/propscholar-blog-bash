@@ -208,12 +208,18 @@ export default function AdminCampaignBuilder() {
   const { data: audienceCount } = useQuery({
     queryKey: ['audience-count-for-campaign', campaign.target_tags, campaign.exclude_tags],
     queryFn: async () => {
-      const { count, error } = await supabase
+      let query = supabase
         .from('audience_users')
         .select('*', { count: 'exact', head: true })
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
 
+      // Filter by target tags if specified
+      if (campaign.target_tags && campaign.target_tags.length > 0) {
+        query = query.overlaps('tags', campaign.target_tags);
+      }
+
+      const { count, error } = await query;
       if (error) throw error;
       return count || 0;
     },
@@ -256,6 +262,8 @@ export default function AdminCampaignBuilder() {
             sender_email: campaign.sender_email,
             sender_name: campaign.sender_name,
             plain_text_content: campaign.plain_text_content,
+            target_tags: campaign.target_tags || [],
+            exclude_tags: campaign.exclude_tags || [],
           }])
           .select()
           .single();
@@ -264,7 +272,11 @@ export default function AdminCampaignBuilder() {
       } else {
         const { error } = await supabase
           .from('campaigns')
-          .update(campaign)
+          .update({
+            ...campaign,
+            target_tags: campaign.target_tags || [],
+            exclude_tags: campaign.exclude_tags || [],
+          })
           .eq('id', id);
         if (error) throw error;
         return { id };
@@ -324,15 +336,22 @@ export default function AdminCampaignBuilder() {
         throw new Error('Schedule time must be in the future');
       }
 
-      // Queue recipients
-      const { data: audienceUsers, error: audienceError } = await supabase
+      // Queue recipients - filter by target tags if specified
+      let audienceQuery = supabase
         .from('audience_users')
         .select('id, email, first_name')
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
 
+      // Filter by target tags if specified
+      if (campaign.target_tags && campaign.target_tags.length > 0) {
+        audienceQuery = audienceQuery.overlaps('tags', campaign.target_tags);
+      }
+
+      const { data: audienceUsers, error: audienceError } = await audienceQuery;
+
       if (audienceError) throw audienceError;
-      if (!audienceUsers?.length) throw new Error('No eligible recipients');
+      if (!audienceUsers?.length) throw new Error('No eligible recipients in the selected group');
 
       // Insert recipients
       const recipients = audienceUsers.map(user => ({
@@ -695,6 +714,65 @@ export default function AdminCampaignBuilder() {
                       className="mt-1.5"
                     />
                   </div>
+                </div>
+
+                <Separator className="my-4" />
+                
+                {/* Target Audience Group Selection */}
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Target Audience Group
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Select a specific group to send to, or leave empty to send to all subscribers
+                  </p>
+                  <Select
+                    value={campaign.target_tags?.[0] || 'all'}
+                    onValueChange={(value) => setCampaign(p => ({ 
+                      ...p, 
+                      target_tags: value === 'all' ? [] : [value] 
+                    }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All subscribers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span>All Subscribers</span>
+                        </div>
+                      </SelectItem>
+                      {tags?.map((tag) => (
+                        <SelectItem key={tag.id} value={tag.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: tag.color || '#6366f1' }}
+                            />
+                            <span>{tag.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {campaign.target_tags && campaign.target_tags.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge 
+                        variant="outline" 
+                        className="rounded-full"
+                        style={{ 
+                          borderColor: tags?.find(t => t.id === campaign.target_tags?.[0])?.color || '#6366f1',
+                          color: tags?.find(t => t.id === campaign.target_tags?.[0])?.color || '#6366f1'
+                        }}
+                      >
+                        {tags?.find(t => t.id === campaign.target_tags?.[0])?.name}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">selected</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
