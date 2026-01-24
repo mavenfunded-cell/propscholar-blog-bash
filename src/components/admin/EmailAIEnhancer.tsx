@@ -10,7 +10,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Sparkles, Wand2, ImagePlus, PenLine, RefreshCw, Copy, Check,
   Target, Smile, Zap, MessageSquare, Loader2, ChevronRight,
-  Lightbulb, LayoutTemplate
+  Lightbulb, Code, Palette, Type, Smartphone, Trash2, Undo2,
+  Eye, CheckCircle, XCircle, LayoutTemplate
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +38,14 @@ const QUICK_ACTIONS = [
   { id: 'personalize', label: 'Add Personalization', prompt: 'Add more personalization elements using {{first_name}} and other variables' },
 ];
 
+const CODE_QUICK_ACTIONS = [
+  { id: 'change_colors', label: 'Change Colors', icon: Palette, prompt: 'Change the color scheme' },
+  { id: 'edit_header', label: 'Edit Header', icon: Type, prompt: 'Modify the header section' },
+  { id: 'update_button', label: 'Update Button', icon: CheckCircle, prompt: 'Change the button style or text' },
+  { id: 'mobile_friendly', label: 'Make Mobile-Friendly', icon: Smartphone, prompt: 'Add responsive CSS for mobile devices' },
+  { id: 'clean_html', label: 'Clean Up HTML', icon: Trash2, prompt: 'Remove unnecessary tags and whitespace, optimize the code' },
+];
+
 export function EmailAIEnhancer({ htmlContent, subject, onUpdateContent, onUpdateSubject }: EmailAIEnhancerProps) {
   const [activeTab, setActiveTab] = useState('enhance');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -49,6 +58,13 @@ export function EmailAIEnhancer({ htmlContent, subject, onUpdateContent, onUpdat
   const [imagePrompt, setImagePrompt] = useState('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  // Code editing states
+  const [codeInstruction, setCodeInstruction] = useState('');
+  const [pendingHtml, setPendingHtml] = useState<string | null>(null);
+  const [lastHtml, setLastHtml] = useState<string | null>(null);
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [codeActionType, setCodeActionType] = useState<string>('');
 
   const extractTextFromHtml = (html: string): string => {
     const tempDiv = document.createElement('div');
@@ -102,6 +118,88 @@ Current email content: ${emailText}`;
     }
   };
 
+  const generateCodeEdit = async (instruction: string, quickActionId?: string) => {
+    if (!instruction.trim()) {
+      toast.error('Please describe what you want to change');
+      return;
+    }
+
+    setIsEditingCode(true);
+    setPendingHtml(null);
+    setCodeActionType(quickActionId || 'custom');
+    
+    try {
+      const response = await supabase.functions.invoke('ai-email-enhance', {
+        body: {
+          prompt: instruction,
+          emailContent: htmlContent,
+          subject,
+          action: 'edit_code',
+          fullHtml: true,
+        },
+      });
+
+      if (response.error) throw response.error;
+      
+      const result = response.data?.result || '';
+      
+      // Extract HTML from the result (AI might wrap it in markdown code blocks)
+      let cleanHtml = result;
+      const htmlMatch = result.match(/```html?\s*([\s\S]*?)```/);
+      if (htmlMatch) {
+        cleanHtml = htmlMatch[1].trim();
+      }
+      
+      // Validate it looks like HTML
+      if (cleanHtml.includes('<') && cleanHtml.includes('>')) {
+        setPendingHtml(cleanHtml);
+        toast.success('Code changes ready for review!');
+      } else {
+        toast.error('AI did not return valid HTML. Please try a different instruction.');
+      }
+    } catch (error: any) {
+      console.error('Code edit error:', error);
+      if (error.message?.includes('Rate limit')) {
+        toast.error('Rate limit exceeded. Please wait a moment.');
+      } else if (error.message?.includes('credits')) {
+        toast.error('AI credits exhausted. Please add more credits.');
+      } else {
+        toast.error(error.message || 'Failed to generate code changes');
+      }
+    } finally {
+      setIsEditingCode(false);
+    }
+  };
+
+  const applyCodeChanges = () => {
+    if (!pendingHtml) return;
+    
+    // Save current HTML for undo
+    setLastHtml(htmlContent);
+    
+    // Apply the new HTML
+    onUpdateContent(pendingHtml);
+    setPendingHtml(null);
+    setCodeInstruction('');
+    toast.success('Code changes applied!');
+  };
+
+  const discardCodeChanges = () => {
+    setPendingHtml(null);
+    toast.info('Changes discarded');
+  };
+
+  const undoLastChange = () => {
+    if (!lastHtml) {
+      toast.info('Nothing to undo');
+      return;
+    }
+    
+    onUpdateContent(lastHtml);
+    setLastHtml(null);
+    toast.success('Reverted to previous version');
+  };
+
   const generateImage = async () => {
     if (!imagePrompt.trim()) {
       toast.error('Please enter an image description');
@@ -146,10 +244,8 @@ Current email content: ${emailText}`;
     
     // Try to detect if result is a subject line suggestion
     if (aiResult.toLowerCase().includes('subject') || aiResult.split('\n').length <= 3) {
-      // Ask user what to do
       const lines = aiResult.split('\n').filter(l => l.trim());
       if (lines.length === 1 || lines.every(l => l.length < 100)) {
-        // Likely subject lines
         onUpdateSubject(lines[0].replace(/^\d+[\.\)]\s*/, '').replace(/^[\"']|[\"']$/g, ''));
         toast.success('Subject line updated!');
         return;
@@ -201,6 +297,10 @@ Current email content: ${emailText}`;
           <TabsTrigger value="enhance" className="rounded-t-lg data-[state=active]:bg-background">
             <Wand2 className="w-4 h-4 mr-1.5" />
             Enhance
+          </TabsTrigger>
+          <TabsTrigger value="code" className="rounded-t-lg data-[state=active]:bg-background">
+            <Code className="w-4 h-4 mr-1.5" />
+            Code
           </TabsTrigger>
           <TabsTrigger value="image" className="rounded-t-lg data-[state=active]:bg-background">
             <ImagePlus className="w-4 h-4 mr-1.5" />
@@ -335,6 +435,149 @@ Current email content: ${emailText}`;
             )}
           </TabsContent>
 
+          {/* New Code Tab */}
+          <TabsContent value="code" className="m-0 p-4 space-y-4">
+            {/* Undo Button */}
+            {lastHtml && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={undoLastChange}
+                className="w-full border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+              >
+                <Undo2 className="w-4 h-4 mr-2" />
+                Undo Last Change
+              </Button>
+            )}
+
+            {/* Quick Code Actions */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Quick Code Edits
+              </Label>
+              <div className="space-y-2">
+                {CODE_QUICK_ACTIONS.map((action) => (
+                  <Button
+                    key={action.id}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-left h-auto py-2.5 px-3 border-border/50"
+                    onClick={() => {
+                      setCodeInstruction(action.prompt);
+                      generateCodeEdit(action.prompt, action.id);
+                    }}
+                    disabled={isEditingCode}
+                  >
+                    <action.icon className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <span>{action.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Code Instruction */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Describe Your Edit
+              </Label>
+              <Textarea
+                placeholder="E.g., 'Add a second CTA button below the main content with text Start Trading Now' or 'Change the header background to a gold gradient'"
+                value={codeInstruction}
+                onChange={(e) => setCodeInstruction(e.target.value)}
+                className="min-h-[100px] resize-none border-border/50"
+              />
+              <Button
+                onClick={() => generateCodeEdit(codeInstruction)}
+                disabled={isEditingCode || !codeInstruction.trim()}
+                className="w-full"
+              >
+                {isEditingCode ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Code...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Apply Edit to Code
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Pending Changes Preview */}
+            {pendingHtml && (
+              <Card className="border-green-500/30 bg-green-500/5">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="bg-green-500/20 text-green-600">
+                      <Code className="w-3 h-3 mr-1" />
+                      Pending Changes
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    AI has generated new HTML code based on your instruction. Review the changes in the preview before applying.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={applyCodeChanges}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Apply
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={discardCodeChanges}
+                      className="flex-1 border-red-500/50 text-red-600 hover:bg-red-500/10"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Discard
+                    </Button>
+                  </div>
+                  <div className="mt-2 p-2 bg-muted/30 rounded border border-border/50 max-h-[200px] overflow-auto">
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                      {pendingHtml.substring(0, 500)}
+                      {pendingHtml.length > 500 && '...'}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Template Mode */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Template Actions
+              </Label>
+              <div className="space-y-2">
+                {[
+                  { label: 'Convert to Welcome Email', prompt: 'Convert this email into a professional welcome email template with a warm greeting, introduction to PropScholar, and clear next steps' },
+                  { label: 'Convert to Newsletter', prompt: 'Restructure this email as a newsletter with sections for featured content, tips, and a footer with social links' },
+                  { label: 'Convert to Promo Email', prompt: 'Transform this into a promotional email with urgency elements, clear offer highlight, and multiple CTAs' },
+                  { label: 'Generate Fresh Email', prompt: 'Generate a completely new professional email template based on the current subject line and key message, with modern styling' },
+                ].map((template, i) => (
+                  <Button
+                    key={i}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-left h-auto py-2 px-3 text-xs border-border/50"
+                    onClick={() => {
+                      setCodeInstruction(template.prompt);
+                      generateCodeEdit(template.prompt, 'template');
+                    }}
+                    disabled={isEditingCode}
+                  >
+                    <LayoutTemplate className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                    {template.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="image" className="m-0 p-4 space-y-4">
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -439,9 +682,9 @@ Current email content: ${emailText}`;
                   }}
                 >
                   <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <LayoutTemplate className="w-4 h-4 text-primary" />
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded bg-primary/10">
+                        <Lightbulb className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <div>
                         <p className="font-medium text-sm">{idea.title}</p>
