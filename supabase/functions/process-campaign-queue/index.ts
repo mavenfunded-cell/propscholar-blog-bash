@@ -26,6 +26,23 @@ function generatePreheaderHtml(preheader: string): string {
 }
 const MAX_CONSECUTIVE_FAILURES = 3; // Stop after 3 consecutive SMTP failures
 
+function isHostingerRateLimit(message: string): boolean {
+  const msg = (message || "").toLowerCase();
+  return (
+    msg.includes("ratelimit") ||
+    msg.includes("rate limit") ||
+    msg.includes("4.7.1") ||
+    msg.includes("hostinger_out_ratelimit") ||
+    // Often follows rate limiting / SMTP throttling
+    msg.includes("connection not recoverable") ||
+    msg.includes("error while in datamode")
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -134,14 +151,17 @@ const handler = async (req: Request): Promise<Response> => {
         for (const recipient of recipients) {
           // Stop if we hit too many consecutive failures
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            // In practice, Hostinger throttling can create a streak of transient failures.
+            // Instead of pausing the campaign (manual intervention), back off and retry.
+            const COOLDOWN_MS = 60_000;
             console.error(
-              `Campaign ${campaign.id}: Too many consecutive failures (${consecutiveFailures}), pausing...`
+              `Campaign ${campaign.id}: ${consecutiveFailures} consecutive failures. Cooling down ${Math.round(
+                COOLDOWN_MS / 1000,
+              )}s then continuing...`,
             );
-            await supabase
-              .from("campaigns")
-              .update({ status: "paused" })
-              .eq("id", campaign.id);
-            criticalError = true;
+            await sleep(COOLDOWN_MS);
+            shouldContinue = true;
+            consecutiveFailures = 0;
             break;
           }
 
@@ -238,10 +258,34 @@ const handler = async (req: Request): Promise<Response> => {
             const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 200;
             await new Promise((resolve) => setTimeout(resolve, delay));
           } catch (emailError: any) {
-            console.error(`Failed to send to ${recipient.email}:`, emailError?.message || emailError);
-            consecutiveFailures++;
-
             const msg = emailError?.message || String(emailError);
+            console.error(`Failed to send to ${recipient.email}:`, msg);
+
+            // Hostinger rate limit is a temporary condition.
+            // Don't count it as a failure, don't pause, and retry later after a cooldown.
+            const rateLimited = isHostingerRateLimit(msg);
+            if (rateLimited) {
+              // Keep recipient pending so it can be retried.
+              await supabase
+                .from("campaign_recipients")
+                .update({ status: "pending", error_message: msg })
+                .eq("id", recipient.id);
+
+              // Cooldown and then self-invoke to continue (avoid burning runtime in a tight loop)
+              const COOLDOWN_MS = 45_000;
+              console.log(
+                `Rate limit hit for campaign ${campaign.id}. Cooling down ${Math.round(
+                  COOLDOWN_MS / 1000,
+                )}s then continuing...`,
+              );
+              await sleep(COOLDOWN_MS);
+              shouldContinue = true;
+              // Reset failure streak so we never pause due to consecutive rate limits
+              consecutiveFailures = 0;
+              break;
+            }
+
+            consecutiveFailures++;
 
             // Critical SMTP errors (stop the campaign)
             const isCriticalError =
