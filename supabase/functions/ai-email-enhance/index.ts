@@ -11,14 +11,50 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, systemPrompt, emailContent, subject, action } = await req.json();
+    const { prompt, systemPrompt, emailContent, subject, action, fullHtml } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const userMessage = `
+    let finalSystemPrompt = systemPrompt;
+    let userMessage = "";
+
+    // Handle code editing actions
+    if (action === 'edit_code' && fullHtml) {
+      finalSystemPrompt = `You are an expert email HTML developer specializing in responsive email templates. 
+You work for PropScholar, a prop trading education platform.
+
+CRITICAL RULES:
+1. Return ONLY the complete modified HTML code - no explanations, no markdown, no code blocks.
+2. Preserve all existing structure, styles, and content unless explicitly asked to change them.
+3. Keep all personalization variables like {{first_name}}, {{email}}, {{unsubscribe_url}} intact.
+4. Ensure all changes are email-client compatible (inline styles, table-based layouts where needed).
+5. Maintain responsive design principles.
+6. Use PropScholar brand colors: primary gold (#D4AF37), dark backgrounds, professional styling.
+
+When asked to:
+- "Change colors" - Update color values in style attributes
+- "Edit header" - Modify the header section while keeping structure
+- "Update button" - Change button text, colors, or styling
+- "Make mobile-friendly" - Add responsive styles and media queries
+- "Clean up HTML" - Remove unnecessary whitespace, optimize code
+- "Convert to template" - Restructure content into requested template format
+
+Return the complete HTML document with your changes applied.`;
+
+      userMessage = `Current email subject: ${subject}
+
+Current HTML:
+${emailContent}
+
+Requested change: ${prompt}
+
+Return the complete modified HTML:`;
+    } else {
+      // Original text enhancement mode
+      userMessage = `
 Action requested: ${action}
 Instruction: ${prompt}
 
@@ -30,6 +66,7 @@ Please provide your enhanced version or suggestions. Be specific and actionable.
 If suggesting subject lines, provide 3 options numbered.
 If improving copy, provide the complete improved text.
 Keep responses concise and ready to use.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -40,7 +77,7 @@ Keep responses concise and ready to use.`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: finalSystemPrompt },
           { role: "user", content: userMessage },
         ],
       }),
