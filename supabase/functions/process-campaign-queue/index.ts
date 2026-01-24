@@ -14,8 +14,8 @@ const corsHeaders = {
 
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
-const BATCH_SIZE = 30; // Larger batches
-const DELAY_BETWEEN_EMAILS_MS = 300; // ~3 emails/second - safe for most SMTP servers
+const BATCH_SIZE = 20; // Smaller batches for rate limit safety
+const DELAY_BETWEEN_EMAILS_MS = 600; // ~1.5 emails/second - safer for Hostinger rate limits
 const MAX_BOUNCE_RATE = 0.05;
 
 // Generate preheader HTML that shows as preview text in email clients
