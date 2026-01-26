@@ -425,6 +425,20 @@ export default function AdminCampaignDetail() {
     },
   });
 
+  const restartQueueMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.functions.invoke('process-campaign-queue');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Campaign queue restarted');
+      setTimeout(() => refetchCampaign(), 2000);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to restart queue');
+    },
+  });
+
   if (isLoading || !campaign) {
     return <div className="min-h-screen bg-background p-6">Loading...</div>;
   }
@@ -529,6 +543,14 @@ export default function AdminCampaignDetail() {
             )}
             {(campaign.status === 'sending' || campaign.status === 'paused') && (
               <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => restartQueueMutation.mutate()}
+                  disabled={restartQueueMutation.isPending}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${restartQueueMutation.isPending ? 'animate-spin' : ''}`} />
+                  Restart Queue
+                </Button>
                 <Button 
                   variant="outline" 
                   onClick={() => pauseCampaignMutation.mutate()}
