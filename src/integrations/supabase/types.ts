@@ -1521,6 +1521,13 @@ export type Database = {
             foreignKeyName: "reel_winners_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
+            referencedRelation: "public_reel_winner_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reel_winners_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
             referencedRelation: "reel_submissions"
             referencedColumns: ["id"]
           },
@@ -2399,6 +2406,27 @@ export type Database = {
       }
     }
     Views: {
+      public_reel_winner_submissions: {
+        Row: {
+          description: string | null
+          display_name: string | null
+          event_id: string | null
+          id: string | null
+          submitted_at: string | null
+          thumbnail_url: string | null
+          title: string | null
+          video_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reel_submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_winner_submissions: {
         Row: {
           blog: string | null
