@@ -2530,6 +2530,7 @@ export type Database = {
         Args: { _winner_id: string; _winner_type: string }
         Returns: boolean
       }
+      check_duplicate_gmail: { Args: { _email: string }; Returns: boolean }
       claim_coupon: {
         Args: { _expiry_days?: number; _reward_type: string }
         Returns: Json
@@ -3157,6 +3158,7 @@ export type Database = {
         Args: { _notification_id: string }
         Returns: boolean
       }
+      normalize_gmail: { Args: { email: string }; Returns: string }
       reject_social_follow: { Args: { _follow_id: string }; Returns: boolean }
       send_admin_notification: {
         Args: {
