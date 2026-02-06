@@ -118,9 +118,8 @@ function getAdminRoutes(basePath = "") {
 function PublicRoutes() {
   return (
     <>
-      {/* Forward any /admin access on main domain to the admin subdomain */}
-      <Route path="/admin" element={<RedirectToAdminSubdomain />} />
-      <Route path="/admin/*" element={<RedirectToAdminSubdomain />} />
+      {/* Admin routes on main domain at /admin/* */}
+      {getAdminRoutes("/admin")}
 
       <Route path="/" element={<Landing />} />
       <Route path="/dashboard" element={<Dashboard />} />
