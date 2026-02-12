@@ -18,6 +18,23 @@ const BATCH_SIZE = 20; // Smaller batches for rate limit safety
 const DELAY_BETWEEN_EMAILS_MS = 600; // ~1.5 emails/second - safer for Hostinger rate limits
 const MAX_BOUNCE_RATE = 0.05;
 
+// Dual mailbox configuration for 50/50 split
+interface SmtpMailbox {
+  email: string;
+  password: string;
+  label: string;
+}
+
+// Simple hash to deterministically assign a recipient to a mailbox (0 or 1)
+function getMailboxIndex(email: string): number {
+  let hash = 0;
+  const lower = email.toLowerCase();
+  for (let i = 0; i < lower.length; i++) {
+    hash = ((hash << 5) - hash + lower.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % 2;
+}
+
 // Generate preheader HTML that shows as preview text in email clients
 function generatePreheaderHtml(preheader: string): string {
   if (!preheader) return "";
@@ -69,19 +86,28 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const smtpUser = Deno.env.get("HOSTINGER_CAMPAIGN_EMAIL") || Deno.env.get("HOSTINGER_INFO_EMAIL");
-    const smtpPassword = Deno.env.get("HOSTINGER_CAMPAIGN_PASSWORD") || Deno.env.get("HOSTINGER_INFO_PASSWORD");
+    // Dual mailbox setup: marketing@ and hello@
+    const mailboxes: SmtpMailbox[] = [
+      {
+        email: Deno.env.get("HOSTINGER_MARKETING_EMAIL") || "marketing@propscholar.com",
+        password: Deno.env.get("HOSTINGER_MARKETING_PASSWORD") || "",
+        label: "marketing",
+      },
+      {
+        email: Deno.env.get("HOSTINGER_HELLO_EMAIL") || "hello@propscholar.com",
+        password: Deno.env.get("HOSTINGER_HELLO_PASSWORD") || "",
+        label: "hello",
+      },
+    ];
 
-    if (!smtpUser || !smtpPassword) {
-      console.error("CRITICAL: Campaign SMTP credentials not configured");
-      // Mark all sending campaigns as failed
+    const validMailboxes = mailboxes.filter((m) => m.email && m.password);
+
+    if (validMailboxes.length === 0) {
+      console.error("CRITICAL: No campaign SMTP credentials configured");
       for (const campaign of campaigns) {
         await supabase
           .from("campaigns")
-          .update({ 
-            status: "failed",
-            completed_at: new Date().toISOString()
-          })
+          .update({ status: "failed", completed_at: new Date().toISOString() })
           .eq("id", campaign.id);
         console.log(`Campaign ${campaign.id} marked as failed - no SMTP credentials`);
       }
@@ -91,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const senderEmail = smtpUser;
+    console.log(`Campaign sending with ${validMailboxes.length} mailboxes: ${validMailboxes.map(m => m.email).join(", ")}`);
 
     for (const campaign of campaigns) {
       let consecutiveFailures = 0;
@@ -182,6 +208,10 @@ const handler = async (req: Request): Promise<Response> => {
             continue;
           }
 
+          // Determine which mailbox to use for this recipient (deterministic by email hash)
+          const mbIndex = validMailboxes.length === 1 ? 0 : getMailboxIndex(recipient.email);
+          const mailbox = validMailboxes[mbIndex];
+
           let client: SMTPClient | null = null;
           try {
             client = new SMTPClient({
@@ -190,8 +220,8 @@ const handler = async (req: Request): Promise<Response> => {
                 port: SMTP_PORT,
                 tls: true,
                 auth: {
-                  username: smtpUser,
-                  password: smtpPassword,
+                  username: mailbox.email,
+                  password: mailbox.password,
                 },
               },
             });
@@ -208,7 +238,6 @@ const handler = async (req: Request): Promise<Response> => {
               if (/<body[^>]*>/i.test(html)) {
                 html = html.replace(/(<body[^>]*>)/i, `$1${preheaderHtml}`);
               } else {
-                // If no body tag, prepend to content
                 html = preheaderHtml + html;
               }
             }
@@ -233,7 +262,7 @@ const handler = async (req: Request): Promise<Response> => {
             const senderName = campaign.sender_name || "PropScholar";
 
             await client.send({
-              from: `${senderName} <${senderEmail}>`,
+              from: `${senderName} <${mailbox.email}>`,
               to: recipient.email,
               subject: campaign.subject,
               html,
