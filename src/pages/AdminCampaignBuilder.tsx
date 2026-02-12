@@ -216,7 +216,10 @@ export default function AdminCampaignBuilder() {
 
       // Filter by target tags if specified
       if (campaign.target_tags && campaign.target_tags.length > 0) {
-        query = query.overlaps('tags', campaign.target_tags);
+        // Use contains for each tag - since UI is single-select, there's only one tag
+        for (const tag of campaign.target_tags) {
+          query = query.contains('tags', [tag]);
+        }
       }
 
       const { count, error } = await query;
@@ -336,25 +339,40 @@ export default function AdminCampaignBuilder() {
         throw new Error('Schedule time must be in the future');
       }
 
-      // Queue recipients - filter by target tags if specified
-      let audienceQuery = supabase
-        .from('audience_users')
-        .select('id, email, first_name')
-        .eq('is_marketing_allowed', true)
-        .is('unsubscribed_at', null);
+      // Queue recipients - filter by target tags if specified, with pagination to handle >1000 users
+      const allAudienceUsers: { id: string; email: string; first_name: string | null }[] = [];
+      let page = 0;
+      const PAGE_SIZE = 1000;
+      
+      while (true) {
+        let audienceQuery = supabase
+          .from('audience_users')
+          .select('id, email, first_name')
+          .eq('is_marketing_allowed', true)
+          .is('unsubscribed_at', null)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      // Filter by target tags if specified
-      if (campaign.target_tags && campaign.target_tags.length > 0) {
-        audienceQuery = audienceQuery.overlaps('tags', campaign.target_tags);
+        // Filter by target tags if specified
+        if (campaign.target_tags && campaign.target_tags.length > 0) {
+          for (const tag of campaign.target_tags) {
+            audienceQuery = audienceQuery.contains('tags', [tag]);
+          }
+        }
+
+        const { data: audienceUsers, error: audienceError } = await audienceQuery;
+        if (audienceError) throw audienceError;
+        
+        if (!audienceUsers?.length) break;
+        allAudienceUsers.push(...audienceUsers);
+        
+        if (audienceUsers.length < PAGE_SIZE) break;
+        page++;
       }
 
-      const { data: audienceUsers, error: audienceError } = await audienceQuery;
-
-      if (audienceError) throw audienceError;
-      if (!audienceUsers?.length) throw new Error('No eligible recipients in the selected group');
+      if (!allAudienceUsers.length) throw new Error('No eligible recipients in the selected group');
 
       // Insert recipients
-      const recipients = audienceUsers.map(user => ({
+      const recipients = allAudienceUsers.map(user => ({
         campaign_id: id,
         audience_user_id: user.id,
         email: user.email,
@@ -374,7 +392,7 @@ export default function AdminCampaignBuilder() {
         .update({
           status: 'scheduled',
           scheduled_at: scheduledAt.toISOString(),
-          total_recipients: audienceUsers.length,
+          total_recipients: allAudienceUsers.length,
         })
         .eq('id', id);
 
