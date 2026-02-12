@@ -53,6 +53,7 @@ import AdminCourseVideos from "./pages/AdminCourseVideos";
 import Learn from "./pages/Learn";
 import AdminCampaigns from "./pages/AdminCampaigns";
 import AdminCampaignAudience from "./pages/AdminCampaignAudience";
+import AdminGroupDetail from "./pages/AdminGroupDetail";
 import AdminCampaignBuilder from "./pages/AdminCampaignBuilder";
 import AdminCampaignDetail from "./pages/AdminCampaignDetail";
 import AdminConversionDashboard from "./pages/AdminConversionDashboard";
@@ -106,6 +107,7 @@ function getAdminRoutes(basePath = "") {
     <Route key="scholar-hub-videos" path={`${basePath}/scholar-hub/:courseId/videos`} element={<AdminCourseVideos />} />,
     <Route key="campaigns" path={`${basePath}/campaigns`} element={<AdminCampaigns />} />,
     <Route key="campaigns-audience" path={`${basePath}/campaigns/audience`} element={<AdminCampaignAudience />} />,
+    <Route key="campaigns-audience-group" path={`${basePath}/campaigns/audience/group/:groupId`} element={<AdminGroupDetail />} />,
     <Route key="campaigns-new" path={`${basePath}/campaigns/new`} element={<AdminCampaignBuilder />} />,
     <Route key="campaigns-edit" path={`${basePath}/campaigns/:id/edit`} element={<AdminCampaignBuilder />} />,
     <Route key="campaigns-detail" path={`${basePath}/campaigns/:id`} element={<AdminCampaignDetail />} />,
