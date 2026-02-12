@@ -103,7 +103,7 @@ export default function AdminCampaignBuilder() {
     name: '',
     subject: '',
     preheader: '',
-    sender_email: 'info@propscholar.com',
+    sender_email: 'marketing@propscholar.com',
     sender_name: 'PropScholar',
     html_content: DEFAULT_HTML,
     plain_text_content: '',

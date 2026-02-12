@@ -839,7 +839,12 @@ export default function AdminCampaignAudience() {
                           <Label className="text-sm text-muted-foreground">Existing Groups</Label>
                           <div className="space-y-2">
                             {tags.map(tag => (
-                              <div key={tag.id} className="flex items-center justify-between p-2 rounded-lg border border-border/50 bg-muted/30">
+                              <div key={tag.id} className="flex items-center justify-between p-2 rounded-lg border border-border/50 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                                onClick={() => {
+                                  setTagDialogOpen(false);
+                                  adminNavigate(`/admin/campaigns/audience/group/${tag.id}`);
+                                }}
+                              >
                                 <div className="flex items-center gap-2">
                                   <div 
                                     className="w-4 h-4 rounded-full" 
@@ -847,18 +852,21 @@ export default function AdminCampaignAudience() {
                                   />
                                   <span className="font-medium">{tag.name}</span>
                                 </div>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() => {
-                                    if (confirm(`Delete group "${tag.name}"? This will remove it from all contacts.`)) {
-                                      deleteTagMutation.mutate(tag.id);
-                                    }
-                                  }}
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Delete group "${tag.name}"? This will remove it from all contacts.`)) {
+                                        deleteTagMutation.mutate(tag.id);
+                                      }
+                                    }}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1140,7 +1148,8 @@ export default function AdminCampaignAudience() {
                               <Badge 
                                 key={tagId}
                                 style={{ backgroundColor: tag.color }}
-                                className="text-white text-xs px-1.5 py-0"
+                                className="text-white text-xs px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => adminNavigate(`/admin/campaigns/audience/group/${tag.id}`)}
                               >
                                 {tag.name}
                               </Badge>
