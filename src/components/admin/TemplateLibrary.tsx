@@ -12,6 +12,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   LayoutTemplate,
   Plus,
   Copy,
@@ -21,8 +28,10 @@ import {
   Check,
   Star,
   Loader2,
+  Send,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface Template {
   id: string;
@@ -47,7 +56,20 @@ export function TemplateLibrary({ onSelect, currentHtml }: TemplateLibraryProps)
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateCategory, setNewTemplateCategory] = useState('Custom');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [savedTemplate, setSavedTemplate] = useState<Template | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const { data: groups } = useQuery({
+    queryKey: ['audience-tags-for-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('audience_tags').select('id, name').order('name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: open || saveDialogOpen,
+  });
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['email-templates'],
@@ -70,10 +92,10 @@ export function TemplateLibrary({ onSelect, currentHtml }: TemplateLibraryProps)
         });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, _vars, _ctx) => {
       queryClient.invalidateQueries({ queryKey: ['email-templates'] });
       toast.success('Template saved!');
-      setSaveDialogOpen(false);
+      setSavedTemplate({ id: '', name: newTemplateName, category: newTemplateCategory, subject: null, html_content: currentHtml || '', plain_text_content: null, is_default: false, created_at: '' });
       setNewTemplateName('');
     },
     onError: (error: any) => {
@@ -232,41 +254,89 @@ export function TemplateLibrary({ onSelect, currentHtml }: TemplateLibraryProps)
       </Dialog>
 
       {/* Save Template Dialog */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+      <Dialog open={saveDialogOpen} onOpenChange={(o) => { setSaveDialogOpen(o); if (!o) setSavedTemplate(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Save as Template</DialogTitle>
+            <DialogTitle>{savedTemplate ? 'Send Campaign' : 'Save as Template'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Template Name</Label>
-              <Input
-                placeholder="My Newsletter Template"
-                value={newTemplateName}
-                onChange={(e) => setNewTemplateName(e.target.value)}
-              />
+          {savedTemplate ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Template "<span className="font-medium text-foreground">{savedTemplate.name}</span>" saved! Send it now?
+              </p>
+              <div>
+                <Label>Send to</Label>
+                <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select audience" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Contacts</SelectItem>
+                    {groups?.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setSaveDialogOpen(false); setSavedTemplate(null); }}>
+                  Skip
+                </Button>
+                <Button onClick={async () => {
+                  const { data, error } = await supabase.from('campaigns').insert([{
+                    name: `Campaign: ${savedTemplate.name}`,
+                    subject: savedTemplate.subject || savedTemplate.name,
+                    html_content: savedTemplate.html_content,
+                    target_tags: selectedGroupId === 'all' ? [] : [selectedGroupId],
+                    status: 'draft',
+                    sender_email: 'marketing@propscholar.com',
+                    sender_name: 'PropScholar',
+                  }]).select().single();
+                  if (error) { toast.error(error.message); return; }
+                  toast.success('Campaign draft created!');
+                  setSaveDialogOpen(false);
+                  setSavedTemplate(null);
+                  navigate(`/admin/campaigns/${data.id}`);
+                }}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Create Campaign
+                </Button>
+              </DialogFooter>
             </div>
-            <div>
-              <Label>Category</Label>
-              <Input
-                placeholder="Marketing"
-                value={newTemplateCategory}
-                onChange={(e) => setNewTemplateCategory(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => saveTemplateMutation.mutate()}
-              disabled={!newTemplateName || saveTemplateMutation.isPending}
-            >
-              {saveTemplateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Save Template
-            </Button>
-          </DialogFooter>
+          ) : (
+            <>
+              <div className="space-y-4">
+                <div>
+                  <Label>Template Name</Label>
+                  <Input
+                    placeholder="My Newsletter Template"
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Category</Label>
+                  <Input
+                    placeholder="Marketing"
+                    value={newTemplateCategory}
+                    onChange={(e) => setNewTemplateCategory(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => saveTemplateMutation.mutate()}
+                  disabled={!newTemplateName || saveTemplateMutation.isPending}
+                >
+                  {saveTemplateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Save Template
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
