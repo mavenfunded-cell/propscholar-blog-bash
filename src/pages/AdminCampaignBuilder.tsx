@@ -214,12 +214,10 @@ export default function AdminCampaignBuilder() {
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
 
-      // Filter by target tags if specified
+      // Filter by target tags if specified - use cs operator with proper UUID casting
       if (campaign.target_tags && campaign.target_tags.length > 0) {
-        // Use contains for each tag - since UI is single-select, there's only one tag
-        for (const tag of campaign.target_tags) {
-          query = query.contains('tags', [tag]);
-        }
+        const tagFilter = `{${campaign.target_tags.join(',')}}`;
+        query = query.filter('tags', 'cs', tagFilter);
       }
 
       const { count, error } = await query;
@@ -352,11 +350,10 @@ export default function AdminCampaignBuilder() {
           .is('unsubscribed_at', null)
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-        // Filter by target tags if specified
+        // Filter by target tags if specified - use cs operator with proper UUID casting
         if (campaign.target_tags && campaign.target_tags.length > 0) {
-          for (const tag of campaign.target_tags) {
-            audienceQuery = audienceQuery.contains('tags', [tag]);
-          }
+          const tagFilter = `{${campaign.target_tags.join(',')}}`;
+          audienceQuery = audienceQuery.filter('tags', 'cs', tagFilter);
         }
 
         const { data: audienceUsers, error: audienceError } = await audienceQuery;
