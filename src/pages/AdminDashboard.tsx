@@ -99,6 +99,7 @@ const quickLinks = [
   { to: '/admin/ai-usage', icon: BarChart3, label: 'AI Usage', color: 'text-cyan-400', borderColor: 'border-cyan-500/20' },
   { to: '/admin/scholar-hub', icon: GraduationCap, label: 'Scholar Hub', color: 'text-amber-400', borderColor: 'border-amber-500/30', gradient: 'from-amber-500/10 to-orange-500/5' },
   { to: '/admin/campaigns', icon: Megaphone, label: 'Campaigns', color: 'text-rose-400', borderColor: 'border-rose-500/30', gradient: 'from-rose-500/10 to-pink-500/5' },
+  { to: '/admin/business-email', icon: Mail, label: 'Business Email', color: 'text-orange-400', borderColor: 'border-orange-500/30', gradient: 'from-orange-500/10 to-amber-500/5', highlight: true },
 ];
 
 export default function AdminDashboard() {
