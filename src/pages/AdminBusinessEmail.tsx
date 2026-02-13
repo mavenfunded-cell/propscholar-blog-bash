@@ -193,7 +193,7 @@ export default function AdminBusinessEmail() {
   // Group emails into conversations by sender
   const getConversations = () => {
     const convMap = new Map<string, BusinessEmail[]>();
-    emails.filter(e => e.status !== 'archived').forEach(email => {
+    emails.forEach(email => {
       const key = email.direction === 'outbound' ? email.to_email : email.from_email;
       if (!convMap.has(key)) convMap.set(key, []);
       convMap.get(key)!.push(email);
