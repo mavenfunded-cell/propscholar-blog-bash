@@ -447,7 +447,7 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Events Section */}
+        {activeSection === 'space' && (
         <Tabs defaultValue="blog" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <TabsList className="bg-muted/50 rounded-lg p-1">
@@ -563,6 +563,7 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
         </Tabs>
+        )}
       </main>
     </div>
   );
