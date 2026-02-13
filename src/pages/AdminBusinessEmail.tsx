@@ -95,9 +95,20 @@ export default function AdminBusinessEmail() {
     }
   };
 
+  const getContactEmail = (email: BusinessEmail) => {
+    return email.direction === 'outbound' ? email.to_email : email.from_email;
+  };
+
   const sendReply = async () => {
     if (!selectedEmail || !replyText.trim()) return;
     setSending(true);
+    const contactEmail = getContactEmail(selectedEmail);
+    // Find the latest inbound message for threading
+    const threadEmails = getThreadEmails();
+    const latestInbound = [...threadEmails].reverse().find(e => e.direction === 'inbound');
+    const latestMessage = threadEmails[threadEmails.length - 1];
+    const replyToMsg = latestInbound || latestMessage || selectedEmail;
+    const subject = selectedEmail.subject.startsWith('Re:') ? selectedEmail.subject : `Re: ${selectedEmail.subject}`;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
@@ -107,11 +118,11 @@ export default function AdminBusinessEmail() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
           body: JSON.stringify({
-            to: selectedEmail.from_email,
-            subject: selectedEmail.subject.startsWith('Re:') ? selectedEmail.subject : `Re: ${selectedEmail.subject}`,
+            to: contactEmail,
+            subject,
             body: replyText,
-            inReplyTo: selectedEmail.message_id,
-            emailId: selectedEmail.id,
+            inReplyTo: replyToMsg.message_id,
+            emailId: replyToMsg.id,
           }),
         }
       );
