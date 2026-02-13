@@ -49,31 +49,39 @@ serve(async (req) => {
 <body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#000000;">
 <tr><td style="padding:48px 20px;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" align="center" style="max-width:560px;margin:0 auto;">
+
+<!-- Outer Container with subtle white outline -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="580" align="center" style="max-width:580px;margin:0 auto;border:1px solid rgba(255,255,255,0.08);border-radius:16px;background:#050505;">
+<tr><td style="padding:40px 36px;">
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
 
 <!-- Logo & Brand -->
-<tr><td style="text-align:center;padding-bottom:40px;">
-<img src="${logoUrl}" alt="PropScholar" width="44" height="44" style="display:inline-block;margin-bottom:16px;">
-<p style="margin:0;font-size:13px;letter-spacing:4px;text-transform:uppercase;color:#888888;font-weight:600;">PropScholar Business</p>
-<div style="width:40px;height:1px;background:#333333;margin:14px auto 0;"></div>
+<tr><td style="text-align:center;padding-bottom:36px;">
+<img src="${logoUrl}" alt="PropScholar" width="40" height="40" style="display:inline-block;margin-bottom:14px;">
+<p style="margin:0;font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#777777;font-weight:600;">PropScholar Business</p>
 </td></tr>
 
-<!-- Main Card -->
+<!-- Glassmorphism Message Card -->
 <tr><td>
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#111111;border-radius:12px;border:1px solid #1a1a1a;">
-<tr><td style="padding:32px;">
-<div style="color:#d4d4d4;font-size:14px;line-height:1.8;font-weight:400;">${escapedBody}</div>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border-radius:14px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.05);">
+<tr><td style="padding:28px 28px;">
+<div style="color:#e0e0e0;font-size:14px;line-height:1.85;font-weight:400;letter-spacing:0.2px;">${escapedBody}</div>
 </td></tr>
 </table>
 </td></tr>
 
 <!-- Footer Tagline -->
-<tr><td style="padding-top:48px;text-align:center;">
-<div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,#333,transparent);margin:0 auto 20px;"></div>
-<p style="margin:0;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#444444;font-weight:500;">PropScholar — Making The Trading Skill Based</p>
+<tr><td style="padding-top:40px;text-align:center;">
+<div style="width:50px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);margin:0 auto 16px;"></div>
+<p style="margin:0;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#555555;font-weight:500;">PropScholar — Making The Trading Skill Based</p>
 </td></tr>
 
 </table>
+
+</td></tr>
+</table>
+
 </td></tr></table>
 </body></html>`;
 
