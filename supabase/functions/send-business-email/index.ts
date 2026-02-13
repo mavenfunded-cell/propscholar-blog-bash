@@ -51,14 +51,11 @@ serve(async (req) => {
 <tr><td style="padding:48px 20px;">
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" align="center" style="max-width:560px;margin:0 auto;">
 
-<!-- Logo -->
-<tr><td style="padding-bottom:32px;">
-<img src="${logoUrl}" alt="PropScholar" width="36" height="36" style="display:block;">
-</td></tr>
-
-<!-- Header Text -->
-<tr><td style="padding-bottom:28px;">
-<p style="margin:0;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#666666;font-weight:500;">PropScholar — Making The Trading Skill Based</p>
+<!-- Logo & Brand -->
+<tr><td style="text-align:center;padding-bottom:40px;">
+<img src="${logoUrl}" alt="PropScholar" width="44" height="44" style="display:inline-block;margin-bottom:16px;">
+<p style="margin:0;font-size:13px;letter-spacing:4px;text-transform:uppercase;color:#888888;font-weight:600;">PropScholar Business</p>
+<div style="width:40px;height:1px;background:#333333;margin:14px auto 0;"></div>
 </td></tr>
 
 <!-- Main Card -->
