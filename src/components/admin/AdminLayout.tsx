@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   Mail,
+  Briefcase,
   Users,
   Settings,
   LogOut,
@@ -102,6 +103,12 @@ const navGroups: NavGroup[] = [
       { label: 'AI Usage', icon: BarChart3, href: '/admin/ai-usage' },
       { label: 'User Analytics', icon: Clock, href: '/admin/analytics' },
       { label: 'UTM Tracking', icon: Share2, href: '/admin/utm-tracking' },
+    ],
+  },
+  {
+    title: 'Email',
+    items: [
+      { label: 'Business Email', icon: Briefcase, href: '/admin/business-email' },
     ],
   },
   {

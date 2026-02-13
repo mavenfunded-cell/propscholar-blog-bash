@@ -396,6 +396,60 @@ export type Database = {
           },
         ]
       }
+      business_emails: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          direction: string
+          from_email: string
+          from_name: string | null
+          id: string
+          in_reply_to: string | null
+          is_starred: boolean | null
+          message_id: string | null
+          received_at: string
+          status: string
+          subject: string
+          thread_id: string | null
+          to_email: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          direction?: string
+          from_email: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          is_starred?: boolean | null
+          message_id?: string | null
+          received_at?: string
+          status?: string
+          subject?: string
+          thread_id?: string | null
+          to_email: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          direction?: string
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          is_starred?: boolean | null
+          message_id?: string | null
+          received_at?: string
+          status?: string
+          subject?: string
+          thread_id?: string | null
+          to_email?: string
+        }
+        Relationships: []
+      }
       campaign_events: {
         Row: {
           audience_user_id: string | null

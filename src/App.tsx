@@ -58,6 +58,7 @@ import AdminCampaignBuilder from "./pages/AdminCampaignBuilder";
 import AdminCampaignDetail from "./pages/AdminCampaignDetail";
 import AdminConversionDashboard from "./pages/AdminConversionDashboard";
 import AdminUtmTracking from "./pages/AdminUtmTracking";
+import AdminBusinessEmail from "./pages/AdminBusinessEmail";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +114,7 @@ function getAdminRoutes(basePath = "") {
     <Route key="campaigns-detail" path={`${basePath}/campaigns/:id`} element={<AdminCampaignDetail />} />,
     <Route key="conversion" path={`${basePath}/conversion`} element={<AdminConversionDashboard />} />,
     <Route key="utm-tracking" path={`${basePath}/utm-tracking`} element={<AdminUtmTracking />} />,
+    <Route key="business-email" path={`${basePath}/business-email`} element={<AdminBusinessEmail />} />,
   ];
 }
 
