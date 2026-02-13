@@ -354,8 +354,8 @@ export default function AdminBusinessEmail() {
                           <div
                             className={`rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${
                               isOutbound
-                                ? 'bg-white text-black rounded-br-sm'
-                                : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-sm'
+                                ? 'bg-white/[0.04] border border-white/[0.15] text-white/90 rounded-br-sm'
+                                : 'bg-white/[0.03] border border-white/[0.08] text-white/80 rounded-bl-sm'
                             }`}
                           >
                             <p className="font-medium text-[11px] mb-1.5 opacity-50">{email.subject}</p>
