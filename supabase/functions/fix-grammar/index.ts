@@ -23,6 +23,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
+        stream: false,
         messages: [
           {
             role: "system",
@@ -35,7 +36,14 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      console.error("Raw response:", rawText.substring(0, 500));
+      throw new Error("Invalid response from AI gateway");
+    }
     const fixed = data.choices?.[0]?.message?.content || text;
 
     return new Response(JSON.stringify({ fixed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

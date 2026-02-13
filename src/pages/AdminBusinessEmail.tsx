@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  ArrowLeft, RefreshCw, Mail, Send, Loader2, Sparkles, MailOpen
+  ArrowLeft, RefreshCw, Mail, Send, Loader2, Sparkles, MailOpen, Plus, X
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -38,6 +38,10 @@ export default function AdminBusinessEmail() {
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
   const [fixingGrammar, setFixingGrammar] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -124,8 +128,8 @@ export default function AdminBusinessEmail() {
     }
   };
 
-  const fixGrammar = async () => {
-    if (!replyText.trim()) return;
+  const fixGrammar = async (text: string, setText: (v: string) => void) => {
+    if (!text.trim()) return;
     setFixingGrammar(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -135,13 +139,13 @@ export default function AdminBusinessEmail() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({ text: replyText }),
+          body: JSON.stringify({ text }),
         }
       );
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error);
-      if (result.fixed && result.fixed !== replyText) {
-        setReplyText(result.fixed);
+      if (result.fixed && result.fixed !== text) {
+        setText(result.fixed);
         toast.success('Grammar fixed!');
       } else {
         toast.info('No grammar issues found');
@@ -150,6 +154,39 @@ export default function AdminBusinessEmail() {
       toast.error(e.message || 'Grammar fix failed');
     } finally {
       setFixingGrammar(false);
+    }
+  };
+
+  const sendCompose = async () => {
+    if (!composeTo.trim() || !composeBody.trim()) return;
+    setSending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-business-email`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            to: composeTo,
+            subject: composeSubject || '(No Subject)',
+            body: composeBody,
+          }),
+        }
+      );
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.error);
+      toast.success('Email sent!');
+      setComposing(false);
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      await fetchEmails();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send email');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -214,6 +251,13 @@ export default function AdminBusinessEmail() {
         >
           <RefreshCw className={`w-3.5 h-3.5 ${polling ? 'animate-spin' : ''}`} />
           {polling ? 'Checking...' : 'Refresh'}
+        </button>
+        <button
+          onClick={() => setComposing(true)}
+          className="flex items-center gap-1.5 text-xs bg-white text-black px-3 py-1.5 rounded-full hover:bg-white/90 transition-colors font-medium"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Compose
         </button>
       </div>
 
@@ -333,7 +377,7 @@ export default function AdminBusinessEmail() {
               <div className="border-t border-white/[0.06] bg-black/80 backdrop-blur-xl px-4 py-3 shrink-0">
                 <div className="max-w-2xl mx-auto flex items-end gap-2">
                   <button
-                    onClick={fixGrammar}
+                    onClick={() => fixGrammar(replyText, setReplyText)}
                     disabled={fixingGrammar || !replyText.trim()}
                     className="shrink-0 p-2.5 rounded-full text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-all disabled:opacity-30"
                     title="Fix Grammar"
@@ -362,6 +406,61 @@ export default function AdminBusinessEmail() {
           )}
         </div>
       </div>
+
+      {/* Compose modal */}
+      {composing && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111] border border-white/[0.08] rounded-2xl w-full max-w-lg flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+              <h2 className="text-sm font-medium text-white">New Email</h2>
+              <button onClick={() => setComposing(false)} className="text-white/30 hover:text-white/60 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <input
+                value={composeTo}
+                onChange={e => setComposeTo(e.target.value)}
+                placeholder="To (email address)"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+              />
+              <input
+                value={composeSubject}
+                onChange={e => setComposeSubject(e.target.value)}
+                placeholder="Subject"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+              />
+              <div className="relative">
+                <textarea
+                  value={composeBody}
+                  onChange={e => setComposeBody(e.target.value)}
+                  placeholder="Write your message..."
+                  rows={6}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.06]">
+              <button
+                onClick={() => fixGrammar(composeBody, setComposeBody)}
+                disabled={fixingGrammar || !composeBody.trim()}
+                className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-30"
+              >
+                {fixingGrammar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Fix Grammar
+              </button>
+              <button
+                onClick={sendCompose}
+                disabled={sending || !composeTo.trim() || !composeBody.trim()}
+                className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-full text-sm font-medium hover:bg-white/90 transition-all disabled:opacity-30"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
