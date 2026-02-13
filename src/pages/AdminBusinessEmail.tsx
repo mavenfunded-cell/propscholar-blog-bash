@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  ArrowLeft, RefreshCw, Mail, Send, Loader2, Sparkles,
-  ChevronRight, MailOpen
+  ArrowLeft, RefreshCw, Mail, Send, Loader2, Sparkles, MailOpen
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -156,17 +153,31 @@ export default function AdminBusinessEmail() {
     }
   };
 
-  // Thread view: get all emails in the same thread or same subject chain
+  // Group emails into conversations by sender
+  const getConversations = () => {
+    const convMap = new Map<string, BusinessEmail[]>();
+    emails.filter(e => e.status !== 'archived').forEach(email => {
+      const key = email.direction === 'outbound' ? email.to_email : email.from_email;
+      if (!convMap.has(key)) convMap.set(key, []);
+      convMap.get(key)!.push(email);
+    });
+    // Sort conversations by latest email
+    return Array.from(convMap.entries())
+      .map(([contactEmail, msgs]) => {
+        const sorted = msgs.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
+        const latest = sorted[0];
+        const unreadCount = msgs.filter(m => m.status === 'unread' && m.direction === 'inbound').length;
+        const contactName = msgs.find(m => m.direction === 'inbound' && m.from_name)?.from_name || contactEmail;
+        return { contactEmail, contactName, latest, unreadCount, msgs: sorted };
+      })
+      .sort((a, b) => new Date(b.latest.received_at).getTime() - new Date(a.latest.received_at).getTime());
+  };
+
   const getThreadEmails = () => {
     if (!selectedEmail) return [];
-    const threadId = selectedEmail.thread_id;
-    const subject = selectedEmail.subject.replace(/^Re:\s*/gi, '');
+    const contactEmail = selectedEmail.direction === 'outbound' ? selectedEmail.to_email : selectedEmail.from_email;
     return emails
-      .filter(e => {
-        if (threadId && e.thread_id === threadId) return true;
-        const s = e.subject.replace(/^Re:\s*/gi, '');
-        return s === subject && (e.from_email === selectedEmail.from_email || e.to_email === selectedEmail.from_email || e.from_email === selectedEmail.to_email);
-      })
+      .filter(e => e.from_email === contactEmail || e.to_email === contactEmail)
       .sort((a, b) => new Date(a.received_at).getTime() - new Date(b.received_at).getTime());
   };
 
@@ -178,114 +189,24 @@ export default function AdminBusinessEmail() {
     );
   }
 
-  // Chat detail view
-  if (selectedEmail) {
-    const thread = getThreadEmails();
-    return (
-      <div className="h-screen bg-black flex flex-col">
-        {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
-          <button
-            onClick={() => setSelectedEmail(null)}
-            className="text-white/50 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">
-              {selectedEmail.from_name || selectedEmail.from_email}
-            </p>
-            <p className="text-[11px] text-white/30 truncate">{selectedEmail.subject}</p>
-          </div>
-        </div>
+  const conversations = getConversations();
+  const selectedContact = selectedEmail
+    ? (selectedEmail.direction === 'outbound' ? selectedEmail.to_email : selectedEmail.from_email)
+    : null;
 
-        {/* Chat messages */}
-        <ScrollArea className="flex-1 px-4 py-6">
-          <div className="max-w-2xl mx-auto space-y-4">
-            {thread.map(email => {
-              const isOutbound = email.direction === 'outbound';
-              return (
-                <div key={email.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] group ${isOutbound ? 'items-end' : 'items-start'}`}>
-                    <div
-                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                        isOutbound
-                          ? 'bg-white text-black rounded-br-md'
-                          : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-md'
-                      }`}
-                    >
-                      {!isOutbound && (
-                        <p className={`text-xs font-semibold mb-1.5 ${isOutbound ? 'text-black/60' : 'text-white/60'}`}>
-                          {email.from_name || email.from_email}
-                        </p>
-                      )}
-                      <p className="font-medium text-[13px] mb-1 opacity-80">{email.subject}</p>
-                      <div className="whitespace-pre-wrap text-[13px] leading-[1.6] opacity-90">
-                        {email.body_text?.substring(0, 600) || 'No content'}
-                      </div>
-                    </div>
-                    <p className={`text-[10px] mt-1 px-1 ${isOutbound ? 'text-right text-white/20' : 'text-white/20'}`}>
-                      {formatDistanceToNow(new Date(email.received_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
-
-        {/* Reply bar */}
-        {selectedEmail.direction === 'inbound' && (
-          <div className="border-t border-white/[0.06] bg-black/80 backdrop-blur-xl px-4 py-3">
-            <div className="max-w-2xl mx-auto flex items-end gap-2">
-              <button
-                onClick={fixGrammar}
-                disabled={fixingGrammar || !replyText.trim()}
-                className="shrink-0 p-2.5 rounded-full text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-all disabled:opacity-30"
-                title="Fix Grammar"
-              >
-                {fixingGrammar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              </button>
-              <div className="flex-1 relative">
-                <input
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
-                  placeholder="Type your reply..."
-                  className="w-full bg-white/[0.06] border border-white/[0.08] rounded-full px-4 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
-                />
-              </div>
-              <button
-                onClick={sendReply}
-                disabled={sending || !replyText.trim()}
-                className="shrink-0 p-2.5 rounded-full bg-white text-black hover:bg-white/90 transition-all disabled:opacity-30 disabled:hover:bg-white"
-              >
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Email list view
   return (
     <div className="h-screen bg-black flex flex-col">
-      {/* Minimal top bar */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
-            className="text-white/40 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <MailOpen className="w-5 h-5 text-white/50" />
-            <span className="text-sm text-white/60">business@propscholar.com</span>
-          </div>
-        </div>
+      {/* Top bar */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl shrink-0">
+        <button
+          onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
+          className="text-white/40 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <MailOpen className="w-5 h-5 text-white/50" />
+        <span className="text-sm text-white/60">business@propscholar.com</span>
+        <div className="flex-1" />
         <button
           onClick={pollInbox}
           disabled={polling}
@@ -296,50 +217,151 @@ export default function AdminBusinessEmail() {
         </button>
       </div>
 
-      {/* Email list */}
-      <ScrollArea className="flex-1">
-        <div className="max-w-2xl mx-auto py-2">
-          {emails.filter(e => e.status !== 'archived').length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 text-white/20">
-              <Mail className="w-10 h-10 mb-3" />
-              <p className="text-sm">No emails</p>
+      {/* Split layout */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: Conversation list */}
+        <div className="w-[380px] shrink-0 border-r border-white/[0.06] flex flex-col">
+          <ScrollArea className="flex-1">
+            {conversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32 text-white/20">
+                <Mail className="w-10 h-10 mb-3" />
+                <p className="text-sm">No emails</p>
+              </div>
+            ) : (
+              conversations.map(conv => {
+                const isActive = selectedContact === conv.contactEmail;
+                return (
+                  <button
+                    key={conv.contactEmail}
+                    onClick={() => selectEmail(conv.latest)}
+                    className={`w-full text-left px-4 py-3.5 flex items-start gap-3 transition-colors border-b border-white/[0.04] ${
+                      isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    {/* Avatar circle */}
+                    <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-sm font-medium text-white/50">
+                        {conv.contactName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className={`text-[13px] truncate ${conv.unreadCount > 0 ? 'font-semibold text-white' : 'text-white/70'}`}>
+                          {conv.contactName}
+                        </span>
+                        <span className="text-[11px] text-white/25 shrink-0">
+                          {formatDistanceToNow(new Date(conv.latest.received_at), { addSuffix: false })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-xs truncate flex-1 ${conv.unreadCount > 0 ? 'text-white/60' : 'text-white/30'}`}>
+                          {conv.latest.direction === 'outbound' && <span className="text-white/20">You: </span>}
+                          {conv.latest.body_text?.substring(0, 60) || conv.latest.subject}
+                        </p>
+                        {conv.unreadCount > 0 && (
+                          <span className="w-5 h-5 rounded-full bg-white text-black text-[10px] font-bold flex items-center justify-center shrink-0">
+                            {conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Right: Chat view */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {!selectedEmail ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-white/15">
+              <MailOpen className="w-16 h-16 mb-4" />
+              <p className="text-lg font-light">Select a conversation</p>
+              <p className="text-xs text-white/10 mt-1">Choose from your emails on the left</p>
             </div>
           ) : (
-            emails.filter(e => e.status !== 'archived').map(email => {
-              const isOutbound = email.direction === 'outbound';
-              return (
-                <button
-                  key={email.id}
-                  onClick={() => selectEmail(email)}
-                  className="w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className={`text-sm truncate ${email.status === 'unread' ? 'font-semibold text-white' : 'text-white/70'}`}>
-                        {isOutbound ? `To: ${email.to_email}` : (email.from_name || email.from_email)}
-                      </span>
-                      {isOutbound && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-white/30">Sent</span>
-                      )}
-                    </div>
-                    <p className={`text-sm truncate ${email.status === 'unread' ? 'text-white/80' : 'text-white/40'}`}>
-                      {email.subject}
-                    </p>
-                    <p className="text-xs text-white/20 truncate mt-0.5">{email.body_text?.substring(0, 80)}</p>
+            <>
+              {/* Chat header */}
+              <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-black/60 backdrop-blur-xl shrink-0">
+                <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center">
+                  <span className="text-sm font-medium text-white/50">
+                    {(selectedEmail.from_name || selectedEmail.from_email).charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {selectedEmail.direction === 'outbound' ? selectedEmail.to_email : (selectedEmail.from_name || selectedEmail.from_email)}
+                  </p>
+                  <p className="text-[11px] text-white/25 truncate">
+                    {selectedEmail.direction === 'outbound' ? selectedEmail.to_email : selectedEmail.from_email}
+                  </p>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <ScrollArea className="flex-1 px-5 py-6">
+                <div className="max-w-2xl mx-auto space-y-3">
+                  {getThreadEmails().map(email => {
+                    const isOutbound = email.direction === 'outbound';
+                    return (
+                      <div key={email.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
+                        <div className="max-w-[80%]">
+                          <div
+                            className={`rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${
+                              isOutbound
+                                ? 'bg-white text-black rounded-br-sm'
+                                : 'bg-white/[0.06] border border-white/[0.08] text-white/90 rounded-bl-sm'
+                            }`}
+                          >
+                            <p className="font-medium text-[11px] mb-1.5 opacity-50">{email.subject}</p>
+                            <div className="whitespace-pre-wrap leading-[1.6] opacity-90">
+                              {email.body_text?.substring(0, 800) || 'No content'}
+                            </div>
+                          </div>
+                          <p className={`text-[10px] mt-1 px-1 ${isOutbound ? 'text-right' : ''} text-white/20`}>
+                            {formatDistanceToNow(new Date(email.received_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              {/* Reply bar */}
+              <div className="border-t border-white/[0.06] bg-black/80 backdrop-blur-xl px-4 py-3 shrink-0">
+                <div className="max-w-2xl mx-auto flex items-end gap-2">
+                  <button
+                    onClick={fixGrammar}
+                    disabled={fixingGrammar || !replyText.trim()}
+                    className="shrink-0 p-2.5 rounded-full text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-all disabled:opacity-30"
+                    title="Fix Grammar"
+                  >
+                    {fixingGrammar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  </button>
+                  <div className="flex-1">
+                    <input
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
+                      placeholder="Type your reply..."
+                      className="w-full bg-white/[0.06] border border-white/[0.08] rounded-full px-4 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+                    />
                   </div>
-                  <div className="shrink-0 flex items-center gap-2 pt-0.5">
-                    <span className="text-[11px] text-white/20">
-                      {formatDistanceToNow(new Date(email.received_at), { addSuffix: true })}
-                    </span>
-                    {email.status === 'unread' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white/30 transition-colors" />
-                  </div>
-                </button>
-              );
-            })
+                  <button
+                    onClick={sendReply}
+                    disabled={sending || !replyText.trim()}
+                    className="shrink-0 p-2.5 rounded-full bg-white text-black hover:bg-white/90 transition-all disabled:opacity-30"
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
