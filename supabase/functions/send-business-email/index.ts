@@ -67,14 +67,10 @@ serve(async (req) => {
 </table>
 </td></tr>
 
-<!-- Reply hint -->
-<tr><td style="padding-top:24px;">
-<p style="margin:0;color:#444444;font-size:12px;">Reply to this email to continue the conversation.</p>
-</td></tr>
-
-<!-- Footer -->
-<tr><td style="padding-top:48px;border-top:1px solid #1a1a1a;margin-top:48px;">
-<p style="margin:24px 0 0 0;color:#333333;font-size:11px;line-height:1.6;">This is a notification from PropScholar.<br>You're receiving this because you're a member.</p>
+<!-- Footer Tagline -->
+<tr><td style="padding-top:48px;text-align:center;">
+<div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,#333,transparent);margin:0 auto 20px;"></div>
+<p style="margin:0;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#444444;font-weight:500;">PropScholar — Making The Trading Skill Based</p>
 </td></tr>
 
 </table>
