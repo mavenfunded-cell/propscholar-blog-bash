@@ -214,10 +214,10 @@ export default function AdminCampaignBuilder() {
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
 
-      // Filter by target tags if specified - use cs operator with proper UUID casting
+      // Filter by target tags if specified - use ov (overlap) to match ANY tag
       if (campaign.target_tags && campaign.target_tags.length > 0) {
         const tagFilter = `{${campaign.target_tags.join(',')}}`;
-        query = query.filter('tags', 'cs', tagFilter);
+        query = query.filter('tags', 'ov', tagFilter);
       }
 
       const { count, error } = await query;
@@ -350,10 +350,10 @@ export default function AdminCampaignBuilder() {
           .is('unsubscribed_at', null)
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-        // Filter by target tags if specified - use cs operator with proper UUID casting
+        // Filter by target tags if specified - use ov (overlap) to match ANY tag
         if (campaign.target_tags && campaign.target_tags.length > 0) {
           const tagFilter = `{${campaign.target_tags.join(',')}}`;
-          audienceQuery = audienceQuery.filter('tags', 'cs', tagFilter);
+          audienceQuery = audienceQuery.filter('tags', 'ov', tagFilter);
         }
 
         const { data: audienceUsers, error: audienceError } = await audienceQuery;
