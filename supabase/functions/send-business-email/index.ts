@@ -41,31 +41,45 @@ serve(async (req) => {
     const messageId = `<${crypto.randomUUID()}@propscholar.com>`;
 
     // Build email HTML
-    const logoUrl = "https://res.cloudinary.com/dzozyqlqr/image/upload/v1763325013/d0d1d9_dthfiq.jpg";
+    const logoUrl = "https://res.cloudinary.com/dzozyqlqr/image/upload/v1766327970/Gemini_Generated_Image_hvp9g0hvp9g0hvp9_1_q6pmq8.png";
     const escapedBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     
     const emailHtml = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" style="background:#020617;"><tr><td style="padding:40px 20px;">
-<table width="600" align="center" style="max-width:600px;">
-<tr><td style="text-align:center;padding-bottom:24px;">
-<img src="${logoUrl}" alt="PropScholar" width="80" style="border-radius:12px;">
+<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#000000;">
+<tr><td style="padding:48px 20px;">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" align="center" style="max-width:560px;margin:0 auto;">
+
+<!-- Logo -->
+<tr><td style="padding-bottom:32px;">
+<img src="${logoUrl}" alt="PropScholar" width="36" height="36" style="display:block;">
 </td></tr>
+
+<!-- Header Text -->
+<tr><td style="padding-bottom:28px;">
+<p style="margin:0;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#666666;font-weight:500;">PropScholar — Making The Trading Skill Based</p>
+</td></tr>
+
+<!-- Main Card -->
 <tr><td>
-<table width="100%" style="background:#0f172a;border-radius:16px;border:1px solid rgba(59,130,246,0.3);">
-<tr><td style="height:3px;background:linear-gradient(90deg,#1e40af,#3b82f6,#1e40af);border-radius:16px 16px 0 0;"></td></tr>
-<tr><td style="padding:28px 32px;">
-<div style="color:#e2e8f0;font-size:15px;line-height:1.7;">${escapedBody}</div>
-</td></tr>
-<tr><td style="padding:0 32px 24px;text-align:center;">
-<p style="color:#94a3b8;font-size:13px;">Reply to this email to continue the conversation</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#111111;border-radius:12px;border:1px solid #1a1a1a;">
+<tr><td style="padding:32px;">
+<div style="color:#d4d4d4;font-size:14px;line-height:1.8;font-weight:400;">${escapedBody}</div>
 </td></tr>
 </table>
 </td></tr>
-<tr><td style="padding:24px;text-align:center;">
-<p style="color:#475569;font-size:11px;">&copy; ${new Date().getFullYear()} PropScholar</p>
+
+<!-- Reply hint -->
+<tr><td style="padding-top:24px;">
+<p style="margin:0;color:#444444;font-size:12px;">Reply to this email to continue the conversation.</p>
 </td></tr>
+
+<!-- Footer -->
+<tr><td style="padding-top:48px;border-top:1px solid #1a1a1a;margin-top:48px;">
+<p style="margin:24px 0 0 0;color:#333333;font-size:11px;line-height:1.6;">This is a notification from PropScholar.<br>You're receiving this because you're a member.</p>
+</td></tr>
+
 </table>
 </td></tr></table>
 </body></html>`;
