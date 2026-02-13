@@ -75,31 +75,36 @@ interface EventWithCount extends Event {
   submission_count: number;
 }
 
-// Quick link configuration for cleaner rendering
-const quickLinks = [
-  { to: '/admin/utm-tracking', icon: Link2, label: 'UTM', color: 'text-sky-400', borderColor: 'border-sky-500/30', gradient: 'from-sky-500/10 to-blue-500/5', highlight: true },
-  { to: '/admin/conversion', icon: TrendingDown, label: 'Conversion Intel', color: 'text-rose-400', borderColor: 'border-rose-500/30', gradient: 'from-rose-500/10 to-red-500/5', highlight: true },
-  { to: '/admin/rewards', icon: Settings, label: 'Reward Settings', color: 'text-amber-400', borderColor: 'border-amber-500/20' },
-  { to: '/admin/coupons', icon: Ticket, label: 'Coupon Management', color: 'text-violet-400', borderColor: 'border-violet-500/20' },
-  { to: '/admin/users-coins', icon: Coins, label: 'User Coins', color: 'text-yellow-400', borderColor: 'border-yellow-500/20' },
-  { to: '/admin/claims', icon: Gift, label: 'Reward Claims', color: 'text-emerald-400', borderColor: 'border-emerald-500/20' },
-  { to: '/admin/winner-claims', icon: Trophy, label: 'Winner Claims', color: 'text-amber-500', borderColor: 'border-amber-500/30', highlight: true },
-  { to: '/admin/social-follows', icon: Share2, label: 'Social Screenshots', color: 'text-blue-400', borderColor: 'border-blue-500/20' },
-  { to: '/admin/votes', icon: ThumbsUp, label: 'Blog Votes', color: 'text-pink-400', borderColor: 'border-pink-500/20' },
-  { to: '/admin/add-votes', icon: Plus, label: 'Add Manual Votes', color: 'text-orange-400', borderColor: 'border-orange-500/20' },
-  { to: '/admin/seo', icon: Search, label: 'SEO Management', color: 'text-green-400', borderColor: 'border-green-500/20' },
-  { to: '/admin/emails', icon: Mail, label: 'Email Logs', color: 'text-cyan-400', borderColor: 'border-cyan-500/20' },
-  { to: '/admin/notifications', icon: Users, label: 'Send Notifications', color: 'text-blue-400', borderColor: 'border-blue-500/20' },
-  { to: '/admin/analytics', icon: Clock, label: 'User Analytics', color: 'text-emerald-400', borderColor: 'border-emerald-500/20' },
-  { to: '/admin/referrals', icon: UserPlus, label: 'Referral Logs', color: 'text-indigo-400', borderColor: 'border-indigo-500/20' },
-  { to: '/admin/tickets', icon: Mail, label: 'Support Tickets', color: 'text-cyan-400', borderColor: 'border-cyan-500/20' },
-  { to: '/admin/reviews', icon: Trophy, label: 'Ticket Reviews', color: 'text-yellow-400', borderColor: 'border-yellow-500/20' },
-  { to: '/admin/ai-knowledge', icon: Brain, label: 'Train AI', color: 'text-violet-400', borderColor: 'border-violet-500/20' },
-  { to: '/admin/canned-messages', icon: MessageSquare, label: 'Canned Messages', color: 'text-teal-400', borderColor: 'border-teal-500/20' },
-  { to: '/admin/ai-usage', icon: BarChart3, label: 'AI Usage', color: 'text-cyan-400', borderColor: 'border-cyan-500/20' },
-  { to: '/admin/scholar-hub', icon: GraduationCap, label: 'Scholar Hub', color: 'text-amber-400', borderColor: 'border-amber-500/30', gradient: 'from-amber-500/10 to-orange-500/5' },
-  { to: '/admin/campaigns', icon: Megaphone, label: 'Campaigns', color: 'text-rose-400', borderColor: 'border-rose-500/30', gradient: 'from-rose-500/10 to-pink-500/5' },
-  { to: '/admin/business-email', icon: Mail, label: 'Business Email', color: 'text-orange-400', borderColor: 'border-orange-500/30', gradient: 'from-orange-500/10 to-amber-500/5', highlight: true },
+// In House links - core operational tools
+const inHouseLinks = [
+  { to: '/admin/utm-tracking', icon: Link2, label: 'UTM Tracking' },
+  { to: '/admin/tickets', icon: Mail, label: 'Support Tickets' },
+  { to: '/admin/campaigns', icon: Megaphone, label: 'Campaigns' },
+  { to: '/admin/business-email', icon: Mail, label: 'Business Mail' },
+];
+
+// Space links - competition & rewards ecosystem
+const spaceLinks = [
+  { to: '/admin/conversion', icon: TrendingDown, label: 'Conversion Intel' },
+  { to: '/admin/rewards', icon: Settings, label: 'Reward Settings' },
+  { to: '/admin/coupons', icon: Ticket, label: 'Coupon Management' },
+  { to: '/admin/users-coins', icon: Coins, label: 'User Coins' },
+  { to: '/admin/claims', icon: Gift, label: 'Reward Claims' },
+  { to: '/admin/winner-claims', icon: Trophy, label: 'Winner Claims' },
+  { to: '/admin/social-follows', icon: Share2, label: 'Social Screenshots' },
+  { to: '/admin/votes', icon: ThumbsUp, label: 'Blog Votes' },
+  { to: '/admin/add-votes', icon: Plus, label: 'Add Manual Votes' },
+  { to: '/admin/seo', icon: Search, label: 'SEO Management' },
+  { to: '/admin/emails', icon: Mail, label: 'Email Logs' },
+  { to: '/admin/notifications', icon: Users, label: 'Send Notifications' },
+  { to: '/admin/analytics', icon: Clock, label: 'User Analytics' },
+  { to: '/admin/referrals', icon: UserPlus, label: 'Referral Logs' },
+  { to: '/admin/reviews', icon: Trophy, label: 'Ticket Reviews' },
+  { to: '/admin/ai-knowledge', icon: Brain, label: 'Train AI' },
+  { to: '/admin/canned-messages', icon: MessageSquare, label: 'Canned Messages' },
+  { to: '/admin/ai-usage', icon: BarChart3, label: 'AI Usage' },
+  { to: '/admin/scholar-hub', icon: GraduationCap, label: 'Scholar Hub' },
+  { to: '/admin/og-images', icon: ExternalLink, label: 'OG Images' },
 ];
 
 export default function AdminDashboard() {
@@ -109,6 +114,7 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState<EventWithCount[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<'inhouse' | 'space'>('inhouse');
 
   useEffect(() => {
     if (authLoading) return;
@@ -380,20 +386,65 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Quick Links Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {quickLinks.map((link) => (
-            <AdminLink key={link.to} to={link.to}>
-              <Card className={`h-full border-border/40 ${link.borderColor} ${link.gradient ? `bg-gradient-to-br ${link.gradient}` : 'bg-card/30'} hover:bg-card/60 hover:border-border/60 transition-all cursor-pointer group`}>
-                <CardHeader className="p-4">
-                  <CardDescription className="flex items-center gap-2.5 text-sm">
-                    <link.icon className={`w-4 h-4 ${link.color} group-hover:scale-110 transition-transform`} />
-                    <span className="truncate">{link.label}</span>
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </AdminLink>
-          ))}
+        {/* Section Toggle */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-1 p-1 bg-muted/30 border border-border/40 rounded-xl w-fit">
+            <button
+              onClick={() => setActiveSection('inhouse')}
+              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeSection === 'inhouse'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              In House
+            </button>
+            <button
+              onClick={() => setActiveSection('space')}
+              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeSection === 'space'
+                  ? 'bg-foreground text-background shadow-lg'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Space
+            </button>
+          </div>
+
+          {/* In House Section */}
+          {activeSection === 'inhouse' && (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {inHouseLinks.map((link) => (
+                <AdminLink key={link.to} to={link.to}>
+                  <div className="group relative overflow-hidden rounded-2xl border border-border/30 bg-card/20 hover:bg-card/50 hover:border-border/60 transition-all duration-300 cursor-pointer p-6">
+                    <div className="flex flex-col gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-foreground/5 border border-border/30 flex items-center justify-center group-hover:bg-foreground/10 transition-colors">
+                        <link.icon className="w-5 h-5 text-foreground/70 group-hover:text-foreground transition-colors" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">{link.label}</span>
+                    </div>
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-gradient-to-br from-foreground/[0.02] to-transparent" />
+                  </div>
+                </AdminLink>
+              ))}
+            </div>
+          )}
+
+          {/* Space Section */}
+          {activeSection === 'space' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {spaceLinks.map((link) => (
+                <AdminLink key={link.to} to={link.to}>
+                  <div className="group rounded-xl border border-border/30 bg-card/20 hover:bg-card/40 hover:border-border/50 transition-all cursor-pointer p-4">
+                    <div className="flex items-center gap-2.5">
+                      <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                      <span className="text-sm text-muted-foreground group-hover:text-foreground truncate transition-colors">{link.label}</span>
+                    </div>
+                  </div>
+                </AdminLink>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Events Section */}
