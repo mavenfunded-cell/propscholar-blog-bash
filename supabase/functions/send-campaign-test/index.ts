@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Campaign emails use info@propscholar.com - separate from support
+// Campaign test emails use marketing@propscholar.com - same as production queue
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
 const FROM_NAME = "PropScholar";
@@ -43,14 +43,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Use campaign SMTP credentials (info@propscholar.com)
-    const smtpUser = Deno.env.get("HOSTINGER_CAMPAIGN_EMAIL") || Deno.env.get("HOSTINGER_INFO_EMAIL");
-    const smtpPassword = Deno.env.get("HOSTINGER_CAMPAIGN_PASSWORD") || Deno.env.get("HOSTINGER_INFO_PASSWORD");
+    // Use dual mailbox system (marketing@ / hello@) — same as production queue
+    const smtpUser = Deno.env.get("HOSTINGER_MARKETING_EMAIL");
+    const smtpPassword = Deno.env.get("HOSTINGER_MARKETING_PASSWORD");
 
     if (!smtpUser || !smtpPassword) {
-      console.error("Campaign SMTP credentials not configured");
+      console.error("Marketing SMTP credentials not configured");
       return new Response(
-        JSON.stringify({ error: "Campaign email not configured. Please add HOSTINGER_CAMPAIGN_EMAIL and HOSTINGER_CAMPAIGN_PASSWORD secrets." }),
+        JSON.stringify({ error: "Marketing email not configured. Please add HOSTINGER_MARKETING_EMAIL and HOSTINGER_MARKETING_PASSWORD secrets." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
