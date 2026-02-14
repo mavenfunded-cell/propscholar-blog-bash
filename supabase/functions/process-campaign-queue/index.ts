@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from "npm:nodemailer@6.9.12";
 
-// Declare EdgeRuntime for TypeScript
 declare const EdgeRuntime: {
   waitUntil(promise: Promise<unknown>): void;
 };
@@ -14,18 +13,19 @@ const corsHeaders = {
 
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
-const BATCH_SIZE = 20; // Smaller batches for rate limit safety
-const DELAY_BETWEEN_EMAILS_MS = 600; // ~1.5 emails/second - safer for Hostinger rate limits
+const BATCH_SIZE = 20;
+const DELAY_BETWEEN_EMAILS_MS = 600;
 const MAX_BOUNCE_RATE = 0.05;
+const MAX_CONSECUTIVE_FAILURES = 3;
 
-// Dual mailbox configuration for 50/50 split
 interface SmtpMailbox {
   email: string;
   password: string;
   label: string;
+  transporter: any;
+  healthy: boolean;
 }
 
-// Simple hash to deterministically assign a recipient to a mailbox (0 or 1)
 function getMailboxIndex(email: string): number {
   let hash = 0;
   const lower = email.toLowerCase();
@@ -35,13 +35,10 @@ function getMailboxIndex(email: string): number {
   return Math.abs(hash) % 2;
 }
 
-// Generate preheader HTML that shows as preview text in email clients
 function generatePreheaderHtml(preheader: string): string {
   if (!preheader) return "";
-  // Hidden preheader text with zero-width spacing to prevent showing in email body
   return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}${"&#8204; &zwnj; ".repeat(30)}</div>`;
 }
-const MAX_CONSECUTIVE_FAILURES = 3; // Stop after 3 consecutive SMTP failures
 
 function isHostingerRateLimit(message: string): boolean {
   const msg = (message || "").toLowerCase();
@@ -50,7 +47,6 @@ function isHostingerRateLimit(message: string): boolean {
     msg.includes("rate limit") ||
     msg.includes("4.7.1") ||
     msg.includes("hostinger_out_ratelimit") ||
-    // Often follows rate limiting / SMTP throttling
     msg.includes("connection not recoverable") ||
     msg.includes("error while in datamode")
   );
@@ -58,6 +54,18 @@ function isHostingerRateLimit(message: string): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createTransporter(email: string, password: string) {
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: true,
+    auth: { user: email, pass: password },
+    pool: false,
+    connectionTimeout: 10000,
+    socketTimeout: 15000,
+  });
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -86,30 +94,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Dual mailbox setup: marketing@ and hello@
-    const mailboxes: SmtpMailbox[] = [
+    // Build mailbox list
+    const mailboxConfigs: { email: string; password: string; label: string }[] = [
       {
-        email: Deno.env.get("HOSTINGER_MARKETING_EMAIL") || "marketing@propscholar.com",
+        email: Deno.env.get("HOSTINGER_MARKETING_EMAIL") || "",
         password: Deno.env.get("HOSTINGER_MARKETING_PASSWORD") || "",
         label: "marketing",
       },
       {
-        email: Deno.env.get("HOSTINGER_HELLO_EMAIL") || "hello@propscholar.com",
+        email: Deno.env.get("HOSTINGER_HELLO_EMAIL") || "",
         password: Deno.env.get("HOSTINGER_HELLO_PASSWORD") || "",
         label: "hello",
       },
     ];
 
-    const validMailboxes = mailboxes.filter((m) => m.email && m.password);
+    const mailboxes: SmtpMailbox[] = mailboxConfigs
+      .filter((m) => m.email && m.password)
+      .map((m) => ({
+        ...m,
+        transporter: createTransporter(m.email, m.password),
+        healthy: true,
+      }));
 
-    if (validMailboxes.length === 0) {
+    if (mailboxes.length === 0) {
       console.error("CRITICAL: No campaign SMTP credentials configured");
       for (const campaign of campaigns) {
         await supabase
           .from("campaigns")
           .update({ status: "failed", completed_at: new Date().toISOString() })
           .eq("id", campaign.id);
-        console.log(`Campaign ${campaign.id} marked as failed - no SMTP credentials`);
       }
       return new Response(
         JSON.stringify({ error: "SMTP credentials not configured", failed: true }),
@@ -117,26 +130,22 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Campaign sending with ${validMailboxes.length} mailboxes: ${validMailboxes.map(m => m.email).join(", ")}`);
+    console.log(`Campaign sending with ${mailboxes.length} mailboxes: ${mailboxes.map(m => m.email).join(", ")}`);
 
     for (const campaign of campaigns) {
       let consecutiveFailures = 0;
       let criticalError = false;
 
-      // Check bounce rate - stop if too high
+      // Check bounce rate
       if (campaign.sent_count > 10) {
         const bounceRate = campaign.bounce_count / campaign.sent_count;
         if (bounceRate > MAX_BOUNCE_RATE) {
-          await supabase
-            .from("campaigns")
-            .update({ status: "paused" })
-            .eq("id", campaign.id);
+          await supabase.from("campaigns").update({ status: "paused" }).eq("id", campaign.id);
           console.log(`Campaign ${campaign.id} paused due to high bounce rate: ${(bounceRate * 100).toFixed(1)}%`);
           continue;
         }
       }
 
-      // Mark as sending if just starting
       if (campaign.status === "scheduled") {
         await supabase
           .from("campaigns")
@@ -145,15 +154,11 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const trackingBaseUrl = `${supabaseUrl}/functions/v1`;
-
-      // Process recipients in a loop so the campaign doesn't get stuck in "sending"
-      // (edge functions are short-lived, so we stop when we near the runtime limit)
       const campaignStart = Date.now();
-      const MAX_RUNTIME_MS = 50_000; // 50 seconds to leave time for self-invoke
+      const MAX_RUNTIME_MS = 50_000;
       let shouldContinue = false;
 
       while (Date.now() - campaignStart < MAX_RUNTIME_MS) {
-        // Get pending recipients (batch)
         const { data: recipients, error: recipientError } = await supabase
           .from("campaign_recipients")
           .select("*")
@@ -163,7 +168,6 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (recipientError) throw recipientError;
 
-        // No more recipients => campaign complete
         if (!recipients?.length) {
           await supabase
             .from("campaigns")
@@ -173,34 +177,23 @@ const handler = async (req: Request): Promise<Response> => {
           break;
         }
 
-        // Send emails
         for (const recipient of recipients) {
-          // Stop if we hit too many consecutive failures
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            // In practice, Hostinger throttling can create a streak of transient failures.
-            // Instead of pausing the campaign (manual intervention), back off and retry.
             const COOLDOWN_MS = 60_000;
-            console.error(
-              `Campaign ${campaign.id}: ${consecutiveFailures} consecutive failures. Cooling down ${Math.round(
-                COOLDOWN_MS / 1000,
-              )}s then continuing...`,
-            );
+            console.error(`Campaign ${campaign.id}: ${consecutiveFailures} consecutive failures. Cooling down...`);
             await sleep(COOLDOWN_MS);
             shouldContinue = true;
             consecutiveFailures = 0;
             break;
           }
 
-          // Stop if we're near runtime limit - flag for continuation
           if (Date.now() - campaignStart >= MAX_RUNTIME_MS) {
-            console.log(`Campaign ${campaign.id}: runtime limit reached, will self-invoke to continue`);
+            console.log(`Campaign ${campaign.id}: runtime limit reached, will self-invoke`);
             shouldContinue = true;
             break;
           }
 
-          // Skip if recipient has empty/invalid email
           if (!recipient.email || !recipient.email.includes("@")) {
-            console.warn(`Skipping recipient with invalid email: ${recipient.email}`);
             await supabase
               .from("campaign_recipients")
               .update({ status: "failed", error_message: "Invalid email address" })
@@ -208,31 +201,34 @@ const handler = async (req: Request): Promise<Response> => {
             continue;
           }
 
-          // Determine which mailbox to use for this recipient (deterministic by email hash)
-          const mbIndex = validMailboxes.length === 1 ? 0 : getMailboxIndex(recipient.email);
-          const mailbox = validMailboxes[mbIndex];
+          // Pick mailbox - fall back to healthy one if preferred is down
+          const healthyMailboxes = mailboxes.filter((m) => m.healthy);
+          if (healthyMailboxes.length === 0) {
+            console.error(`Campaign ${campaign.id}: All mailboxes unhealthy, failing campaign`);
+            await supabase
+              .from("campaigns")
+              .update({ status: "failed", completed_at: new Date().toISOString() })
+              .eq("id", campaign.id);
+            await supabase
+              .from("campaign_recipients")
+              .update({ status: "failed", error_message: "All SMTP mailboxes failed authentication" })
+              .eq("campaign_id", campaign.id)
+              .eq("status", "pending");
+            criticalError = true;
+            break;
+          }
 
-          let client: SMTPClient | null = null;
+          let mbIndex = healthyMailboxes.length === 1 ? 0 : getMailboxIndex(recipient.email) % healthyMailboxes.length;
+          const mailbox = healthyMailboxes[mbIndex];
+
           try {
-            client = new SMTPClient({
-              connection: {
-                hostname: SMTP_HOST,
-                port: SMTP_PORT,
-                tls: true,
-                auth: {
-                  username: mailbox.email,
-                  password: mailbox.password,
-                },
-              },
-            });
-
             // Replace variables
             let html = campaign.html_content;
             html = html.replace(/\{\{first_name\}\}/g, recipient.first_name || "there");
             html = html.replace(/\{\{email\}\}/g, recipient.email);
             html = html.replace(/\{\{subject\}\}/g, campaign.subject);
 
-            // Inject preheader right after <body> tag
+            // Inject preheader
             if (campaign.preheader) {
               const preheaderHtml = generatePreheaderHtml(campaign.preheader);
               if (/<body[^>]*>/i.test(html)) {
@@ -242,7 +238,7 @@ const handler = async (req: Request): Promise<Response> => {
               }
             }
 
-            // Add tracking pixel (robust to missing/uppercase </body>)
+            // Tracking pixel
             const trackingPixel = `<img src="${trackingBaseUrl}/track-campaign-open?t=${recipient.tracking_id}" width="1" height="1" style="display:none;" />`;
             if (/<\/body>/i.test(html)) {
               html = html.replace(/<\/body>/i, `${trackingPixel}</body>`);
@@ -261,72 +257,59 @@ const handler = async (req: Request): Promise<Response> => {
 
             const senderName = campaign.sender_name || "PropScholar";
 
-            await client.send({
+            await mailbox.transporter.sendMail({
               from: `${senderName} <${mailbox.email}>`,
               to: recipient.email,
               subject: campaign.subject,
               html,
-              content: campaign.plain_text_content || undefined,
             });
 
-            // Mark as sent
             await supabase
               .from("campaign_recipients")
               .update({ status: "sent", sent_at: new Date().toISOString() })
               .eq("id", recipient.id);
 
-            // Update campaign sent count
             await supabase.rpc("increment_campaign_sent", { campaign_id: campaign.id });
 
-            console.log(`Email sent to ${recipient.email}`);
-
-            // Reset consecutive failures on success
+            console.log(`Email sent to ${recipient.email} via ${mailbox.label}`);
             consecutiveFailures = 0;
 
-            // Add small delay to avoid rate limits
             const delay = DELAY_BETWEEN_EMAILS_MS + Math.random() * 200;
-            await new Promise((resolve) => setTimeout(resolve, delay));
+            await sleep(delay);
           } catch (emailError: any) {
             const msg = emailError?.message || String(emailError);
-            console.error(`Failed to send to ${recipient.email}:`, msg);
+            console.error(`Failed to send to ${recipient.email} via ${mailbox.label}:`, msg);
 
-            // Hostinger rate limit is a temporary condition.
-            // Don't count it as a failure, don't pause, and retry later after a cooldown.
-            const rateLimited = isHostingerRateLimit(msg);
-            if (rateLimited) {
-              // Keep recipient pending so it can be retried.
+            // Rate limit - keep pending and cooldown
+            if (isHostingerRateLimit(msg)) {
               await supabase
                 .from("campaign_recipients")
                 .update({ status: "pending", error_message: msg })
                 .eq("id", recipient.id);
-
-              // Cooldown and then self-invoke to continue (avoid burning runtime in a tight loop)
               const COOLDOWN_MS = 45_000;
-              console.log(
-                `Rate limit hit for campaign ${campaign.id}. Cooling down ${Math.round(
-                  COOLDOWN_MS / 1000,
-                )}s then continuing...`,
-              );
+              console.log(`Rate limit hit. Cooling down ${Math.round(COOLDOWN_MS / 1000)}s...`);
               await sleep(COOLDOWN_MS);
               shouldContinue = true;
-              // Reset failure streak so we never pause due to consecutive rate limits
               consecutiveFailures = 0;
               break;
             }
 
+            // Auth failure - mark mailbox as unhealthy, DON'T fail entire campaign
+            const isAuthError = msg.includes("535") || msg.toLowerCase().includes("authentication");
+            if (isAuthError) {
+              console.error(`Mailbox ${mailbox.email} auth failed, marking unhealthy`);
+              mailbox.healthy = false;
+              // Keep recipient pending so it retries with the other mailbox
+              await supabase
+                .from("campaign_recipients")
+                .update({ status: "pending", error_message: `Auth failed on ${mailbox.label}, will retry` })
+                .eq("id", recipient.id);
+              consecutiveFailures = 0;
+              continue;
+            }
+
             consecutiveFailures++;
 
-            // Critical SMTP errors (stop the campaign)
-            const isCriticalError =
-              msg.includes("535") ||
-              msg.toLowerCase().includes("authentication") ||
-              msg.includes("553") ||
-              msg.toLowerCase().includes("sender") ||
-              msg.toLowerCase().includes("connection") ||
-              msg.toLowerCase().includes("ehlo") ||
-              msg.toLowerCase().includes("timed out");
-
-            // Bounce-type errors (recipient issue)
             const isBounce =
               msg.includes("550") ||
               msg.toLowerCase().includes("invalid") ||
@@ -335,15 +318,16 @@ const handler = async (req: Request): Promise<Response> => {
 
             await supabase
               .from("campaign_recipients")
-              .update({
-                status: isBounce ? "bounced" : "failed",
-                error_message: msg,
-              })
+              .update({ status: isBounce ? "bounced" : "failed", error_message: msg })
               .eq("id", recipient.id);
 
             if (isBounce) {
               await supabase.rpc("increment_campaign_bounce", { campaign_id: campaign.id });
             }
+
+            // Only truly critical: sender rejection
+            const isCriticalError =
+              msg.includes("553") || msg.toLowerCase().includes("sender");
 
             if (isCriticalError) {
               console.error(`CRITICAL SMTP error for campaign ${campaign.id}: ${msg}`);
@@ -351,26 +335,13 @@ const handler = async (req: Request): Promise<Response> => {
                 .from("campaigns")
                 .update({ status: "failed", completed_at: new Date().toISOString() })
                 .eq("id", campaign.id);
-
               await supabase
                 .from("campaign_recipients")
-                .update({
-                  status: "failed",
-                  error_message: `Campaign failed: ${msg}`,
-                })
+                .update({ status: "failed", error_message: `Campaign failed: ${msg}` })
                 .eq("campaign_id", campaign.id)
                 .eq("status", "pending");
-
               criticalError = true;
               break;
-            }
-          } finally {
-            if (client) {
-              try {
-                await client.close();
-              } catch (closeError) {
-                console.warn("Error closing SMTP connection:", closeError);
-              }
             }
           }
         }
@@ -382,11 +353,10 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Campaign ${campaign.id} stopped due to critical error`);
       }
 
-      // Self-invoke to continue processing if we hit runtime limit
+      // Self-invoke to continue
       if (shouldContinue && !criticalError) {
         console.log(`Self-invoking to continue campaign ${campaign.id}...`);
-        // Use EdgeRuntime.waitUntil for background continuation
-        const continueProcessing = async () => {
+        EdgeRuntime.waitUntil((async () => {
           try {
             const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
             await fetch(`${supabaseUrl}/functions/v1/process-campaign-queue`, {
@@ -399,12 +369,9 @@ const handler = async (req: Request): Promise<Response> => {
             });
             console.log("Continuation request sent successfully");
           } catch (err) {
-            console.error("Failed to self-invoke for continuation:", err);
+            console.error("Failed to self-invoke:", err);
           }
-        };
-        
-        // Fire and forget - don't await
-        EdgeRuntime.waitUntil(continueProcessing());
+        })());
       }
     }
 
