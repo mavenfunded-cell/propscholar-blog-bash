@@ -90,6 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
       from: `${senderName || FROM_NAME} <${smtpUser}>`,
       to: testEmail,
       subject: `[TEST] ${subject}`,
+      content: "auto",
       html: processedHtml,
     });
 
