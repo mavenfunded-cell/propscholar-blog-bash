@@ -1,12 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from "npm:nodemailer@6.9.12";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Campaign test emails use marketing@propscholar.com - same as production queue
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
 const FROM_NAME = "PropScholar";
@@ -21,10 +20,8 @@ interface SendTestRequest {
   preheader?: string;
 }
 
-// Generate preheader HTML that shows as preview text in email clients
 function generatePreheaderHtml(preheader: string): string {
   if (!preheader) return "";
-  // Hidden preheader text with zero-width spacing to prevent showing in email body
   return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}${"&#8204; &zwnj; ".repeat(30)}</div>`;
 }
 
@@ -34,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { testEmail, subject, htmlContent, senderEmail, senderName, preheader }: SendTestRequest = await req.json();
+    const { testEmail, subject, htmlContent, senderName, preheader }: SendTestRequest = await req.json();
 
     if (!testEmail || !subject || !htmlContent) {
       return new Response(
@@ -43,14 +40,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Use dual mailbox system (marketing@ / hello@) — same as production queue
     const smtpUser = Deno.env.get("HOSTINGER_MARKETING_EMAIL");
     const smtpPassword = Deno.env.get("HOSTINGER_MARKETING_PASSWORD");
 
     if (!smtpUser || !smtpPassword) {
-      console.error("Marketing SMTP credentials not configured");
       return new Response(
-        JSON.stringify({ error: "Marketing email not configured. Please add HOSTINGER_MARKETING_EMAIL and HOSTINGER_MARKETING_PASSWORD secrets." }),
+        JSON.stringify({ error: "Marketing email not configured." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -62,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     processedHtml = processedHtml.replace(/\{\{unsubscribe_url\}\}/g, "#");
     processedHtml = processedHtml.replace(/\{\{subject\}\}/g, subject);
 
-    // Inject preheader right after <body> tag
+    // Inject preheader
     if (preheader) {
       const preheaderHtml = generatePreheaderHtml(preheader);
       if (/<body[^>]*>/i.test(processedHtml)) {
@@ -72,41 +67,22 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Generate plain text from HTML for proper MIME multipart
-    const plainText = processedHtml
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#8204;/g, '')
-      .replace(/&zwnj;/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 500);
-
-    const client = new SMTPClient({
-      connection: {
-        hostname: SMTP_HOST,
-        port: SMTP_PORT,
-        tls: true,
-        auth: {
-          username: smtpUser,
-          password: smtpPassword,
-        },
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: true,
+      auth: {
+        user: smtpUser,
+        pass: smtpPassword,
       },
     });
 
-    await client.send({
+    await transporter.sendMail({
       from: `${senderName || FROM_NAME} <${smtpUser}>`,
       to: testEmail,
       subject: `[TEST] ${subject}`,
-      content: plainText,
       html: processedHtml,
     });
-
-    await client.close();
 
     console.log(`Test email sent to ${testEmail}`);
 
