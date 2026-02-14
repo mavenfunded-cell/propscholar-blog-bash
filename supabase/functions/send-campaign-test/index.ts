@@ -68,10 +68,23 @@ const handler = async (req: Request): Promise<Response> => {
       if (/<body[^>]*>/i.test(processedHtml)) {
         processedHtml = processedHtml.replace(/(<body[^>]*>)/i, `$1${preheaderHtml}`);
       } else {
-        // If no body tag, prepend to content
         processedHtml = preheaderHtml + processedHtml;
       }
     }
+
+    // Generate plain text from HTML for proper MIME multipart
+    const plainText = processedHtml
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#8204;/g, '')
+      .replace(/&zwnj;/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 500);
 
     const client = new SMTPClient({
       connection: {
@@ -85,12 +98,11 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    // Always use the authenticated SMTP email as sender to avoid rejection
     await client.send({
       from: `${senderName || FROM_NAME} <${smtpUser}>`,
       to: testEmail,
       subject: `[TEST] ${subject}`,
-      content: "auto",
+      content: plainText,
       html: processedHtml,
     });
 
