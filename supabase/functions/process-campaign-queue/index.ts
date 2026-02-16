@@ -13,8 +13,8 @@ const corsHeaders = {
 
 const SMTP_HOST = "smtp.hostinger.com";
 const SMTP_PORT = 465;
-const BATCH_SIZE = 20;
-const DELAY_BETWEEN_EMAILS_MS = 600;
+const BATCH_SIZE = 25;
+const DELAY_BETWEEN_EMAILS_MS = 500;
 const MAX_BOUNCE_RATE = 0.05;
 const MAX_CONSECUTIVE_FAILURES = 3;
 
@@ -155,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const trackingBaseUrl = `${supabaseUrl}/functions/v1`;
       const campaignStart = Date.now();
-      const MAX_RUNTIME_MS = 50_000;
+      const MAX_RUNTIME_MS = 55_000;
       let shouldContinue = false;
 
       while (Date.now() - campaignStart < MAX_RUNTIME_MS) {
