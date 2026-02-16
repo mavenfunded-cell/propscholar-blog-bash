@@ -2,10 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.12";
 
-declare const EdgeRuntime: {
-  waitUntil(promise: Promise<unknown>): void;
-};
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -351,22 +347,20 @@ const handler = async (req: Request): Promise<Response> => {
       // Self-invoke to continue
       if (shouldContinue && !criticalError) {
         console.log(`Self-invoking to continue campaign ${campaign.id}...`);
-        EdgeRuntime.waitUntil((async () => {
-          try {
-            const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-            await fetch(`${supabaseUrl}/functions/v1/process-campaign-queue`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${anonKey}`,
-              },
-              body: JSON.stringify({ continue: true }),
-            });
-            console.log("Continuation request sent successfully");
-          } catch (err) {
-            console.error("Failed to self-invoke:", err);
-          }
-        })());
+        try {
+          const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+          const resp = await fetch(`${supabaseUrl}/functions/v1/process-campaign-queue`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${anonKey}`,
+            },
+            body: JSON.stringify({ continue: true }),
+          });
+          console.log(`Continuation request sent, status: ${resp.status}`);
+        } catch (err) {
+          console.error("Failed to self-invoke:", err);
+        }
       }
     }
 
