@@ -368,7 +368,7 @@ export default function AdminCampaignBuilder() {
 
       if (!allAudienceUsers.length) throw new Error('No eligible recipients in the selected group');
 
-      // Insert recipients
+      // Insert recipients in chunks to avoid row limits
       const recipients = allAudienceUsers.map(user => ({
         campaign_id: id,
         audience_user_id: user.id,
@@ -377,11 +377,14 @@ export default function AdminCampaignBuilder() {
         status: 'pending',
       }));
 
-      const { error: recipientError } = await supabase
-        .from('campaign_recipients')
-        .insert(recipients);
-
-      if (recipientError) throw recipientError;
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
+        const chunk = recipients.slice(i, i + CHUNK_SIZE);
+        const { error: recipientError } = await supabase
+          .from('campaign_recipients')
+          .insert(chunk);
+        if (recipientError) throw recipientError;
+      }
 
       // Update campaign status
       const { error: updateError } = await supabase
