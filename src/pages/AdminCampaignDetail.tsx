@@ -343,18 +343,30 @@ export default function AdminCampaignDetail() {
         .limit(1);
 
       if (!existingRecipients?.length) {
-        // Get all active audience users
-        const { data: audienceUsers, error: audienceError } = await supabase
-          .from('audience_users')
-          .select('id, email, first_name')
-          .eq('is_marketing_allowed', true)
-          .is('unsubscribed_at', null);
+        // Get ALL active audience users with pagination (Supabase caps at 1000 per query)
+        const allAudienceUsers: { id: string; email: string; first_name: string | null }[] = [];
+        let page = 0;
+        const PAGE_SIZE = 1000;
 
-        if (audienceError) throw audienceError;
-        if (!audienceUsers?.length) throw new Error('No active audience users to send to');
+        while (true) {
+          const { data: audienceUsers, error: audienceError } = await supabase
+            .from('audience_users')
+            .select('id, email, first_name')
+            .eq('is_marketing_allowed', true)
+            .is('unsubscribed_at', null)
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+          if (audienceError) throw audienceError;
+          if (!audienceUsers?.length) break;
+          allAudienceUsers.push(...audienceUsers);
+          if (audienceUsers.length < PAGE_SIZE) break;
+          page++;
+        }
+
+        if (!allAudienceUsers.length) throw new Error('No active audience users to send to');
 
         // Create campaign recipients
-        const recipients = audienceUsers.map(user => ({
+        const recipients = allAudienceUsers.map(user => ({
           campaign_id: id!,
           audience_user_id: user.id,
           email: user.email,
@@ -363,10 +375,15 @@ export default function AdminCampaignDetail() {
           tracking_id: crypto.randomUUID(),
         }));
 
-        const { error: insertError } = await supabase
-          .from('campaign_recipients')
-          .insert(recipients);
-        if (insertError) throw insertError;
+        // Insert in chunks to avoid row limits
+        const CHUNK_SIZE = 500;
+        for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
+          const chunk = recipients.slice(i, i + CHUNK_SIZE);
+          const { error: insertError } = await supabase
+            .from('campaign_recipients')
+            .insert(chunk);
+          if (insertError) throw insertError;
+        }
 
         // Update campaign total recipients
         await supabase
