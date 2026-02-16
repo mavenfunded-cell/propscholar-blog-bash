@@ -26,14 +26,8 @@ interface SmtpMailbox {
   healthy: boolean;
 }
 
-function getMailboxIndex(email: string): number {
-  let hash = 0;
-  const lower = email.toLowerCase();
-  for (let i = 0; i < lower.length; i++) {
-    hash = ((hash << 5) - hash + lower.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash) % 2;
-}
+// Round-robin counter for true 50/50 distribution
+let roundRobinCounter = 0;
 
 function generatePreheaderHtml(preheader: string): string {
   if (!preheader) return "";
@@ -218,7 +212,8 @@ const handler = async (req: Request): Promise<Response> => {
             break;
           }
 
-          let mbIndex = healthyMailboxes.length === 1 ? 0 : getMailboxIndex(recipient.email) % healthyMailboxes.length;
+          let mbIndex = roundRobinCounter % healthyMailboxes.length;
+          roundRobinCounter++;
           const mailbox = healthyMailboxes[mbIndex];
 
           try {
