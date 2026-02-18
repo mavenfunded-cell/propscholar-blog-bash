@@ -299,9 +299,9 @@ export default function AdminCampaignDetail() {
       firstOpen,
       lastOpen,
       totalOpens: openEvents.length,
-      uniqueOpens: campaign?.open_count || 0,
+      uniqueOpens: new Set(openEvents.map(e => e.id)).size,
       totalClicks: clickEvents.length,
-      uniqueClicks: campaign?.click_count || 0,
+      uniqueClicks: new Set(clickEvents.map(e => e.id)).size,
     };
   }, [events, campaign]);
 
@@ -398,8 +398,6 @@ export default function AdminCampaignDetail() {
         .update({ 
           status: 'scheduled', 
           scheduled_at: new Date().toISOString(),
-          sender_email: 'info@propscholar.com',
-          sender_name: 'PropScholar'
         })
         .eq('id', id);
       if (updateError) throw updateError;
@@ -460,14 +458,18 @@ export default function AdminCampaignDetail() {
     return <div className="min-h-screen bg-background p-6">Loading...</div>;
   }
 
+  // Use real event counts from campaign_events table (not stale DB counters)
+  const realOpenCount = events ? new Set(events.filter(e => e.event_type === 'open').map(e => e.id)).size : campaign.open_count;
+  const realClickCount = events ? new Set(events.filter(e => e.event_type === 'click').map(e => e.id)).size : campaign.click_count;
+
   const openRate = campaign.sent_count > 0 
-    ? ((campaign.open_count / campaign.sent_count) * 100).toFixed(1) 
+    ? ((realOpenCount / campaign.sent_count) * 100).toFixed(1) 
     : '0';
-  const clickRate = campaign.open_count > 0 
-    ? ((campaign.click_count / campaign.open_count) * 100).toFixed(1) 
+  const clickRate = realOpenCount > 0 
+    ? ((realClickCount / realOpenCount) * 100).toFixed(1) 
     : '0';
   const clickToSentRate = campaign.sent_count > 0
-    ? ((campaign.click_count / campaign.sent_count) * 100).toFixed(1)
+    ? ((realClickCount / campaign.sent_count) * 100).toFixed(1)
     : '0';
   const bounceRate = campaign.sent_count > 0 
     ? ((campaign.bounce_count / campaign.sent_count) * 100).toFixed(1) 
@@ -640,7 +642,7 @@ export default function AdminCampaignDetail() {
                 <Eye className="w-8 h-8 text-blue-500" />
                 <div>
                   <p className="text-2xl font-bold">{openRate}%</p>
-                  <p className="text-xs text-muted-foreground">Opens ({campaign.open_count})</p>
+                  <p className="text-xs text-muted-foreground">Opens ({realOpenCount})</p>
                 </div>
               </div>
             </CardContent>
@@ -652,7 +654,7 @@ export default function AdminCampaignDetail() {
                 <MousePointer className="w-8 h-8 text-purple-500" />
                 <div>
                   <p className="text-2xl font-bold">{clickRate}%</p>
-                  <p className="text-xs text-muted-foreground">CTR ({campaign.click_count})</p>
+                  <p className="text-xs text-muted-foreground">CTR ({realClickCount})</p>
                 </div>
               </div>
             </CardContent>

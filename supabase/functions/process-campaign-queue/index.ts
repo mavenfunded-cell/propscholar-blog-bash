@@ -22,7 +22,7 @@ interface SmtpMailbox {
   healthy: boolean;
 }
 
-// Round-robin counter for true 50/50 distribution
+// Per-invocation round-robin counter - seeded from campaign sent_count for balance across cold starts
 let roundRobinCounter = 0;
 
 function generatePreheaderHtml(preheader: string): string {
@@ -125,6 +125,9 @@ const handler = async (req: Request): Promise<Response> => {
     for (const campaign of campaigns) {
       let consecutiveFailures = 0;
       let criticalError = false;
+
+      // Seed round-robin from sent_count so cold starts maintain 50/50 balance
+      roundRobinCounter = campaign.sent_count || 0;
 
       // Check bounce rate
       if (campaign.sent_count > 10) {
