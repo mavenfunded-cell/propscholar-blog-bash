@@ -47,6 +47,21 @@ export default function AdminBusinessEmail() {
     if (authLoading) return;
     if (!isAdmin) { navigate(isAdminSubdomain() ? '/' : '/admin'); return; }
     fetchEmails();
+
+    // 1-minute live sync: poll inbox + refresh emails every 60s
+    const interval = setInterval(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/poll-business-inbox`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` } }
+        );
+        await fetchEmails();
+      } catch {}
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [authLoading, isAdmin]);
 
   const fetchEmails = async () => {
