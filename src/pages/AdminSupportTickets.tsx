@@ -145,6 +145,25 @@ const AdminSupportTickets = () => {
     checkAuth();
   }, [navigate, getLoginPath]);
 
+  // 1-minute auto-sync: poll inbox + refresh tickets every 60s
+  useEffect(() => {
+    if (isAdmin !== true) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("poll-imap-inbox");
+        if (!error && data) {
+          setLastSyncResult(data);
+          if (data.processed > 0) {
+            queryClient.invalidateQueries({ queryKey: ["admin-support-tickets"] });
+          }
+        }
+      } catch {}
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAdmin, queryClient]);
+
   const { data: tickets, isLoading, refetch } = useQuery({
     queryKey: ["admin-support-tickets", statusFilter, priorityFilter],
     queryFn: async () => {
