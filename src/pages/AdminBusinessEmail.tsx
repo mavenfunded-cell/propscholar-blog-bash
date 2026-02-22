@@ -42,27 +42,33 @@ export default function AdminBusinessEmail() {
   const [composeTo, setComposeTo] = useState('');
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
     if (!isAdmin) { navigate(isAdminSubdomain() ? '/' : '/admin'); return; }
     fetchEmails();
 
-    // 1-minute live sync: poll inbox + refresh emails every 60s
-    const interval = setInterval(async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/poll-business-inbox`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` } }
-        );
-        await fetchEmails();
-      } catch {}
-    }, 60000);
+    // Initial sync
+    doSync();
 
+    // 1-minute live sync
+    const interval = setInterval(doSync, 60000);
     return () => clearInterval(interval);
   }, [authLoading, isAdmin]);
+
+  const doSync = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/poll-business-inbox`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` } }
+      );
+      await fetchEmails();
+      setLastSynced(new Date());
+    } catch {}
+  };
 
   const fetchEmails = async () => {
     try {
@@ -260,20 +266,25 @@ export default function AdminBusinessEmail() {
   return (
     <div className="h-screen bg-black flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl shrink-0">
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.08] bg-[#0a0a0a] backdrop-blur-xl shrink-0">
         <button
           onClick={() => navigate(isAdminSubdomain() ? '/dashboard' : '/admin/dashboard')}
-          className="text-white/40 hover:text-white transition-colors"
+          className="text-white/50 hover:text-white/80 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <MailOpen className="w-5 h-5 text-white/50" />
-        <span className="text-sm text-white/60">business@propscholar.com</span>
+        <MailOpen className="w-5 h-5 text-white/60" />
+        <span className="text-sm text-white/70 font-medium">business@propscholar.com</span>
+        {lastSynced && (
+          <span className="text-[11px] text-white/30 ml-1">
+            Synced {formatDistanceToNow(lastSynced, { addSuffix: true })}
+          </span>
+        )}
         <div className="flex-1" />
         <button
           onClick={pollInbox}
           disabled={polling}
-          className="flex items-center gap-2 text-xs text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
+          className="flex items-center gap-2 text-xs text-white/50 hover:text-white/80 transition-colors disabled:opacity-40"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${polling ? 'animate-spin' : ''}`} />
           {polling ? 'Checking...' : 'Refresh'}
@@ -290,10 +301,10 @@ export default function AdminBusinessEmail() {
       {/* Split layout */}
       <div className="flex flex-1 min-h-0">
         {/* Left: Conversation list */}
-        <div className="w-[380px] shrink-0 border-r border-white/[0.06] flex flex-col">
+        <div className="w-[380px] shrink-0 border-r border-white/[0.08] flex flex-col bg-[#060606]">
           <ScrollArea className="flex-1">
             {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-32 text-white/20">
+              <div className="flex flex-col items-center justify-center py-32 text-white/30">
                 <Mail className="w-10 h-10 mb-3" />
                 <p className="text-sm">No emails</p>
               </div>
@@ -304,28 +315,27 @@ export default function AdminBusinessEmail() {
                   <button
                     key={conv.contactEmail}
                     onClick={() => selectEmail(conv.latest)}
-                    className={`w-full text-left px-4 py-3.5 flex items-start gap-3 transition-colors border-b border-white/[0.04] ${
-                      isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
+                    className={`w-full text-left px-4 py-3.5 flex items-start gap-3 transition-colors border-b border-white/[0.05] ${
+                      isActive ? 'bg-white/[0.08]' : 'hover:bg-white/[0.04]'
                     }`}
                   >
-                    {/* Avatar circle */}
-                    <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-sm font-medium text-white/50">
+                    <div className="w-10 h-10 rounded-full bg-white/[0.10] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-sm font-medium text-white/60">
                         {conv.contactName.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <span className={`text-[13px] truncate ${conv.unreadCount > 0 ? 'font-semibold text-white' : 'text-white/70'}`}>
+                        <span className={`text-[13px] truncate ${conv.unreadCount > 0 ? 'font-semibold text-white' : 'text-white/80'}`}>
                           {conv.contactName}
                         </span>
-                        <span className="text-[11px] text-white/25 shrink-0">
+                        <span className="text-[11px] text-white/35 shrink-0">
                           {formatDistanceToNow(new Date(conv.latest.received_at), { addSuffix: false })}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <p className={`text-xs truncate flex-1 ${conv.unreadCount > 0 ? 'text-white/60' : 'text-white/30'}`}>
-                          {conv.latest.direction === 'outbound' && <span className="text-white/20">You: </span>}
+                        <p className={`text-xs truncate flex-1 ${conv.unreadCount > 0 ? 'text-white/70' : 'text-white/40'}`}>
+                          {conv.latest.direction === 'outbound' && <span className="text-white/30">You: </span>}
                           {conv.latest.body_text?.substring(0, 60) || conv.latest.subject}
                         </p>
                         {conv.unreadCount > 0 && (
@@ -343,27 +353,27 @@ export default function AdminBusinessEmail() {
         </div>
 
         {/* Right: Chat view */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#030303]">
           {!selectedEmail ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-white/15">
+            <div className="flex-1 flex flex-col items-center justify-center text-white/25">
               <MailOpen className="w-16 h-16 mb-4" />
               <p className="text-lg font-light">Select a conversation</p>
-              <p className="text-xs text-white/10 mt-1">Choose from your emails on the left</p>
+              <p className="text-xs text-white/15 mt-1">Choose from your emails on the left</p>
             </div>
           ) : (
             <>
               {/* Chat header */}
-              <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-black/60 backdrop-blur-xl shrink-0">
-                <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center">
-                  <span className="text-sm font-medium text-white/50">
+              <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.08] bg-[#0a0a0a]/90 backdrop-blur-xl shrink-0">
+                <div className="w-9 h-9 rounded-full bg-white/[0.10] flex items-center justify-center">
+                  <span className="text-sm font-medium text-white/60">
                     {(selectedEmail.from_name || selectedEmail.from_email).charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
+                  <p className="text-sm font-medium text-white/90 truncate">
                     {selectedEmail.direction === 'outbound' ? selectedEmail.to_email : (selectedEmail.from_name || selectedEmail.from_email)}
                   </p>
-                  <p className="text-[11px] text-white/25 truncate">
+                  <p className="text-[11px] text-white/35 truncate">
                     {selectedEmail.direction === 'outbound' ? selectedEmail.to_email : selectedEmail.from_email}
                   </p>
                 </div>
@@ -380,16 +390,16 @@ export default function AdminBusinessEmail() {
                           <div
                             className={`rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${
                               isOutbound
-                                ? 'bg-white/[0.04] border border-white/[0.15] text-white/90 rounded-br-sm'
-                                : 'bg-white/[0.03] border border-white/[0.08] text-white/80 rounded-bl-sm'
+                                ? 'bg-white/[0.06] border border-white/[0.18] text-white/90 rounded-br-sm'
+                                : 'bg-white/[0.04] border border-white/[0.10] text-white/85 rounded-bl-sm'
                             }`}
                           >
-                            <p className="font-medium text-[11px] mb-1.5 opacity-50">{email.subject}</p>
-                            <div className="whitespace-pre-wrap leading-[1.6] opacity-90">
+                            <p className="font-medium text-[11px] mb-1.5 text-white/45">{email.subject}</p>
+                            <div className="whitespace-pre-wrap leading-[1.6]">
                               {email.body_text?.substring(0, 800) || 'No content'}
                             </div>
                           </div>
-                          <p className={`text-[10px] mt-1 px-1 ${isOutbound ? 'text-right' : ''} text-white/20`}>
+                          <p className={`text-[10px] mt-1 px-1 ${isOutbound ? 'text-right' : ''} text-white/30`}>
                             {formatDistanceToNow(new Date(email.received_at), { addSuffix: true })}
                           </p>
                         </div>
@@ -400,12 +410,12 @@ export default function AdminBusinessEmail() {
               </ScrollArea>
 
               {/* Reply bar */}
-              <div className="border-t border-white/[0.06] bg-black/80 backdrop-blur-xl px-4 py-3 shrink-0">
+              <div className="border-t border-white/[0.08] bg-[#0a0a0a]/90 backdrop-blur-xl px-4 py-3 shrink-0">
                 <div className="max-w-2xl mx-auto flex items-end gap-2">
                   <button
                     onClick={() => fixGrammar(replyText, setReplyText)}
                     disabled={fixingGrammar || !replyText.trim()}
-                    className="shrink-0 p-2.5 rounded-full text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-all disabled:opacity-30"
+                    className="shrink-0 p-2.5 rounded-full text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all disabled:opacity-30"
                     title="Fix Grammar"
                   >
                     {fixingGrammar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
@@ -416,7 +426,7 @@ export default function AdminBusinessEmail() {
                       onChange={e => setReplyText(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                       placeholder="Type your reply..."
-                      className="w-full bg-white/[0.06] border border-white/[0.08] rounded-full px-4 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+                      className="w-full bg-white/[0.07] border border-white/[0.10] rounded-full px-4 py-2.5 text-sm text-white/90 placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
                     />
                   </div>
                   <button
