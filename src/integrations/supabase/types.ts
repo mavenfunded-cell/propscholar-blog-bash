@@ -316,6 +316,7 @@ export type Database = {
           is_marketing_allowed: boolean | null
           last_engaged_at: string | null
           last_name: string | null
+          merged: boolean
           source: string | null
           tags: string[] | null
           total_clicks: number | null
@@ -332,6 +333,7 @@ export type Database = {
           is_marketing_allowed?: boolean | null
           last_engaged_at?: string | null
           last_name?: string | null
+          merged?: boolean
           source?: string | null
           tags?: string[] | null
           total_clicks?: number | null
@@ -348,6 +350,7 @@ export type Database = {
           is_marketing_allowed?: boolean | null
           last_engaged_at?: string | null
           last_name?: string | null
+          merged?: boolean
           source?: string | null
           tags?: string[] | null
           total_clicks?: number | null

@@ -214,10 +214,13 @@ export default function AdminCampaignBuilder() {
         .eq('is_marketing_allowed', true)
         .is('unsubscribed_at', null);
 
-      // Filter by target tags if specified - use ov (overlap) to match ANY tag
       if (campaign.target_tags && campaign.target_tags.length > 0) {
+        // Sending to a specific group - show all contacts in that group
         const tagFilter = `{${campaign.target_tags.join(',')}}`;
         query = query.filter('tags', 'ov', tagFilter);
+      } else {
+        // "All Subscribers" - only merged contacts
+        query = query.eq('merged', true);
       }
 
       const { count, error } = await query;
@@ -354,6 +357,9 @@ export default function AdminCampaignBuilder() {
         if (campaign.target_tags && campaign.target_tags.length > 0) {
           const tagFilter = `{${campaign.target_tags.join(',')}}`;
           audienceQuery = audienceQuery.filter('tags', 'ov', tagFilter);
+        } else {
+          // "All Subscribers" - only merged contacts
+          audienceQuery = audienceQuery.eq('merged', true);
         }
 
         const { data: audienceUsers, error: audienceError } = await audienceQuery;

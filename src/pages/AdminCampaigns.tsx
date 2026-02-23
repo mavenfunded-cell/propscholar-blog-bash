@@ -207,7 +207,8 @@ export default function AdminCampaigns() {
         .from('audience_users')
         .select('*', { count: 'exact', head: true })
         .eq('is_marketing_allowed', true)
-        .is('unsubscribed_at', null);
+        .is('unsubscribed_at', null)
+        .eq('merged', true);
 
       if (error) throw error;
       return count || 0;
