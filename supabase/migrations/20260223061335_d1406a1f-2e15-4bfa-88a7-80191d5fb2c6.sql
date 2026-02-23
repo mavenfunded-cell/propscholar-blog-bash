@@ -1,0 +1,1 @@
+ALTER TABLE public.audience_users ADD COLUMN merged boolean NOT NULL DEFAULT true;

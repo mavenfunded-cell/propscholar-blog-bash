@@ -107,7 +107,11 @@ export default function AdminCampaignAudience() {
         query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       }
       if (activeGroup) {
+        // Show all contacts in this group regardless of merged status
         query = query.contains('tags', [activeGroup]);
+      } else {
+        // "All Contacts" only shows merged contacts
+        query = query.eq('merged', true);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -121,7 +125,8 @@ export default function AdminCampaignAudience() {
     queryFn: async () => {
       const { count, error } = await supabase
         .from('audience_users')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('merged', true);
       if (error) throw error;
       return count || 0;
     },
@@ -170,6 +175,7 @@ export default function AdminCampaignAudience() {
         .maybeSingle();
       if (existing) throw new Error('This email already exists');
       const tagsToAssign = activeGroup ? [activeGroup] : [];
+      const isMerged = !activeGroup; // Only merged if added directly to "All"
       const { error } = await supabase
         .from('audience_users')
         .insert({
@@ -178,6 +184,7 @@ export default function AdminCampaignAudience() {
           last_name: user.last_name || null,
           source: 'manual',
           tags: tagsToAssign,
+          merged: isMerged,
         });
       if (error) throw error;
     },
@@ -285,6 +292,53 @@ export default function AdminCampaignAudience() {
     },
   });
 
+  // Merge all unmerged contacts from the active group into "All"
+  const mergeGroupMutation = useMutation({
+    mutationFn: async (groupId: string) => {
+      // Get all unmerged users in this group
+      const { data: unmergedUsers, error } = await supabase
+        .from('audience_users')
+        .select('id')
+        .contains('tags', [groupId])
+        .eq('merged', false);
+      if (error) throw error;
+      if (!unmergedUsers?.length) throw new Error('No unmerged contacts in this group');
+      const ids = unmergedUsers.map(u => u.id);
+      // Update in batches
+      for (let i = 0; i < ids.length; i += 500) {
+        const batch = ids.slice(i, i + 500);
+        const { error: updateError } = await supabase
+          .from('audience_users')
+          .update({ merged: true })
+          .in('id', batch);
+        if (updateError) throw updateError;
+      }
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-total-count'] });
+      toast.success(`Merged ${count} contacts into All`);
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to merge'),
+  });
+
+  // Count unmerged contacts in active group
+  const { data: unmergedCount } = useQuery({
+    queryKey: ['unmerged-count', activeGroup],
+    queryFn: async () => {
+      if (!activeGroup) return 0;
+      const { count, error } = await supabase
+        .from('audience_users')
+        .select('*', { count: 'exact', head: true })
+        .contains('tags', [activeGroup])
+        .eq('merged', false);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: hasAccess === true && !!activeGroup,
+  });
+
   // Bulk import helpers
   const extractEmails = (text: string): { valid: string[]; invalid: number } => {
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -321,12 +375,14 @@ export default function AdminCampaignAudience() {
       const duplicateCount = validEmails.filter(e => existingEmails.has(e)).length;
       const newEmails = validEmails.filter(e => !existingEmails.has(e));
       const tagToAssign = bulkImportTag && bulkImportTag !== 'none' ? bulkImportTag : (activeGroup || null);
+      const isMerged = !tagToAssign; // Only merged if no group assigned
       if (newEmails.length > 0) {
         const usersToInsert = newEmails.map(email => ({
           email,
           source: 'bulk_import',
           is_marketing_allowed: true,
           tags: tagToAssign ? [tagToAssign] : [],
+          merged: isMerged,
         }));
         for (const batch of chunkArray(usersToInsert, 500)) {
           await supabase.from('audience_users').upsert(batch, { onConflict: 'email', ignoreDuplicates: true });
@@ -433,8 +489,9 @@ export default function AdminCampaignAudience() {
       const existingEmails = await fetchExistingEmails(usersToImport.map(u => u.email));
       const newUsers = usersToImport.filter(u => !existingEmails.has(u.email));
       const tagToAssign = activeGroup || null;
+      const isMerged = !tagToAssign;
       if (newUsers.length > 0) {
-        const withTags = newUsers.map(u => ({ ...u, is_marketing_allowed: true, tags: tagToAssign ? [tagToAssign] : [] }));
+        const withTags = newUsers.map(u => ({ ...u, is_marketing_allowed: true, tags: tagToAssign ? [tagToAssign] : [], merged: isMerged }));
         for (const batch of chunkArray(withTags, 500)) {
           await supabase.from('audience_users').upsert(batch, { onConflict: 'email', ignoreDuplicates: true });
         }
@@ -625,10 +682,27 @@ export default function AdminCampaignAudience() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {users?.length || 0} contacts · {activeCount} active
+                  {activeGroup && unmergedCount ? ` · ${unmergedCount} unmerged` : ''}
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
+                {activeGroup && unmergedCount !== undefined && unmergedCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg border-primary/30 text-primary hover:bg-primary/10 gap-1.5"
+                    onClick={() => mergeGroupMutation.mutate(activeGroup)}
+                    disabled={mergeGroupMutation.isPending}
+                  >
+                    {mergeGroupMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    )}
+                    Merge {unmergedCount} into All
+                  </Button>
+                )}
                 {selectedUsers.length > 0 && (
                   <>
                     <Dialog open={assignGroupOpen} onOpenChange={setAssignGroupOpen}>
