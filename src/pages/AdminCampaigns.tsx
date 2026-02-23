@@ -17,7 +17,7 @@ import {
   Calendar, CheckCircle, Clock, Pause, XCircle,
   TrendingUp, MousePointer, AlertTriangle, ArrowLeft,
   Sparkles, Send, Zap, BarChart3, ExternalLink,
-  MailOpen, Target, Ban, UserMinus, FolderPlus, Trash2, ChevronDown, ChevronUp
+  MailOpen, Target, Ban, UserMinus, FolderPlus, Trash2, ChevronDown, ChevronUp, Pencil
 } from 'lucide-react';
 import { format, parseISO, getHours, getDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,6 +70,9 @@ export default function AdminCampaigns() {
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState('#6366F1');
+  const [renameGroupOpen, setRenameGroupOpen] = useState(false);
+  const [renameGroupId, setRenameGroupId] = useState('');
+  const [renameGroupName, setRenameGroupName] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -267,6 +270,19 @@ export default function AdminCampaigns() {
       queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
       toast.success('Group deleted');
     },
+  });
+
+  const renameGroupMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('audience_tags').update({ name: renameGroupName.trim() }).eq('id', renameGroupId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
+      setRenameGroupOpen(false);
+      toast.success('Group renamed');
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to rename group'),
   });
 
   const GROUP_COLORS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#F97316'];
@@ -548,15 +564,28 @@ export default function AdminCampaigns() {
                       <span className="text-sm font-medium truncate">{group.name}</span>
                     </div>
                     <p className="text-2xl font-bold tabular-nums">{groupCounts?.[group.id] || 0}</p>
-                    <button
-                      className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Delete group "${group.name}"?`)) deleteGroupMutation.mutate(group.id);
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                    </button>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center gap-1">
+                      <button
+                        className="p-1 rounded-md hover:bg-muted"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRenameGroupId(group.id);
+                          setRenameGroupName(group.name);
+                          setRenameGroupOpen(true);
+                        }}
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                      <button
+                        className="p-1 rounded-md hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete group "${group.name}"?`)) deleteGroupMutation.mutate(group.id);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -611,6 +640,37 @@ export default function AdminCampaigns() {
                 disabled={!newGroupName.trim() || createGroupMutation.isPending}
               >
                 {createGroupMutation.isPending ? 'Creating...' : 'Create Group'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rename Group Dialog */}
+        <Dialog open={renameGroupOpen} onOpenChange={setRenameGroupOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Rename Group</DialogTitle>
+              <DialogDescription>Enter a new name for this group.</DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              <Label>Group Name</Label>
+              <Input
+                value={renameGroupName}
+                onChange={(e) => setRenameGroupName(e.target.value)}
+                placeholder="Group name"
+                className="mt-1.5"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && renameGroupName.trim()) renameGroupMutation.mutate();
+                }}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRenameGroupOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => renameGroupMutation.mutate()}
+                disabled={!renameGroupName.trim() || renameGroupMutation.isPending}
+              >
+                {renameGroupMutation.isPending ? 'Renaming...' : 'Rename'}
               </Button>
             </DialogFooter>
           </DialogContent>
