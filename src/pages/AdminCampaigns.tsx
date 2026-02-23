@@ -1,21 +1,27 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import {
   Mail, Users, Plus, Eye, Copy,
   Calendar, CheckCircle, Clock, Pause, XCircle,
   TrendingUp, MousePointer, AlertTriangle, ArrowLeft,
   Sparkles, Send, Zap, BarChart3, ExternalLink,
-  MailOpen, Target, Ban, UserMinus
+  MailOpen, Target, Ban, UserMinus, FolderPlus, Trash2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { format, parseISO, getHours, getDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 interface Campaign {
@@ -54,11 +60,16 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export default function AdminCampaigns() {
   const { adminNavigate, getDashboardPath, getLoginPath } = useAdminNavigation();
   const { isLoggedIn, loading: authLoading, email } = useAdminAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('all');
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showStatsPopup, setShowStatsPopup] = useState(false);
+  const [showGroups, setShowGroups] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupColor, setNewGroupColor] = useState('#6366F1');
 
   useEffect(() => {
     if (authLoading) return;
@@ -201,6 +212,66 @@ export default function AdminCampaigns() {
     enabled: hasAccess === true,
   });
 
+  // Groups (audience tags)
+  const { data: groups } = useQuery({
+    queryKey: ['audience-tags'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('audience_tags').select('*').order('name');
+      if (error) throw error;
+      return data as { id: string; name: string; color: string }[];
+    },
+    enabled: hasAccess === true,
+  });
+
+  const { data: groupCounts } = useQuery({
+    queryKey: ['audience-group-counts', groups],
+    queryFn: async () => {
+      if (!groups) return {};
+      const counts: Record<string, number> = {};
+      for (const g of groups) {
+        const { count } = await supabase.from('audience_users').select('*', { count: 'exact', head: true }).contains('tags', [g.id]);
+        counts[g.id] = count || 0;
+      }
+      return counts;
+    },
+    enabled: hasAccess === true && !!groups,
+  });
+
+  const createGroupMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('audience_tags').insert({ name: newGroupName.trim(), color: newGroupColor });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
+      setCreateGroupOpen(false);
+      setNewGroupName('');
+      setNewGroupColor('#6366F1');
+      toast.success('Group created');
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to create group'),
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const { data: usersWithTag } = await supabase.from('audience_users').select('id, tags').contains('tags', [tagId]);
+      for (const user of usersWithTag || []) {
+        const newTags = (user.tags || []).filter((t: string) => t !== tagId);
+        await supabase.from('audience_users').update({ tags: newTags }).eq('id', user.id);
+      }
+      const { error } = await supabase.from('audience_tags').delete().eq('id', tagId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
+      toast.success('Group deleted');
+    },
+  });
+
+  const GROUP_COLORS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#F97316'];
+
+
   const stats = {
     total: campaigns?.length || 0,
     draft: campaigns?.filter(c => c.status === 'draft').length || 0,
@@ -260,17 +331,6 @@ export default function AdminCampaigns() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => adminNavigate('/admin/campaigns/audience')}
-                className="rounded-lg border-border/50 hover:bg-muted/50"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Audience
-                <Badge variant="secondary" className="ml-2 rounded-full px-2 py-0 text-xs">
-                  {audienceCount}
-                </Badge>
-              </Button>
               <Button 
                 onClick={() => adminNavigate('/admin/campaigns/new')}
                 className="rounded-lg bg-foreground text-background hover:bg-foreground/90"
@@ -429,6 +489,132 @@ export default function AdminCampaigns() {
             iconColor="text-red-400"
           />
         </div>
+
+        {/* Audience Groups Panel */}
+        <Card className="border-border/50 bg-card/50 overflow-hidden">
+          <button
+            onClick={() => setShowGroups(!showGroups)}
+            className="w-full flex items-center justify-between p-5 hover:bg-muted/20 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold">Audience Groups</h3>
+                <p className="text-sm text-muted-foreground">
+                  {groups?.length || 0} groups · {audienceCount} total contacts
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-lg border-border/50"
+                onClick={(e) => { e.stopPropagation(); adminNavigate('/admin/campaigns/audience'); }}
+              >
+                <Users className="w-3.5 h-3.5 mr-1.5" />
+                Manage
+              </Button>
+              {showGroups ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+            </div>
+          </button>
+
+          {showGroups && (
+            <CardContent className="pt-0 pb-5 px-5 border-t border-border/30">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+                {/* All Contacts */}
+                <div
+                  className="p-4 rounded-xl bg-primary/5 border border-primary/20 cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => adminNavigate('/admin/campaigns/audience')}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <span className="text-sm font-medium truncate">All Contacts</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">{audienceCount}</p>
+                </div>
+
+                {/* Groups */}
+                {groups?.map((group) => (
+                  <div
+                    key={group.id}
+                    className="p-4 rounded-xl bg-muted/30 border border-border/50 cursor-pointer hover:bg-muted/50 transition-colors group/card relative"
+                    onClick={() => adminNavigate('/admin/campaigns/audience')}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color || '#6366F1' }} />
+                      <span className="text-sm font-medium truncate">{group.name}</span>
+                    </div>
+                    <p className="text-2xl font-bold tabular-nums">{groupCounts?.[group.id] || 0}</p>
+                    <button
+                      className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Delete group "${group.name}"?`)) deleteGroupMutation.mutate(group.id);
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Create new group */}
+                <button
+                  onClick={() => setCreateGroupOpen(true)}
+                  className="p-4 rounded-xl border border-dashed border-border/50 flex flex-col items-center justify-center gap-2 hover:bg-muted/30 hover:border-border transition-colors min-h-[90px]"
+                >
+                  <FolderPlus className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">New Group</span>
+                </button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Create Group Dialog */}
+        <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Group</DialogTitle>
+              <DialogDescription>Create a new audience segment to organize your contacts.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label>Group Name</Label>
+                <Input
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="e.g. VIP Customers"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Color</Label>
+                <div className="flex gap-2 mt-1.5">
+                  {GROUP_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setNewGroupColor(c)}
+                      className={`w-8 h-8 rounded-full transition-all ${newGroupColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateGroupOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => createGroupMutation.mutate()}
+                disabled={!newGroupName.trim() || createGroupMutation.isPending}
+              >
+                {createGroupMutation.isPending ? 'Creating...' : 'Create Group'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Campaigns List */}
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">

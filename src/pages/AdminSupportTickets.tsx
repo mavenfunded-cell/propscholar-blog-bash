@@ -476,7 +476,7 @@ const AdminSupportTickets = () => {
                       <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 hidden lg:table-cell">From</th>
                       <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[60px]">Status</th>
                       <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[60px] hidden sm:table-cell">Pri</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[90px]">Reply</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[100px]">Last Reply</th>
                       <th className="text-right text-xs font-medium text-muted-foreground px-3 py-3 w-[60px]"></th>
                     </tr>
                   </thead>
@@ -515,8 +515,13 @@ const AdminSupportTickets = () => {
                             </span>
                           </td>
                           <td className="text-xs px-2 py-3">
-                            <div className="text-muted-foreground whitespace-nowrap">
-                              {formatDistanceToNow(new Date(ticket.last_reply_at), { addSuffix: true })}
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`text-[10px] font-medium ${ticket.last_reply_by === 'admin' ? 'text-primary' : 'text-orange-400'}`}>
+                                {ticket.last_reply_by === 'admin' ? 'Admin' : 'User'}
+                              </span>
+                              <span className="text-muted-foreground whitespace-nowrap">
+                                {formatDistanceToNow(new Date(ticket.last_reply_at), { addSuffix: true })}
+                              </span>
                             </div>
                           </td>
                           <td className="text-right px-3 py-3">
