@@ -172,7 +172,11 @@ const AdminSupportTickets = () => {
         _priority_filter: priorityFilter,
       });
       if (error) throw error;
-      return data as Ticket[];
+      // Sort by most recent message first
+      const sorted = (data as Ticket[])?.sort((a, b) => 
+        new Date(b.last_reply_at).getTime() - new Date(a.last_reply_at).getTime()
+      );
+      return sorted;
     },
     enabled: isAdmin === true,
   });
@@ -466,14 +470,14 @@ const AdminSupportTickets = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50 hover:bg-transparent">
-                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">#</TableHead>
-                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">Source</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground">Subject</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground">From</TableHead>
-                      <TableHead className="w-28 text-xs font-medium text-muted-foreground">Status</TableHead>
-                      <TableHead className="w-24 text-xs font-medium text-muted-foreground">Priority</TableHead>
-                      <TableHead className="w-36 text-xs font-medium text-muted-foreground">Last Reply</TableHead>
-                      <TableHead className="w-24 text-right text-xs font-medium text-muted-foreground">Action</TableHead>
+                      <TableHead className="w-16 text-xs font-medium text-muted-foreground">#</TableHead>
+                      <TableHead className="w-16 text-xs font-medium text-muted-foreground">Source</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground min-w-[180px] max-w-[280px]">Subject</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground min-w-[140px] max-w-[200px]">From</TableHead>
+                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">Status</TableHead>
+                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">Priority</TableHead>
+                      <TableHead className="w-28 text-xs font-medium text-muted-foreground">Last Reply</TableHead>
+                      <TableHead className="w-20 text-right text-xs font-medium text-muted-foreground">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -485,24 +489,28 @@ const AdminSupportTickets = () => {
                           className="cursor-pointer border-border/30 hover:bg-muted/30"
                           onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
                         >
-                          <TableCell className="font-mono text-sm text-muted-foreground">
+                          <TableCell className="font-mono text-xs text-muted-foreground">
                             #{ticket.ticket_number}
                           </TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={`rounded-full px-2 gap-1 ${sourceColors[ticket.source || 'email']}`}
+                              className={`rounded-full px-1.5 gap-1 text-[10px] ${sourceColors[ticket.source || 'email']}`}
                             >
                               <SourceIcon source={ticket.source || 'email'} />
                               {sourceLabels[ticket.source || 'email']}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-medium">{ticket.subject}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{ticket.user_email}</TableCell>
+                          <TableCell className="font-medium text-sm max-w-[280px]">
+                            <span className="truncate block">{ticket.subject}</span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs max-w-[200px]">
+                            <span className="truncate block">{ticket.user_email}</span>
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={`rounded-full px-2.5 ${statusColors[getDisplayStatus(ticket.status)]}`}
+                              className={`rounded-full px-2 text-[10px] ${statusColors[getDisplayStatus(ticket.status)]}`}
                             >
                               {statusLabels[getDisplayStatus(ticket.status)]}
                             </Badge>
@@ -510,24 +518,24 @@ const AdminSupportTickets = () => {
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={`rounded-full px-2.5 capitalize ${priorityColors[ticket.priority]}`}
+                              className={`rounded-full px-2 text-[10px] capitalize ${priorityColors[ticket.priority]}`}
                             >
                               {ticket.priority}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-xs">
                             <div className="text-muted-foreground">
                               {formatDistanceToNow(new Date(ticket.last_reply_at), {
                                 addSuffix: true,
                               })}
                             </div>
-                            <div className="text-xs text-muted-foreground/60">by {ticket.last_reply_by}</div>
+                            <div className="text-[10px] text-muted-foreground/60">by {ticket.last_reply_by}</div>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="rounded-lg h-8 border-border/50"
+                              className="rounded-lg h-7 text-xs border-border/50"
                               disabled={isClosed || closeTicketMutation.isPending}
                               onClick={(e) => {
                                 e.preventDefault();
