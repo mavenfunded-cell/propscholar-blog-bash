@@ -3,33 +3,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminNavigation } from '@/hooks/useAdminSubdomain';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import * as XLSX from 'xlsx';
 import {
-  Users, Plus, Upload, Download, Search, Tag, Trash2,
-  Mail, UserMinus, ArrowLeft, Filter, Copy, CheckCircle, AlertCircle, Clock, UserPlus, X
+  Users, Plus, Upload, Download, Search, Trash2,
+  Mail, UserMinus, ArrowLeft, Copy, CheckCircle, AlertCircle, UserPlus, X, FolderPlus, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from '@/components/ui/table';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
 
 interface AudienceUser {
   id: string;
@@ -67,37 +60,27 @@ export default function AdminCampaignAudience() {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [search, setSearch] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null); // null = All
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkEmails, setBulkEmails] = useState('');
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkResult, setBulkResult] = useState<BulkImportResult | null>(null);
   const [newUser, setNewUser] = useState({ email: '', first_name: '', last_name: '' });
-  const [newTag, setNewTag] = useState({ name: '', color: '#6366F1' });
-  const [filterTag, setFilterTag] = useState<string | null>(null);
-  
-  // New state for tag assignment
-  const [assignTagDialogOpen, setAssignTagDialogOpen] = useState(false);
-  const [selectedTagForAssign, setSelectedTagForAssign] = useState<string>('');
-  const [bulkImportTag, setBulkImportTag] = useState<string>('');
-  const [isAssigningTags, setIsAssigningTags] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupColor, setNewGroupColor] = useState('#6366F1');
+  const [assignGroupOpen, setAssignGroupOpen] = useState(false);
+  const [selectedGroupForAssign, setSelectedGroupForAssign] = useState('');
+  const [bulkImportTag, setBulkImportTag] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
-
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !email) {
       setHasAccess(false);
       adminNavigate(getLoginPath());
       return;
     }
-
-    if (!email) {
-      setHasAccess(false);
-      adminNavigate(getLoginPath());
-      return;
-    }
-
     const checkCampaignAccess = async () => {
       const { data: accessData, error } = await supabase
         .from('admin_campaign_access')
@@ -105,41 +88,42 @@ export default function AdminCampaignAudience() {
         .eq('admin_email', email)
         .eq('has_access', true)
         .maybeSingle();
-
-      if (error) {
-        setHasAccess(false);
-        adminNavigate(getDashboardPath());
-        return;
-      }
-
+      if (error) { setHasAccess(false); adminNavigate(getDashboardPath()); return; }
       const ok = !!accessData;
       setHasAccess(ok);
       if (!ok) adminNavigate(getDashboardPath());
     };
-
     checkCampaignAccess();
   }, [adminNavigate, authLoading, email, getDashboardPath, getLoginPath, isLoggedIn]);
 
-
   const { data: users, isLoading } = useQuery({
-    queryKey: ['audience-users', search, filterTag],
+    queryKey: ['audience-users', search, activeGroup],
     queryFn: async () => {
       let query = supabase
         .from('audience_users')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (search) {
         query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       }
-
-      if (filterTag) {
-        query = query.contains('tags', [filterTag]);
+      if (activeGroup) {
+        query = query.contains('tags', [activeGroup]);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data as AudienceUser[];
+    },
+    enabled: hasAccess === true,
+  });
+
+  const { data: allUsersCount } = useQuery({
+    queryKey: ['audience-total-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('audience_users')
+        .select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
     },
     enabled: hasAccess === true,
   });
@@ -151,28 +135,41 @@ export default function AdminCampaignAudience() {
         .from('audience_tags')
         .select('*')
         .order('name');
-
       if (error) throw error;
       return data as AudienceTag[];
     },
     enabled: hasAccess === true,
   });
 
+  // Get count per group
+  const { data: groupCounts } = useQuery({
+    queryKey: ['audience-group-counts', tags],
+    queryFn: async () => {
+      if (!tags) return {};
+      const counts: Record<string, number> = {};
+      for (const tag of tags) {
+        const { count } = await supabase
+          .from('audience_users')
+          .select('*', { count: 'exact', head: true })
+          .contains('tags', [tag.id]);
+        counts[tag.id] = count || 0;
+      }
+      return counts;
+    },
+    enabled: hasAccess === true && !!tags,
+  });
+
+  // Mutations
   const addUserMutation = useMutation({
     mutationFn: async (user: typeof newUser) => {
       const emailToAdd = user.email.toLowerCase().trim();
-      
-      // Check if email already exists
       const { data: existing } = await supabase
         .from('audience_users')
         .select('id')
         .eq('email', emailToAdd)
         .maybeSingle();
-      
-      if (existing) {
-        throw new Error('This email already exists in your audience');
-      }
-      
+      if (existing) throw new Error('This email already exists');
+      const tagsToAssign = activeGroup ? [activeGroup] : [];
       const { error } = await supabase
         .from('audience_users')
         .insert({
@@ -180,147 +177,115 @@ export default function AdminCampaignAudience() {
           first_name: user.first_name || null,
           last_name: user.last_name || null,
           source: 'manual',
+          tags: tagsToAssign,
         });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-total-count'] });
       setAddDialogOpen(false);
       setNewUser({ email: '', first_name: '', last_name: '' });
-      toast.success('User added to audience');
+      toast.success('Contact added');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to add user');
-    },
+    onError: (error: any) => toast.error(error.message || 'Failed to add'),
   });
 
-  const addTagMutation = useMutation({
-    mutationFn: async (tag: typeof newTag) => {
+  const createGroupMutation = useMutation({
+    mutationFn: async () => {
       const { error } = await supabase
         .from('audience_tags')
-        .insert(tag);
+        .insert({ name: newGroupName.trim(), color: newGroupColor });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
-      setTagDialogOpen(false);
-      setNewTag({ name: '', color: '#6366F1' });
-      toast.success('Tag created');
+      setCreateGroupOpen(false);
+      setNewGroupName('');
+      setNewGroupColor('#6366F1');
+      toast.success('Group created');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create tag');
+    onError: (error: any) => toast.error(error.message || 'Failed to create group'),
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const { data: usersWithTag } = await supabase
+        .from('audience_users')
+        .select('id, tags')
+        .contains('tags', [tagId]);
+      for (const user of usersWithTag || []) {
+        const newTags = (user.tags || []).filter((t: string) => t !== tagId);
+        await supabase.from('audience_users').update({ tags: newTags }).eq('id', user.id);
+      }
+      const { error } = await supabase.from('audience_tags').delete().eq('id', tagId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
+      if (activeGroup) setActiveGroup(null);
+      toast.success('Group deleted');
     },
   });
 
   const deleteUsersMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from('audience_users')
-        .delete()
-        .in('id', ids);
+      const { error } = await supabase.from('audience_users').delete().in('id', ids);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-total-count'] });
       setSelectedUsers([]);
-      toast.success('Users deleted');
+      toast.success('Contacts deleted');
     },
   });
 
-  // Assign tag to selected users
-  const assignTagToUsersMutation = useMutation({
+  const assignToGroupMutation = useMutation({
     mutationFn: async ({ userIds, tagId }: { userIds: string[]; tagId: string }) => {
-      // Get current tags for all selected users
-      const { data: usersData, error: fetchError } = await supabase
+      const { data: usersData } = await supabase
         .from('audience_users')
         .select('id, tags')
         .in('id', userIds);
-      
-      if (fetchError) throw fetchError;
-      
-      // Update each user - add tag if not already present
       for (const user of usersData || []) {
         const currentTags = user.tags || [];
         if (!currentTags.includes(tagId)) {
-          const { error } = await supabase
-            .from('audience_users')
-            .update({ tags: [...currentTags, tagId] })
-            .eq('id', user.id);
-          if (error) throw error;
+          await supabase.from('audience_users').update({ tags: [...currentTags, tagId] }).eq('id', user.id);
         }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
       setSelectedUsers([]);
-      setAssignTagDialogOpen(false);
-      setSelectedTagForAssign('');
-      toast.success('Tag assigned to selected users');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to assign tag');
+      setAssignGroupOpen(false);
+      setSelectedGroupForAssign('');
+      toast.success('Added to group');
     },
   });
 
-  // Remove tag from selected users
-  const removeTagFromUsersMutation = useMutation({
-    mutationFn: async ({ userIds, tagId }: { userIds: string[]; tagId: string }) => {
-      const { data: usersData, error: fetchError } = await supabase
-        .from('audience_users')
-        .select('id, tags')
-        .in('id', userIds);
-      
-      if (fetchError) throw fetchError;
-      
+  const removeFromGroupMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      if (!activeGroup) return;
+      const { data: usersData } = await supabase.from('audience_users').select('id, tags').in('id', userIds);
       for (const user of usersData || []) {
-        const currentTags = user.tags || [];
-        const newTags = currentTags.filter((t: string) => t !== tagId);
-        const { error } = await supabase
-          .from('audience_users')
-          .update({ tags: newTags })
-          .eq('id', user.id);
-        if (error) throw error;
+        const newTags = (user.tags || []).filter((t: string) => t !== activeGroup);
+        await supabase.from('audience_users').update({ tags: newTags }).eq('id', user.id);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
       setSelectedUsers([]);
-      toast.success('Tag removed from selected users');
+      toast.success('Removed from group');
     },
   });
 
-  // Delete tag mutation
-  const deleteTagMutation = useMutation({
-    mutationFn: async (tagId: string) => {
-      // First remove tag from all users
-      const { data: usersWithTag } = await supabase
-        .from('audience_users')
-        .select('id, tags')
-        .contains('tags', [tagId]);
-      
-      for (const user of usersWithTag || []) {
-        const newTags = (user.tags || []).filter((t: string) => t !== tagId);
-        await supabase
-          .from('audience_users')
-          .update({ tags: newTags })
-          .eq('id', user.id);
-      }
-      
-      // Then delete the tag
-      const { error } = await supabase
-        .from('audience_tags')
-        .delete()
-        .eq('id', tagId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['audience-tags'] });
-      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
-      toast.success('Group deleted');
-    },
-  });
-
-  // Helper to extract and validate emails
+  // Bulk import helpers
   const extractEmails = (text: string): { valid: string[]; invalid: number } => {
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
     const allMatches = text.match(emailRegex) || [];
@@ -331,7 +296,6 @@ export default function AdminCampaignAudience() {
   };
 
   const chunkArray = <T,>(arr: T[], size: number): T[][] => {
-    if (size <= 0) return [arr];
     const chunks: T[][] = [];
     for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
     return chunks;
@@ -339,81 +303,24 @@ export default function AdminCampaignAudience() {
 
   const fetchExistingEmails = async (emails: string[]) => {
     const existing = new Set<string>();
-    const chunks = chunkArray(emails, 500);
-    for (const batch of chunks) {
-      const { data, error } = await supabase
-        .from('audience_users')
-        .select('email')
-        .in('email', batch);
-      if (error) throw error;
-      (data || []).forEach((u) => existing.add(String(u.email).toLowerCase()));
+    for (const batch of chunkArray(emails, 500)) {
+      const { data } = await supabase.from('audience_users').select('email').in('email', batch);
+      (data || []).forEach(u => existing.add(String(u.email).toLowerCase()));
     }
     return existing;
   };
 
-  const insertUsersInBatches = async (
-    usersToInsert: { email: string; first_name?: string | null; last_name?: string | null; source: string; is_marketing_allowed?: boolean; tags?: string[] }[]
-  ) => {
-    const chunks = chunkArray(usersToInsert, 500);
-    for (const batch of chunks) {
-      const { error } = await supabase
-        .from('audience_users')
-        // upsert with ignoreDuplicates prevents unique constraint errors if another import runs simultaneously
-        .upsert(batch, { onConflict: 'email', ignoreDuplicates: true });
-      if (error) throw error;
-    }
-  };
-
-  // Assign tag to existing emails (for bulk import with tag)
-  const assignTagToEmails = async (emails: string[], tagId: string) => {
-    const chunks = chunkArray(emails, 100);
-    for (const batch of chunks) {
-      // Get users with these emails
-      const { data: usersData } = await supabase
-        .from('audience_users')
-        .select('id, tags')
-        .in('email', batch);
-      
-      for (const user of usersData || []) {
-        const currentTags = user.tags || [];
-        if (!currentTags.includes(tagId)) {
-          await supabase
-            .from('audience_users')
-            .update({ tags: [...currentTags, tagId] })
-            .eq('id', user.id);
-        }
-      }
-    }
-  };
-
-  // Bulk email import handler (paste) - with optional tag
   const handleBulkImport = async () => {
-    if (!bulkEmails.trim()) {
-      toast.error('Please enter some emails');
-      return;
-    }
-
+    if (!bulkEmails.trim()) { toast.error('Please enter some emails'); return; }
     setBulkImporting(true);
     setBulkResult(null);
-
     try {
       const { valid: validEmails, invalid: invalidCount } = extractEmails(bulkEmails);
-
-      if (validEmails.length === 0) {
-        toast.error('No valid emails found');
-        setBulkImporting(false);
-        return;
-      }
-
-      // IMPORTANT: chunked lookup because the backend has practical limits on large IN() lists
+      if (validEmails.length === 0) { toast.error('No valid emails found'); setBulkImporting(false); return; }
       const existingEmails = await fetchExistingEmails(validEmails);
-
       const duplicateCount = validEmails.filter(e => existingEmails.has(e)).length;
       const newEmails = validEmails.filter(e => !existingEmails.has(e));
-
-      // Insert new users (with tag if selected)
-      const tagToAssign = bulkImportTag && bulkImportTag !== 'none' ? bulkImportTag : null;
-      
+      const tagToAssign = bulkImportTag && bulkImportTag !== 'none' ? bulkImportTag : (activeGroup || null);
       if (newEmails.length > 0) {
         const usersToInsert = newEmails.map(email => ({
           email,
@@ -421,36 +328,37 @@ export default function AdminCampaignAudience() {
           is_marketing_allowed: true,
           tags: tagToAssign ? [tagToAssign] : [],
         }));
-
-        await insertUsersInBatches(usersToInsert);
+        for (const batch of chunkArray(usersToInsert, 500)) {
+          await supabase.from('audience_users').upsert(batch, { onConflict: 'email', ignoreDuplicates: true });
+        }
       }
-
-      // Also assign tag to existing emails if tag is selected
       if (tagToAssign) {
         const existingEmailsList = validEmails.filter(e => existingEmails.has(e));
         if (existingEmailsList.length > 0) {
-          await assignTagToEmails(existingEmailsList, tagToAssign);
+          for (const batch of chunkArray(existingEmailsList, 100)) {
+            const { data: usersData } = await supabase.from('audience_users').select('id, tags').in('email', batch);
+            for (const user of usersData || []) {
+              const currentTags = user.tags || [];
+              if (!currentTags.includes(tagToAssign)) {
+                await supabase.from('audience_users').update({ tags: [...currentTags, tagToAssign] }).eq('id', user.id);
+              }
+            }
+          }
         }
       }
-
-      setBulkResult({
-        total: validEmails.length,
-        added: newEmails.length,
-        duplicates: duplicateCount,
-        invalid: invalidCount,
-      });
-
+      setBulkResult({ total: validEmails.length, added: newEmails.length, duplicates: duplicateCount, invalid: invalidCount });
       queryClient.invalidateQueries({ queryKey: ['audience-users'] });
-      toast.success(`Added ${newEmails.length} new emails${bulkImportTag ? ' and assigned to group' : ''}`);
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-total-count'] });
+      toast.success(`Added ${newEmails.length} new emails`);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to import emails');
+      toast.error(error.message || 'Failed to import');
     } finally {
       setBulkImporting(false);
     }
   };
 
   const normalizeHeader = (h: string) => h.toLowerCase().trim().replace(/\s+/g, '_');
-
   const parseFullName = (name: string | null | undefined) => {
     const cleaned = (name || '').trim();
     if (!cleaned) return { first_name: null as string | null, last_name: null as string | null };
@@ -459,174 +367,112 @@ export default function AdminCampaignAudience() {
     return { first_name: parts[0], last_name: parts.slice(1).join(' ') };
   };
 
-  const importContacts = async (
-    usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[],
-    {
-      invalidCount,
-      duplicatesInFile,
-    }: { invalidCount: number; duplicatesInFile: number }
-  ) => {
-    if (usersToImport.length === 0) {
-      toast.error('No valid emails found');
-      return;
-    }
-
-    // Chunked lookup so large imports (1100+) don't get cut off
-    const existingEmails = await fetchExistingEmails(usersToImport.map(u => u.email));
-
-    const duplicatesInDb = usersToImport.filter(u => existingEmails.has(u.email)).length;
-    const newUsers = usersToImport.filter(u => !existingEmails.has(u.email));
-
-    if (newUsers.length > 0) {
-      await insertUsersInBatches(newUsers);
-    }
-
-    setBulkDialogOpen(true);
-    setBulkResult({
-      total: usersToImport.length,
-      added: newUsers.length,
-      duplicates: duplicatesInDb + duplicatesInFile,
-      invalid: invalidCount,
-    });
-
-    queryClient.invalidateQueries({ queryKey: ['audience-users'] });
-    toast.success(`Added ${newUsers.length} new contacts`);
-  };
-
-  const handleSpreadsheetImport = async (file: File) => {
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setBulkImporting(true);
     setBulkResult(null);
-
     try {
       const ext = file.name.toLowerCase().split('.').pop();
+      let usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
+      let invalidCount = 0;
+      const seenEmails = new Set<string>();
 
       if (ext === 'csv') {
         const text = await file.text();
         const lines = text.split('\n').filter(l => l.trim());
         const headers = lines[0].split(',').map(h => normalizeHeader(h));
-
         const emailIndex = headers.findIndex(h => h === 'email');
         const firstNameIndex = headers.findIndex(h => h === 'first_name' || h === 'firstname');
         const lastNameIndex = headers.findIndex(h => h === 'last_name' || h === 'lastname');
         const nameIndex = headers.findIndex(h => h === 'name' || h === 'full_name');
-
-        if (emailIndex === -1) {
-          toast.error('CSV must have an "email" column');
-          return;
-        }
-
-        const usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
-        const seenEmails = new Set<string>();
-        let invalidCount = 0;
-
+        if (emailIndex === -1) { toast.error('CSV must have an "email" column'); return; }
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
           const email = values[emailIndex]?.toLowerCase().trim();
-
           if (email && email.includes('@') && !seenEmails.has(email)) {
             seenEmails.add(email);
-
-            const nameFromFile = nameIndex >= 0 ? values[nameIndex] : null;
-            const parsedName = parseFullName(nameFromFile);
-
+            const parsedName = parseFullName(nameIndex >= 0 ? values[nameIndex] : null);
             usersToImport.push({
               email,
               first_name: firstNameIndex >= 0 ? (values[firstNameIndex] || null) : parsedName.first_name,
               last_name: lastNameIndex >= 0 ? (values[lastNameIndex] || null) : parsedName.last_name,
               source: 'csv_import',
             });
-          } else if (values[emailIndex]?.trim()) {
-            invalidCount++;
-          }
+          } else if (values[emailIndex]?.trim()) invalidCount++;
         }
-
-        const duplicatesInFile = lines.length - 1 - usersToImport.length - invalidCount;
-        await importContacts(usersToImport, { invalidCount, duplicatesInFile });
-        return;
-      }
-
-      // XLSX / XLS
-      if (ext === 'xlsx' || ext === 'xls') {
+      } else if (ext === 'xlsx' || ext === 'xls') {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const ws = workbook.Sheets[sheetName];
-
-        // sheet_to_json with header: 1 gives rows as arrays, first row headers
+        const ws = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false }) as string[][];
         const headerRow = (rows[0] || []).map(h => normalizeHeader(String(h || '')));
-
         const emailIndex = headerRow.findIndex(h => h === 'email');
         const nameIndex = headerRow.findIndex(h => h === 'name' || h === 'full_name');
         const firstNameIndex = headerRow.findIndex(h => h === 'first_name' || h === 'firstname');
         const lastNameIndex = headerRow.findIndex(h => h === 'last_name' || h === 'lastname');
-
-        if (emailIndex === -1) {
-          toast.error('XLSX must have an "Email" column');
-          return;
-        }
-
-        const usersToImport: { email: string; first_name: string | null; last_name: string | null; source: string }[] = [];
-        const seenEmails = new Set<string>();
-        let invalidCount = 0;
-
+        if (emailIndex === -1) { toast.error('File must have an "Email" column'); return; }
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i] || [];
           const email = String(row[emailIndex] || '').toLowerCase().trim();
           if (email && email.includes('@') && !seenEmails.has(email)) {
             seenEmails.add(email);
-
-            const nameFromFile = nameIndex >= 0 ? String(row[nameIndex] || '') : '';
-            const parsedName = parseFullName(nameFromFile);
-
-            const firstName = firstNameIndex >= 0 ? (String(row[firstNameIndex] || '').trim() || null) : parsedName.first_name;
-            const lastName = lastNameIndex >= 0 ? (String(row[lastNameIndex] || '').trim() || null) : parsedName.last_name;
-
+            const parsedName = parseFullName(nameIndex >= 0 ? String(row[nameIndex] || '') : '');
             usersToImport.push({
               email,
-              first_name: firstName,
-              last_name: lastName,
+              first_name: firstNameIndex >= 0 ? (String(row[firstNameIndex] || '').trim() || null) : parsedName.first_name,
+              last_name: lastNameIndex >= 0 ? (String(row[lastNameIndex] || '').trim() || null) : parsedName.last_name,
               source: 'xlsx_import',
             });
-          } else if (String(row[emailIndex] || '').trim()) {
-            invalidCount++;
+          } else if (String(row[emailIndex] || '').trim()) invalidCount++;
+        }
+      } else {
+        toast.error('Unsupported file type'); return;
+      }
+      if (usersToImport.length === 0) { toast.error('No valid emails found'); return; }
+      const existingEmails = await fetchExistingEmails(usersToImport.map(u => u.email));
+      const newUsers = usersToImport.filter(u => !existingEmails.has(u.email));
+      const tagToAssign = activeGroup || null;
+      if (newUsers.length > 0) {
+        const withTags = newUsers.map(u => ({ ...u, is_marketing_allowed: true, tags: tagToAssign ? [tagToAssign] : [] }));
+        for (const batch of chunkArray(withTags, 500)) {
+          await supabase.from('audience_users').upsert(batch, { onConflict: 'email', ignoreDuplicates: true });
+        }
+      }
+      if (tagToAssign) {
+        const existingUserEmails = usersToImport.filter(u => existingEmails.has(u.email)).map(u => u.email);
+        for (const batch of chunkArray(existingUserEmails, 100)) {
+          const { data: usersData } = await supabase.from('audience_users').select('id, tags').in('email', batch);
+          for (const user of usersData || []) {
+            const currentTags = user.tags || [];
+            if (!currentTags.includes(tagToAssign)) {
+              await supabase.from('audience_users').update({ tags: [...currentTags, tagToAssign] }).eq('id', user.id);
+            }
           }
         }
-
-        const duplicatesInFile = rows.length - 1 - usersToImport.length - invalidCount;
-        await importContacts(usersToImport, { invalidCount, duplicatesInFile });
-        return;
       }
-
-      toast.error('Unsupported file type. Please upload a CSV or XLSX file.');
+      setBulkDialogOpen(true);
+      setBulkResult({ total: usersToImport.length, added: newUsers.length, duplicates: existingEmails.size, invalid: invalidCount });
+      queryClient.invalidateQueries({ queryKey: ['audience-users'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-group-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['audience-total-count'] });
+      toast.success(`Added ${newUsers.length} new contacts`);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to import file');
+      toast.error(error.message || 'Failed to import');
     } finally {
       setBulkImporting(false);
-    }
-  };
-
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      await handleSpreadsheetImport(file);
-    } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleExport = () => {
     if (!users) return;
-    
     const csv = [
       'email,first_name,last_name,subscribed,source,opens,clicks',
-      ...users.map(u => 
+      ...users.map(u =>
         `${u.email},${u.first_name || ''},${u.last_name || ''},${u.is_marketing_allowed},${u.source},${u.total_opens},${u.total_clicks}`
       )
     ].join('\n');
-
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -637,15 +483,16 @@ export default function AdminCampaignAudience() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedUsers.length === users?.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(users?.map(u => u.id) || []);
-    }
+    if (selectedUsers.length === users?.length) setSelectedUsers([]);
+    else setSelectedUsers(users?.map(u => u.id) || []);
   };
 
   const activeCount = users?.filter(u => u.is_marketing_allowed && !u.unsubscribed_at).length || 0;
-  const unsubscribedCount = users?.filter(u => u.unsubscribed_at).length || 0;
+  const activeGroupData = tags?.find(t => t.id === activeGroup);
+
+  const groupColors = [
+    '#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#14B8A6'
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -653,547 +500,482 @@ export default function AdminCampaignAudience() {
       <header className="sticky top-0 z-20 border-b border-border/50 bg-background/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => adminNavigate('/admin/campaigns')}
               className="rounded-full hover:bg-muted/50"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-xl font-semibold tracking-tight">Audience Manager</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Audience</h1>
               <p className="text-sm text-muted-foreground">
-                Manage your marketing contacts
+                {allUsersCount || 0} total contacts · {tags?.length || 0} groups
               </p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <Users className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums">{users?.length || 0}</p>
-                  <p className="text-xs text-muted-foreground">Total Contacts</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10">
-                  <Mail className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums">{activeCount}</p>
-                  <p className="text-xs text-muted-foreground">Active Subscribers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-red-500/10">
-                  <UserMinus className="w-5 h-5 text-red-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums">{unsubscribedCount}</p>
-                  <p className="text-xs text-muted-foreground">Unsubscribed</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex gap-6">
+          {/* ── Sidebar: Groups ── */}
+          <div className="w-56 shrink-0 space-y-2">
+            {/* All Contacts */}
+            <button
+              onClick={() => { setActiveGroup(null); setSelectedUsers([]); }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeGroup === null
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-foreground/80 hover:bg-muted/50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                All Contacts
+              </span>
+              <span className={`text-xs tabular-nums ${activeGroup === null ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                {allUsersCount || 0}
+              </span>
+            </button>
 
-        {/* Actions */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search by email or name..." 
-                    className="pl-10"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+            <div className="h-px bg-border/50 my-3" />
+
+            <div className="flex items-center justify-between px-3 mb-1">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Groups</span>
+              <button
+                onClick={() => setCreateGroupOpen(true)}
+                className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                title="Create group"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {tags?.length === 0 && (
+              <div className="px-3 py-6 text-center">
+                <FolderPlus className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-xs text-muted-foreground">No groups yet</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2 text-xs h-7"
+                  onClick={() => setCreateGroupOpen(true)}
+                >
+                  Create first group
+                </Button>
+              </div>
+            )}
+
+            {tags?.map(tag => (
+              <button
+                key={tag.id}
+                onClick={() => { setActiveGroup(tag.id); setSelectedUsers([]); }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all group ${
+                  activeGroup === tag.id
+                    ? 'bg-muted/80 text-foreground font-medium'
+                    : 'text-foreground/70 hover:bg-muted/30'
+                }`}
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: tag.color }}
                   />
-                </div>
+                  <span className="truncate">{tag.name}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {groupCounts?.[tag.id] || 0}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete "${tag.name}"? Contacts won't be deleted.`)) {
+                        deleteGroupMutation.mutate(tag.id);
+                      }
+                    }}
+                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              </button>
+            ))}
+          </div>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Filter className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setFilterTag(null)}>
-                      All contacts
-                    </DropdownMenuItem>
-                    {tags?.map(tag => (
-                      <DropdownMenuItem key={tag.id} onClick={() => setFilterTag(tag.id)}>
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          {/* ── Main Content ── */}
+          <div className="flex-1 min-w-0 space-y-4">
+            {/* Active group header */}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  {activeGroupData ? (
+                    <>
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: activeGroupData.color }} />
+                      {activeGroupData.name}
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      All Contacts
+                    </>
+                  )}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {users?.length || 0} contacts · {activeCount} active
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 {selectedUsers.length > 0 && (
                   <>
-                    {/* Assign Tag to Selected */}
-                    <Dialog open={assignTagDialogOpen} onOpenChange={setAssignTagDialogOpen}>
+                    <Dialog open={assignGroupOpen} onOpenChange={setAssignGroupOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <UserPlus className="w-4 h-4 mr-2" />
+                        <Button variant="outline" size="sm" className="rounded-lg border-border/50 gap-1.5">
+                          <UserPlus className="w-3.5 h-3.5" />
                           Add to Group ({selectedUsers.length})
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="border-border/50">
                         <DialogHeader>
                           <DialogTitle>Add to Group</DialogTitle>
                           <DialogDescription>
-                            Assign {selectedUsers.length} selected contacts to a group/tag
+                            Add {selectedUsers.length} contacts to a group
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4">
+                        <Select value={selectedGroupForAssign} onValueChange={setSelectedGroupForAssign}>
+                          <SelectTrigger><SelectValue placeholder="Choose a group..." /></SelectTrigger>
+                          <SelectContent>
+                            {tags?.map(tag => (
+                              <SelectItem key={tag.id} value={tag.id}>
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                                  {tag.name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <DialogFooter>
+                          <Button
+                            onClick={() => assignToGroupMutation.mutate({ userIds: selectedUsers, tagId: selectedGroupForAssign })}
+                            disabled={!selectedGroupForAssign || assignToGroupMutation.isPending}
+                            className="rounded-lg"
+                          >
+                            {assignToGroupMutation.isPending ? 'Adding...' : 'Add to Group'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    {activeGroup && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-border/50 gap-1.5"
+                        onClick={() => removeFromGroupMutation.mutate(selectedUsers)}
+                      >
+                        <UserMinus className="w-3.5 h-3.5" />
+                        Remove ({selectedUsers.length})
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="rounded-lg gap-1.5"
+                      onClick={() => {
+                        if (confirm(`Delete ${selectedUsers.length} contacts permanently?`)) {
+                          deleteUsersMutation.mutate(selectedUsers);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </Button>
+                  </>
+                )}
+
+                <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileImport} />
+                <Button variant="outline" size="sm" className="rounded-lg border-border/50" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="w-3.5 h-3.5 mr-1.5" />
+                  Import
+                </Button>
+                <Button variant="outline" size="sm" className="rounded-lg border-border/50" onClick={handleExport}>
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Export
+                </Button>
+
+                <Dialog open={bulkDialogOpen} onOpenChange={(open) => { setBulkDialogOpen(open); if (!open) { setBulkEmails(''); setBulkResult(null); setBulkImportTag(''); } }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-lg border-border/50">
+                      <Copy className="w-3.5 h-3.5 mr-1.5" />
+                      Bulk Add
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-xl border-border/50">
+                    <DialogHeader>
+                      <DialogTitle>Bulk Import</DialogTitle>
+                      <DialogDescription>
+                        Paste emails below. {activeGroupData ? `They'll be added to "${activeGroupData.name}".` : 'They\'ll be added to All Contacts.'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    {!bulkResult ? (
+                      <div className="space-y-4">
+                        {!activeGroup && (
                           <div>
-                            <Label>Select Group</Label>
-                            <Select value={selectedTagForAssign} onValueChange={setSelectedTagForAssign}>
-                              <SelectTrigger className="mt-1.5">
-                                <SelectValue placeholder="Choose a group..." />
+                            <Label className="text-xs text-muted-foreground">Assign to Group (optional)</Label>
+                            <Select value={bulkImportTag} onValueChange={setBulkImportTag}>
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="No group" />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="none">No group</SelectItem>
                                 {tags?.map(tag => (
                                   <SelectItem key={tag.id} value={tag.id}>
-                                    <div className="flex items-center gap-2">
-                                      <div 
-                                        className="w-3 h-3 rounded-full" 
-                                        style={{ backgroundColor: tag.color }}
-                                      />
+                                    <span className="flex items-center gap-2">
+                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
                                       {tag.name}
-                                    </div>
+                                    </span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          <DialogFooter>
-                            <Button 
-                              onClick={() => assignTagToUsersMutation.mutate({ 
-                                userIds: selectedUsers, 
-                                tagId: selectedTagForAssign 
-                              })}
-                              disabled={!selectedTagForAssign || assignTagToUsersMutation.isPending}
-                            >
-                              {assignTagToUsersMutation.isPending ? 'Assigning...' : 'Add to Group'}
-                            </Button>
-                          </DialogFooter>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => deleteUsersMutation.mutate(selectedUsers)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete ({selectedUsers.length})
-                    </Button>
-                  </>
-                )}
-
-                <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <Tag className="w-4 h-4 mr-2" />
-                      Groups
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Manage Groups</DialogTitle>
-                      <DialogDescription>
-                        Create groups to organize contacts and target campaigns
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      {tags && tags.length > 0 && (
-                        <div className="space-y-2">
-                          <Label className="text-sm text-muted-foreground">Existing Groups</Label>
-                          <div className="space-y-2">
-                            {tags.map(tag => (
-                              <div key={tag.id} className="flex items-center justify-between p-2 rounded-lg border border-border/50 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => {
-                                  setTagDialogOpen(false);
-                                  adminNavigate(`/admin/campaigns/audience/group/${tag.id}`);
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-4 h-4 rounded-full" 
-                                    style={{ backgroundColor: tag.color }}
-                                  />
-                                  <span className="font-medium">{tag.name}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (confirm(`Delete group "${tag.name}"? This will remove it from all contacts.`)) {
-                                        deleteTagMutation.mutate(tag.id);
-                                      }
-                                    }}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="grid gap-3 pt-2 border-t border-border/50">
-                        <Label>Create New Group</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="Group name (e.g. VIP Traders)"
-                            value={newTag.name}
-                            onChange={(e) => setNewTag(p => ({ ...p, name: e.target.value }))}
-                          />
-                          <Input 
-                            type="color"
-                            className="w-14 cursor-pointer"
-                            value={newTag.color}
-                            onChange={(e) => setNewTag(p => ({ ...p, color: e.target.value }))}
-                          />
-                          <Button onClick={() => addTagMutation.mutate(newTag)} disabled={!newTag.name.trim()}>
-                            Add
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <input 
-                  ref={fileInputRef}
-                  type="file" 
-                  accept=".csv,.xlsx,.xls" 
-                  className="hidden" 
-                  onChange={handleFileImport}
-                />
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import File
-                </Button>
-
-                <Button variant="outline" onClick={handleExport}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-
-                <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add User
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add User to Audience</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4">
-                      <div>
-                        <Label>Email *</Label>
-                        <Input 
-                          type="email"
-                          placeholder="user@example.com"
-                          value={newUser.email}
-                          onChange={(e) => setNewUser(p => ({ ...p, email: e.target.value }))}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>First Name</Label>
-                          <Input 
-                            placeholder="John"
-                            value={newUser.first_name}
-                            onChange={(e) => setNewUser(p => ({ ...p, first_name: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label>Last Name</Label>
-                          <Input 
-                            placeholder="Doe"
-                            value={newUser.last_name}
-                            onChange={(e) => setNewUser(p => ({ ...p, last_name: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      <Button onClick={() => addUserMutation.mutate(newUser)}>
-                        Add to Audience
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Bulk Import Dialog */}
-                <Dialog open={bulkDialogOpen} onOpenChange={(open) => {
-                  setBulkDialogOpen(open);
-                  if (!open) {
-                    setBulkEmails('');
-                    setBulkResult(null);
-                    setBulkImportTag('');
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <Copy className="w-4 h-4 mr-2" />
-                      Bulk Add
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-xl">
-                    <DialogHeader>
-                      <DialogTitle>Bulk Email Import</DialogTitle>
-                      <DialogDescription>
-                        Paste a list of emails and optionally assign them to a group. Duplicates will be automatically filtered.
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    {!bulkResult ? (
-                      <div className="space-y-4">
-                        {/* Group selector */}
-                        <div>
-                          <Label>Assign to Group (Optional)</Label>
-                          <Select value={bulkImportTag} onValueChange={setBulkImportTag}>
-                            <SelectTrigger className="mt-1.5">
-                              <SelectValue placeholder="No group - just import emails" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No group</SelectItem>
-                              {tags?.map(tag => (
-                                <SelectItem key={tag.id} value={tag.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div 
-                                      className="w-3 h-3 rounded-full" 
-                                      style={{ backgroundColor: tag.color }}
-                                    />
-                                    {tag.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {bulkImportTag && bulkImportTag !== 'none' && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              All emails will be added to this group (including existing contacts)
-                            </p>
-                          )}
-                        </div>
-
-                        <Textarea 
-                          placeholder="rasakmomodu@yahoo.com&#10;ujjwalyadav86768@gmail.com&#10;ahsandevil003@gmail.com"
+                        )}
+                        <Textarea
+                          placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
                           value={bulkEmails}
                           onChange={(e) => setBulkEmails(e.target.value)}
-                          className="min-h-[180px] font-mono text-sm"
+                          className="min-h-[160px] font-mono text-sm"
                         />
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>
-                            {extractEmails(bulkEmails).valid.length} valid emails detected
-                          </span>
-                          {bulkImportTag && bulkImportTag !== 'none' && tags && (
-                            <Badge 
-                              style={{ backgroundColor: tags.find(t => t.id === bulkImportTag)?.color }}
-                              className="text-white"
-                            >
-                              → {tags.find(t => t.id === bulkImportTag)?.name}
-                            </Badge>
-                          )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{extractEmails(bulkEmails).valid.length} valid emails</span>
                         </div>
                         <DialogFooter>
-                          <Button 
-                            onClick={handleBulkImport} 
-                            disabled={bulkImporting || !bulkEmails.trim()}
-                          >
-                            {bulkImporting ? (
-                              <>Processing...</>
-                            ) : (
-                              <>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Import {bulkImportTag ? 'to Group' : 'Emails'}
-                              </>
-                            )}
+                          <Button onClick={handleBulkImport} disabled={bulkImporting || !bulkEmails.trim()} className="rounded-lg">
+                            {bulkImporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</> : <><Upload className="w-4 h-4 mr-2" /> Import</>}
                           </Button>
                         </DialogFooter>
                       </div>
                     ) : (
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         <div className="text-center py-4">
-                          <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-3" />
-                          <h3 className="text-lg font-semibold">Import Complete!</h3>
+                          <CheckCircle className="w-10 h-10 mx-auto text-emerald-500 mb-2" />
+                          <p className="font-semibold">Import Complete</p>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card className="border-green-500/30 bg-green-500/10">
-                            <CardContent className="p-4 text-center">
-                              <p className="text-3xl font-bold text-green-400">{bulkResult.added}</p>
-                              <p className="text-sm text-muted-foreground">New emails added</p>
-                            </CardContent>
-                          </Card>
-                          <Card className="border-amber-500/30 bg-amber-500/10">
-                            <CardContent className="p-4 text-center">
-                              <p className="text-3xl font-bold text-amber-400">{bulkResult.duplicates}</p>
-                              <p className="text-sm text-muted-foreground">Duplicates skipped</p>
-                            </CardContent>
-                          </Card>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-center">
+                            <p className="text-2xl font-bold text-emerald-400">{bulkResult.added}</p>
+                            <p className="text-xs text-muted-foreground">Added</p>
+                          </div>
+                          <div className="rounded-lg bg-muted/50 border border-border/50 p-3 text-center">
+                            <p className="text-2xl font-bold text-muted-foreground">{bulkResult.duplicates}</p>
+                            <p className="text-xs text-muted-foreground">Duplicates</p>
+                          </div>
                         </div>
-
                         {bulkResult.invalid > 0 && (
-                          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
-                            <AlertCircle className="w-4 h-4 text-red-400" />
-                            <span>{bulkResult.invalid} invalid entries were skipped</span>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 text-xs">
+                            <AlertCircle className="w-3.5 h-3.5 text-destructive" />
+                            {bulkResult.invalid} invalid entries skipped
                           </div>
                         )}
-
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Total processed: {bulkResult.total} emails
-                          </p>
-                          <Button onClick={() => {
-                            setBulkDialogOpen(false);
-                            setBulkEmails('');
-                            setBulkResult(null);
-                          }}>
-                            Done
-                          </Button>
-                        </div>
+                        <Button className="w-full rounded-lg" onClick={() => { setBulkDialogOpen(false); setBulkEmails(''); setBulkResult(null); }}>
+                          Done
+                        </Button>
                       </div>
                     )}
                   </DialogContent>
                 </Dialog>
+
+                <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="rounded-lg gap-1.5">
+                      <Plus className="w-3.5 h-3.5" />
+                      Add
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="border-border/50">
+                    <DialogHeader>
+                      <DialogTitle>Add Contact</DialogTitle>
+                      {activeGroupData && (
+                        <DialogDescription>Will be added to "{activeGroupData.name}"</DialogDescription>
+                      )}
+                    </DialogHeader>
+                    <div className="grid gap-3">
+                      <div>
+                        <Label className="text-xs">Email *</Label>
+                        <Input type="email" placeholder="user@example.com" value={newUser.email} onChange={(e) => setNewUser(p => ({ ...p, email: e.target.value }))} className="mt-1" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">First Name</Label>
+                          <Input placeholder="John" value={newUser.first_name} onChange={(e) => setNewUser(p => ({ ...p, first_name: e.target.value }))} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Last Name</Label>
+                          <Input placeholder="Doe" value={newUser.last_name} onChange={(e) => setNewUser(p => ({ ...p, last_name: e.target.value }))} className="mt-1" />
+                        </div>
+                      </div>
+                      <Button onClick={() => addUserMutation.mutate(newUser)} disabled={!newUser.email.trim()} className="rounded-lg">
+                        Add Contact
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Users Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox 
-                      checked={selectedUsers.length === users?.length && users.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Groups</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Engagement</TableHead>
-                  <TableHead>Added</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users?.map(user => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <Checkbox 
-                        checked={selectedUsers.includes(user.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedUsers(p => [...p, user.id]);
-                          } else {
-                            setSelectedUsers(p => p.filter(id => id !== user.id));
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>
-                      {user.first_name || user.last_name 
-                        ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-                        : '-'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      {user.tags && user.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {user.tags.map(tagId => {
-                            const tag = tags?.find(t => t.id === tagId);
-                            return tag ? (
-                              <Badge 
-                                key={tagId}
-                                style={{ backgroundColor: tag.color }}
-                                className="text-white text-xs px-1.5 py-0 cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => adminNavigate(`/admin/campaigns/audience/group/${tag.id}`)}
-                              >
-                                {tag.name}
-                              </Badge>
-                            ) : null;
-                          })}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {user.unsubscribed_at ? (
-                        <Badge variant="destructive">Unsubscribed</Badge>
-                      ) : user.is_marketing_allowed ? (
-                        <Badge className="bg-green-500/20 text-green-400">Active</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {user.total_opens} opens · {user.total_clicks} clicks
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(user.created_at), 'MMM d')}
-                    </TableCell>
-                  </TableRow>
+            {/* Search */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search contacts..."
+                className="pl-9 rounded-lg border-border/50 bg-background/50"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Table */}
+            <Card className="border-border/50 bg-card/50 overflow-hidden">
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-12 text-center text-muted-foreground">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    Loading...
+                  </div>
+                ) : users?.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <Users className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
+                    <p className="font-medium mb-1">No contacts{activeGroupData ? ` in "${activeGroupData.name}"` : ''}</p>
+                    <p className="text-sm text-muted-foreground">Add contacts or import from a file</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        <th className="w-10 px-3 py-3">
+                          <Checkbox
+                            checked={selectedUsers.length === users?.length && (users?.length || 0) > 0}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3">Email</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 hidden md:table-cell">Name</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 hidden lg:table-cell">Groups</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[70px]">Status</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 hidden sm:table-cell w-[100px]">Engagement</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 hidden xl:table-cell w-[70px]">Added</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users?.map(user => (
+                        <tr key={user.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                          <td className="px-3 py-2.5">
+                            <Checkbox
+                              checked={selectedUsers.includes(user.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) setSelectedUsers(p => [...p, user.id]);
+                                else setSelectedUsers(p => p.filter(id => id !== user.id));
+                              }}
+                            />
+                          </td>
+                          <td className="px-2 py-2.5 font-medium truncate max-w-[200px]">{user.email}</td>
+                          <td className="px-2 py-2.5 text-muted-foreground hidden md:table-cell">
+                            {user.first_name || user.last_name
+                              ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+                              : <span className="text-muted-foreground/40">-</span>
+                            }
+                          </td>
+                          <td className="px-2 py-2.5 hidden lg:table-cell">
+                            {user.tags && user.tags.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {user.tags.map(tagId => {
+                                  const tag = tags?.find(t => t.id === tagId);
+                                  return tag ? (
+                                    <span
+                                      key={tagId}
+                                      className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                                      style={{ backgroundColor: tag.color }}
+                                    >
+                                      {tag.name}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground/40 text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2.5">
+                            {user.unsubscribed_at ? (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-destructive/15 text-destructive border border-destructive/30">Unsub</span>
+                            ) : user.is_marketing_allowed ? (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Active</span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">Off</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">
+                            {user.total_opens}o · {user.total_clicks}c
+                          </td>
+                          <td className="px-2 py-2.5 text-xs text-muted-foreground hidden xl:table-cell">
+                            {format(new Date(user.created_at), 'MMM d')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Create Group Dialog */}
+      <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
+        <DialogContent className="max-w-sm border-border/50">
+          <DialogHeader>
+            <DialogTitle>Create Group</DialogTitle>
+            <DialogDescription>Groups let you organize contacts and target campaigns</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">Group Name</Label>
+              <Input
+                placeholder="e.g. VIP Traders, Newsletter"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Color</Label>
+              <div className="flex gap-2 mt-1.5">
+                {groupColors.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setNewGroupColor(c)}
+                    className={`w-7 h-7 rounded-full transition-all ${newGroupColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground/30 scale-110' : 'hover:scale-105'}`}
+                    style={{ backgroundColor: c }}
+                  />
                 ))}
-              </TableBody>
-            </Table>
-
-            {users?.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">No contacts yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Add users manually or import from CSV
-                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+            </div>
+            <Button
+              onClick={() => createGroupMutation.mutate()}
+              disabled={!newGroupName.trim() || createGroupMutation.isPending}
+              className="w-full rounded-lg"
+            >
+              {createGroupMutation.isPending ? 'Creating...' : 'Create Group'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
