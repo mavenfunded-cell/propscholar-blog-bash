@@ -467,75 +467,63 @@ const AdminSupportTickets = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50 hover:bg-transparent">
-                      <TableHead className="w-16 text-xs font-medium text-muted-foreground">#</TableHead>
-                      <TableHead className="w-16 text-xs font-medium text-muted-foreground">Source</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground min-w-[180px] max-w-[280px]">Subject</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground min-w-[140px] max-w-[200px]">From</TableHead>
-                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">Status</TableHead>
-                      <TableHead className="w-20 text-xs font-medium text-muted-foreground">Priority</TableHead>
-                      <TableHead className="w-28 text-xs font-medium text-muted-foreground">Last Reply</TableHead>
-                      <TableHead className="w-20 text-right text-xs font-medium text-muted-foreground">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left text-xs font-medium text-muted-foreground px-3 py-3 w-[50px]">#</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[60px]">Src</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3">Subject</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 hidden lg:table-cell">From</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[60px]">Status</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[60px] hidden sm:table-cell">Pri</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-2 py-3 w-[90px]">Reply</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground px-3 py-3 w-[60px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {filteredTickets?.map((ticket) => {
                       const isClosed = ticket.status === "closed";
                       return (
-                        <TableRow
+                        <tr
                           key={ticket.id}
-                          className="cursor-pointer border-border/30 hover:bg-muted/30"
+                          className="cursor-pointer border-b border-border/20 hover:bg-muted/30 transition-colors"
                           onClick={() => adminNavigate(`/tickets/${ticket.id}`)}
                         >
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            #{ticket.ticket_number}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`rounded-full px-1.5 gap-1 text-[10px] ${sourceColors[ticket.source || 'email']}`}
-                            >
+                          <td className="font-mono text-xs text-muted-foreground px-3 py-3">
+                            {ticket.ticket_number}
+                          </td>
+                          <td className="px-2 py-3">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${sourceColors[ticket.source || 'email']}`}>
                               <SourceIcon source={ticket.source || 'email'} />
-                              {sourceLabels[ticket.source || 'email']}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium text-sm max-w-[280px]">
-                            <span className="truncate block">{ticket.subject}</span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs max-w-[200px]">
-                            <span className="truncate block">{ticket.user_email}</span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`rounded-full px-2 text-[10px] ${statusColors[getDisplayStatus(ticket.status)]}`}
-                            >
+                            </span>
+                          </td>
+                          <td className="px-2 py-3">
+                            <p className="font-medium text-sm truncate max-w-[220px] xl:max-w-[320px]">{ticket.subject}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[220px] xl:max-w-[320px] lg:hidden">{ticket.user_email}</p>
+                          </td>
+                          <td className="text-muted-foreground text-xs px-2 py-3 hidden lg:table-cell">
+                            <span className="truncate block max-w-[160px]">{ticket.user_email}</span>
+                          </td>
+                          <td className="px-2 py-3">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[getDisplayStatus(ticket.status)]}`}>
                               {statusLabels[getDisplayStatus(ticket.status)]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`rounded-full px-2 text-[10px] capitalize ${priorityColors[ticket.priority]}`}
-                            >
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 hidden sm:table-cell">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${priorityColors[ticket.priority]}`}>
                               {ticket.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <div className="text-muted-foreground">
-                              {formatDistanceToNow(new Date(ticket.last_reply_at), {
-                                addSuffix: true,
-                              })}
+                            </span>
+                          </td>
+                          <td className="text-xs px-2 py-3">
+                            <div className="text-muted-foreground whitespace-nowrap">
+                              {formatDistanceToNow(new Date(ticket.last_reply_at), { addSuffix: true })}
                             </div>
-                            <div className="text-[10px] text-muted-foreground/60">by {ticket.last_reply_by}</div>
-                          </TableCell>
-                          <TableCell className="text-right">
+                          </td>
+                          <td className="text-right px-3 py-3">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="rounded-lg h-7 text-xs border-border/50"
+                              variant="ghost"
+                              className="h-6 px-2 text-[10px] rounded"
                               disabled={isClosed || closeTicketMutation.isPending}
                               onClick={(e) => {
                                 e.preventDefault();
@@ -545,12 +533,12 @@ const AdminSupportTickets = () => {
                             >
                               {isClosed ? "Closed" : "Close"}
                             </Button>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
