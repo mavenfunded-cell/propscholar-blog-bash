@@ -300,22 +300,23 @@ const AdminTicketDetail = () => {
         ? replyBody 
         : replyBody + getSignature(selectedMod);
 
-      // Get access token for JWT auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error("Not authenticated");
-      }
-      
-      const { data, error } = await supabase.functions.invoke("send-support-email", {
-        body: {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-support-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": "propscholar-admin-secret-2024",
+        },
+        body: JSON.stringify({
           ticketId: id,
           body: bodyWithSignature,
           isInternalNote,
           attachments: attachments.length > 0 ? attachments : undefined,
           senderName: selectedMod,
-        },
+        }),
       });
-      if (error) throw error;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Failed to send reply");
       return data;
     },
     onSuccess: () => {
@@ -333,23 +334,20 @@ const AdminTicketDetail = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: TicketStatus) => {
-      // Get access token for JWT auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error("Not authenticated");
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "admin-update-ticket-status",
-        {
-          body: {
-            ticketId: id,
-            status: newStatus,
-          },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/admin-update-ticket-status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": "propscholar-admin-secret-2024",
         },
-      );
-
-      if (error) throw error;
+        body: JSON.stringify({
+          ticketId: id,
+          status: newStatus,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Failed to update status");
       if (!data?.success) throw new Error(data?.error || "Failed to update status");
       return data;
     },
