@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -106,6 +107,7 @@ const priorityColors: Record<TicketPriority, string> = {
 const AdminSupportTickets = () => {
   const navigate = useNavigate();
   const { adminNavigate, getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -118,32 +120,14 @@ const AdminSupportTickets = () => {
     timestamp: string;
   } | null>(null);
 
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const isAdmin = authLoading ? null : isLoggedIn;
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setIsAdmin(false);
-        navigate(getLoginPath(), { replace: true });
-        return;
-      }
-      
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      
-      setIsAdmin(!!roleData);
-      if (!roleData) {
-        navigate(getLoginPath(), { replace: true });
-      }
-    };
-    
-    checkAuth();
-  }, [navigate, getLoginPath]);
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      navigate(getLoginPath(), { replace: true });
+    }
+  }, [authLoading, isLoggedIn, navigate, getLoginPath]);
 
   // 1-minute auto-sync: poll inbox + refresh tickets every 60s
   useEffect(() => {
