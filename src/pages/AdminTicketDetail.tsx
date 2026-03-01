@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdminNavigation, isAdminSubdomain } from "@/hooks/useAdminSubdomain";
+import { useAdminNavigation } from "@/hooks/useAdminSubdomain";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -116,12 +117,13 @@ const priorityColors: Record<TicketPriority, string> = {
 const AdminTicketDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { adminNavigate } = useAdminNavigation();
+  const { adminNavigate, getLoginPath } = useAdminNavigation();
+  const { isLoggedIn, loading: authLoading } = useAdminAuth();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [replyBody, setReplyBody] = useState("");
   const [isInternalNote, setIsInternalNote] = useState(false);
-  const [showAISidebar, setShowAISidebar] = useState(false); // Start closed on mobile
+  const [showAISidebar, setShowAISidebar] = useState(false);
   const [showFullConversation, setShowFullConversation] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -133,36 +135,14 @@ const AdminTicketDetail = () => {
   // AI Enhancer hook
   const aiEnhancer = useReplyAIEnhancer();
 
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const isAdmin = authLoading ? null : isLoggedIn;
 
-  // Check admin authentication via Supabase
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setIsAdmin(false);
-        navigate(isAdminSubdomain() ? '/' : '/admin');
-        return;
-      }
-      
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      
-      if (!roleData) {
-        setIsAdmin(false);
-        navigate(isAdminSubdomain() ? '/' : '/admin');
-        return;
-      }
-      
-      setIsAdmin(true);
-    };
-    
-    checkAuth();
-  }, [navigate]);
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      navigate(getLoginPath(), { replace: true });
+    }
+  }, [authLoading, isLoggedIn, navigate, getLoginPath]);
 
   // Listen for close event from AI sidebar
   useEffect(() => {
