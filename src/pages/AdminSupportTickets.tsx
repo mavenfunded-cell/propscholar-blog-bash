@@ -43,7 +43,7 @@ import { AdminNotificationBell } from "@/components/AdminNotificationBell";
 
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
-type TicketSource = "email" | "chatbot" | "form";
+type TicketSource = "email" | "chatbot" | "form" | "dash";
 
 interface Ticket {
   id: string;
@@ -63,12 +63,14 @@ const sourceColors: Record<TicketSource, string> = {
   email: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
   chatbot: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
   form: "bg-green-500/15 text-green-400 border border-green-500/30",
+  dash: "bg-white/15 text-white border border-white/30",
 };
 
 const sourceLabels: Record<TicketSource, string> = {
   email: "Email",
   chatbot: "Chatbot",
   form: "Form",
+  dash: "Dash",
 };
 
 const SourceIcon = ({ source }: { source: TicketSource }) => {
@@ -78,6 +80,8 @@ const SourceIcon = ({ source }: { source: TicketSource }) => {
       return <Bot className={iconClass} />;
     case "form":
       return <FileText className={iconClass} />;
+    case "dash":
+      return <Sparkles className={iconClass} />;
     default:
       return <Mail className={iconClass} />;
   }
@@ -214,8 +218,15 @@ const AdminSupportTickets = () => {
 
   const filteredTickets = tickets?.filter((ticket) => {
     // Source filter
-    if (sourceFilter !== "all" && ticket.source !== sourceFilter) return false;
-    
+    if (sourceFilter !== "all") {
+      if (sourceFilter === "chatbot") {
+        if (ticket.source !== "chatbot" && ticket.source !== "form") return false;
+      } else if (sourceFilter === "dash") {
+        if (ticket.source !== "dash") return false;
+      } else if (sourceFilter === "email") {
+        if (ticket.source && ticket.source !== "email") return false;
+      } else if (ticket.source !== sourceFilter) return false;
+    }
     // Search filter
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -236,6 +247,7 @@ const AdminSupportTickets = () => {
     all: tickets?.length || 0,
     email: tickets?.filter((t) => !t.source || t.source === "email").length || 0,
     chatbot: tickets?.filter((t) => t.source === "chatbot" || t.source === "form").length || 0,
+    dash: tickets?.filter((t) => t.source === "dash").length || 0,
   };
 
   return (
@@ -344,6 +356,7 @@ const AdminSupportTickets = () => {
             { key: "all", label: "All Tickets", icon: MessageSquare, count: sourceCounts.all },
             { key: "email", label: "Email", icon: Mail, count: sourceCounts.email },
             { key: "chatbot", label: "Chatbot/Form", icon: Bot, count: sourceCounts.chatbot },
+            { key: "dash", label: "Dash", icon: Sparkles, count: sourceCounts.dash },
           ].map((tab) => (
             <button
               key={tab.key}

@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.suggest-ticket-reply]
 verify_jwt = true
+
+[functions.create-dash-ticket]
+verify_jwt = false
