@@ -8,6 +8,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { TicketListPanel } from "@/components/admin/tickets/TicketListPanel";
 import { TicketChatPanel } from "@/components/admin/tickets/TicketChatPanel";
 import { TicketDetailsPanel } from "@/components/admin/tickets/TicketDetailsPanel";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 type TicketStatus = "open" | "awaiting_support" | "awaiting_user" | "closed";
 
@@ -22,7 +27,7 @@ const AdminSupportTickets = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(urlTicketId || null);
   const [statusFilter, setStatusFilter] = useState("open");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [showDetails, setShowDetails] = useState(!isMobile);
+  const [showDetails, setShowDetails] = useState(false);
 
   const isAdmin = authLoading ? null : isLoggedIn;
 
@@ -65,8 +70,6 @@ const AdminSupportTickets = () => {
   };
 
   const handleInsertReply = (content: string) => {
-    // This will be used by the details panel AI to insert into chat panel
-    // We use a custom event to communicate between panels
     window.dispatchEvent(new CustomEvent("insert-reply", { detail: content }));
   };
 
@@ -99,37 +102,58 @@ const AdminSupportTickets = () => {
     );
   }
 
-  // Desktop: 3-panel layout
+  // Desktop: resizable 3-panel layout
   return (
     <div className="h-screen flex overflow-hidden">
-      {/* Left: Ticket List */}
-      <div className="w-[320px] shrink-0">
-        <TicketListPanel
-          tickets={tickets}
-          isLoading={isLoading}
-          selectedTicketId={selectedTicketId}
-          onSelectTicket={handleSelectTicket}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-        />
-      </div>
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/* Left: Ticket List - resizable */}
+        <ResizablePanel
+          defaultSize={selectedTicketId ? 22 : 100}
+          minSize={15}
+          maxSize={selectedTicketId ? 40 : 100}
+          className="transition-all duration-300 ease-in-out"
+        >
+          <TicketListPanel
+            tickets={tickets}
+            isLoading={isLoading}
+            selectedTicketId={selectedTicketId}
+            onSelectTicket={handleSelectTicket}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
+        </ResizablePanel>
 
-      {/* Center: Chat */}
-      <TicketChatPanel
-        ticketId={selectedTicketId}
-        onBack={() => setSelectedTicketId(null)}
-        showDetails={showDetails}
-        onToggleDetails={() => setShowDetails(!showDetails)}
-        isMobile={false}
-      />
+        {/* Show chat + details only when ticket selected */}
+        {selectedTicketId && (
+          <>
+            <ResizableHandle withHandle />
 
-      {/* Right: Details */}
-      {showDetails && (
-        <TicketDetailsPanel
-          ticketId={selectedTicketId}
-          onInsertReply={handleInsertReply}
-        />
-      )}
+            {/* Center: Chat */}
+            <ResizablePanel defaultSize={showDetails ? 52 : 78} minSize={35}>
+              <TicketChatPanel
+                ticketId={selectedTicketId}
+                onBack={() => setSelectedTicketId(null)}
+                showDetails={showDetails}
+                onToggleDetails={() => setShowDetails(!showDetails)}
+                isMobile={false}
+              />
+            </ResizablePanel>
+
+            {/* Right: Details/AI - collapsible */}
+            {showDetails && (
+              <>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={26} minSize={18} maxSize={40}>
+                  <TicketDetailsPanel
+                    ticketId={selectedTicketId}
+                    onInsertReply={handleInsertReply}
+                  />
+                </ResizablePanel>
+              </>
+            )}
+          </>
+        )}
+      </ResizablePanelGroup>
     </div>
   );
 };

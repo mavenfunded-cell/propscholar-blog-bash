@@ -13,12 +13,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Mail,
   Clock,
   Phone,
   Bot,
   User,
-  ChevronRight,
+  ChevronDown,
   MessageCircle,
   Sparkles,
   StickyNote,
@@ -57,9 +62,9 @@ const sourceColors: Record<string, string> = {
 
 export function TicketDetailsPanel({ ticketId, onInsertReply }: TicketDetailsPanelProps) {
   const queryClient = useQueryClient();
-  const [showDetails, setShowDetails] = useState(true);
+  const [aiOpen, setAiOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const [internalNote, setInternalNote] = useState("");
-  const [activeTab, setActiveTab] = useState<"ai" | "details">("ai");
 
   const { data: ticket } = useQuery({
     queryKey: ["admin-ticket", ticketId],
@@ -143,61 +148,49 @@ export function TicketDetailsPanel({ ticketId, onInsertReply }: TicketDetailsPan
 
   if (!ticketId || !ticket) {
     return (
-      <div className="w-80 border-l border-border/50 bg-background flex items-center justify-center">
+      <div className="h-full border-l border-border/50 bg-background flex items-center justify-center">
         <p className="text-sm text-muted-foreground">Select a ticket</p>
       </div>
     );
   }
 
   return (
-    <div className="w-80 border-l border-border/50 bg-background flex flex-col h-full">
-      {/* Tab Header */}
-      <div className="shrink-0 p-3 border-b border-border/50">
-        <div className="flex items-center gap-1 p-0.5 bg-muted/30 rounded-lg">
-          <button
-            onClick={() => setActiveTab("ai")}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              activeTab === "ai" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            Help: <span className="font-bold">AI</span>
+    <div className="border-l border-border/50 bg-background flex flex-col h-full">
+      {/* AI Suggestions - Collapsible */}
+      <Collapsible open={aiOpen} onOpenChange={setAiOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full shrink-0 p-3 border-b border-border/50 flex items-center justify-between hover:bg-muted/30 transition-colors">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">AI Suggestions</span>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${aiOpen ? "" : "-rotate-90"}`} />
           </button>
-          <Button
-            size="sm"
-            variant={activeTab === "ai" ? "default" : "ghost"}
-            className="flex-1 text-xs h-7"
-            onClick={() => setActiveTab("ai")}
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            Get AI Suggestions
-          </Button>
-        </div>
-      </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 duration-200">
+          {messages && (
+            <div className="border-b border-border/50">
+              <AISuggestionsSidebar
+                ticketId={ticketId}
+                messages={messages}
+                onInsertReply={onInsertReply}
+              />
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
 
-      <ScrollArea className="flex-1">
-        {activeTab === "ai" && messages && (
-          <div className="p-0">
-            <AISuggestionsSidebar
-              ticketId={ticketId}
-              messages={messages}
-              onInsertReply={onInsertReply}
-            />
-          </div>
-        )}
-
-        {/* Ticket Details - always visible below AI */}
-        <div className="p-3 space-y-4">
-          {/* Collapsible header */}
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-2 w-full text-left"
-          >
-            <h3 className="text-sm font-semibold flex-1">Ticket Details & Actions</h3>
-            <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${showDetails ? "rotate-90" : ""}`} />
+      {/* Ticket Details - Collapsible */}
+      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full shrink-0 p-3 border-b border-border/50 flex items-center justify-between hover:bg-muted/30 transition-colors">
+            <span className="text-sm font-semibold">Ticket Details & Actions</span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${detailsOpen ? "" : "-rotate-90"}`} />
           </button>
-
-          {showDetails && (
-            <div className="space-y-4">
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 duration-200">
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-4">
               {/* Status */}
               <div>
                 <label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Status</label>
@@ -306,9 +299,9 @@ export function TicketDetailsPanel({ ticketId, onInsertReply }: TicketDetailsPan
                 </Button>
               </div>
             </div>
-          )}
-        </div>
-      </ScrollArea>
+          </ScrollArea>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

@@ -229,16 +229,7 @@ export function TicketChatPanel({ ticketId, onBack, showDetails, onToggleDetails
   };
 
   if (!ticketId) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <div className="text-center text-muted-foreground">
-          <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4">
-            <StickyNote className="h-8 w-8 text-muted-foreground/40" />
-          </div>
-          <p className="text-sm">Select a ticket to view</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
