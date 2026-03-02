@@ -188,11 +188,7 @@ const AISuggestionsSidebar = ({ ticketId, messages, onInsertReply }: AISuggestio
   // Removed auto-generation - AI suggestions now only trigger on button click
 
   return (
-    <div className="
-      fixed inset-0 z-50 bg-background
-      lg:static lg:inset-auto lg:z-auto
-      w-full lg:w-80 border-l flex flex-col h-full overflow-hidden
-    ">
+    <div className="w-full flex flex-col h-full overflow-hidden">
       <Tabs defaultValue="ai" className="flex flex-col h-full overflow-hidden">
         {/* Mobile header */}
         <div className="flex items-center justify-between p-3 lg:hidden border-b bg-muted/50 shrink-0">

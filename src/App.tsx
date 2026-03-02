@@ -98,7 +98,7 @@ function getAdminRoutes(basePath = "") {
     <Route key="analytics" path={`${basePath}/analytics`} element={<AdminUserAnalytics />} />,
     <Route key="referrals" path={`${basePath}/referrals`} element={<AdminReferrals />} />,
     <Route key="tickets" path={`${basePath}/tickets`} element={<AdminSupportTickets />} />,
-    <Route key="ticket-detail" path={`${basePath}/tickets/:id`} element={<AdminTicketDetail />} />,
+    <Route key="ticket-detail" path={`${basePath}/tickets/:id`} element={<AdminSupportTickets />} />,
     <Route key="reviews" path={`${basePath}/reviews`} element={<AdminTicketReviews />} />,
     <Route key="canned-messages" path={`${basePath}/canned-messages`} element={<AdminCannedMessages />} />,
     <Route key="ai-knowledge" path={`${basePath}/ai-knowledge`} element={<AdminAIKnowledge />} />,
