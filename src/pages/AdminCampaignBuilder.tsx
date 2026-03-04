@@ -155,12 +155,8 @@ export default function AdminCampaignBuilder() {
     }
 
     const checkCampaignAccess = async () => {
-      const { data: accessData, error } = await supabase
-        .from('admin_campaign_access')
-        .select('has_access')
-        .eq('admin_email', email)
-        .eq('has_access', true)
-        .maybeSingle();
+      const { data: hasAccessResult, error } = await supabase
+        .rpc('check_campaign_access', { p_email: email });
 
       if (error) {
         console.error('Campaign access check failed:', error);
@@ -169,8 +165,7 @@ export default function AdminCampaignBuilder() {
         return;
       }
 
-      const ok = !!accessData;
-      console.log('Campaign access check result:', { email, ok, accessData });
+      const ok = !!hasAccessResult;
       setHasAccess(ok);
       if (!ok) adminNavigate(getDashboardPath());
     };
