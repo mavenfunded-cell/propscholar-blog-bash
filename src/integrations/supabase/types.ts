@@ -2587,6 +2587,7 @@ export type Database = {
         Args: { _winner_id: string; _winner_type: string }
         Returns: boolean
       }
+      check_campaign_access: { Args: { p_email: string }; Returns: boolean }
       check_duplicate_gmail: { Args: { _email: string }; Returns: boolean }
       claim_coupon: {
         Args: { _expiry_days?: number; _reward_type: string }
@@ -3083,6 +3084,19 @@ export type Database = {
           submission_name: string
           submission_title: string
           vote_count: number
+        }[]
+      }
+      get_previous_campaigns: {
+        Args: { p_exclude_id?: string }
+        Returns: {
+          created_at: string
+          html_content: string
+          id: string
+          name: string
+          open_count: number
+          sent_count: number
+          status: string
+          subject: string
         }[]
       }
       get_reel_event_submission_counts: {
