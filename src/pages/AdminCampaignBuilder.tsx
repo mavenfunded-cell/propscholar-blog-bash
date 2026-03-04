@@ -163,12 +163,14 @@ export default function AdminCampaignBuilder() {
         .maybeSingle();
 
       if (error) {
+        console.error('Campaign access check failed:', error);
         setHasAccess(false);
         adminNavigate(getDashboardPath());
         return;
       }
 
       const ok = !!accessData;
+      console.log('Campaign access check result:', { email, ok, accessData });
       setHasAccess(ok);
       if (!ok) adminNavigate(getDashboardPath());
     };
