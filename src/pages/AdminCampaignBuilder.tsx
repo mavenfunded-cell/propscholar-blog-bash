@@ -232,15 +232,19 @@ export default function AdminCampaignBuilder() {
 
   // Fetch previous campaigns for copy feature
   const { data: previousCampaigns } = useQuery({
-    queryKey: ['previous-campaigns'],
+    queryKey: ['previous-campaigns', id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
         .select('id, name, subject, html_content, created_at, status, sent_count, open_count')
+        .in('status', ['sent', 'draft', 'scheduled', 'paused', 'sending', 'cancelled'])
         .neq('id', id || '')
         .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
+        .limit(20);
+      if (error) {
+        console.error('Failed to fetch previous campaigns:', error);
+        throw error;
+      }
       return data;
     },
     enabled: hasAccess === true,
