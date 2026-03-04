@@ -163,12 +163,14 @@ export default function AdminCampaignBuilder() {
         .maybeSingle();
 
       if (error) {
+        console.error('Campaign access check failed:', error);
         setHasAccess(false);
         adminNavigate(getDashboardPath());
         return;
       }
 
       const ok = !!accessData;
+      console.log('Campaign access check result:', { email, ok, accessData });
       setHasAccess(ok);
       if (!ok) adminNavigate(getDashboardPath());
     };
@@ -232,15 +234,19 @@ export default function AdminCampaignBuilder() {
 
   // Fetch previous campaigns for copy feature
   const { data: previousCampaigns } = useQuery({
-    queryKey: ['previous-campaigns'],
+    queryKey: ['previous-campaigns', id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
         .select('id, name, subject, html_content, created_at, status, sent_count, open_count')
+        .in('status', ['sent', 'draft', 'scheduled', 'paused', 'sending', 'cancelled'])
         .neq('id', id || '')
         .order('created_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
+        .limit(20);
+      if (error) {
+        console.error('Failed to fetch previous campaigns:', error);
+        throw error;
+      }
       return data;
     },
     enabled: hasAccess === true,
