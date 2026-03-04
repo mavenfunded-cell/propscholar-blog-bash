@@ -227,17 +227,13 @@ export default function AdminCampaignBuilder() {
     enabled: hasAccess === true,
   });
 
-  // Fetch previous campaigns for copy feature
+  // Fetch previous campaigns for copy feature (using RPC to bypass RLS)
   const { data: previousCampaigns } = useQuery({
     queryKey: ['previous-campaigns', id],
     queryFn: async () => {
+      const excludeId = (id && id !== 'new') ? id : null;
       const { data, error } = await supabase
-        .from('campaigns')
-        .select('id, name, subject, html_content, created_at, status, sent_count, open_count')
-        .in('status', ['sent', 'draft', 'scheduled', 'paused', 'sending', 'cancelled'])
-        .neq('id', id || '')
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .rpc('get_previous_campaigns', { p_exclude_id: excludeId });
       if (error) {
         console.error('Failed to fetch previous campaigns:', error);
         throw error;
