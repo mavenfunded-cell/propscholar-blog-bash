@@ -1,0 +1,1 @@
+UPDATE campaigns SET status = 'scheduled', scheduled_at = NOW(), total_recipients = 1896, target_tags = '{}' WHERE id = '1f3632d6-e763-4fc3-9018-095119234b37';
