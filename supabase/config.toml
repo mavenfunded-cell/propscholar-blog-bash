@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.ai-auto-reply]
 verify_jwt = false
+
+[functions.send-msr-india]
+verify_jwt = false
