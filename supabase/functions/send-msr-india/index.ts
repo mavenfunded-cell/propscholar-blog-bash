@@ -13,6 +13,7 @@ const MSR_TAG_ID = "d1c01c35-84c8-4aaf-9b56-1938bd407305";
 const SUBJECT = "Start Trading at $5 - India's First Trading Scholarship Model";
 const PREHEADER = "You Focus On Skill, We Give Scholarship";
 const SENDER_NAME = "PropScholar";
+const MAX_PER_BATCH = 25;
 
 function generatePreheaderHtml(preheader: string): string {
   return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${preheader}${"&#8204; &zwnj; ".repeat(30)}</div>`;
@@ -66,49 +67,60 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
+    const sentEmails: string[] = body.sentEmails || [];
+    const totalSentSoFar = body.totalSent || 0;
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Get all MSR tagged users
-    const { data: users, error } = await supabase
+    const { data: allUsers, error } = await supabase
       .from("audience_users")
       .select("id, email, first_name")
       .contains("tags", [MSR_TAG_ID]);
 
     if (error) throw error;
-    if (!users || users.length === 0) {
+    if (!allUsers || allUsers.length === 0) {
       return new Response(JSON.stringify({ error: "No MSR users found" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`Found ${users.length} MSR users to send to`);
+    // Filter out already sent
+    const sentSet = new Set(sentEmails.map((e: string) => e.toLowerCase()));
+    const remaining = allUsers.filter(u => !sentSet.has(u.email.toLowerCase()));
+    
+    console.log(`Total MSR: ${allUsers.length}, Already sent: ${sentEmails.length}, Remaining: ${remaining.length}`);
+
+    if (remaining.length === 0) {
+      console.log("ALL DONE! All emails sent.");
+      return new Response(
+        JSON.stringify({ success: true, message: "All emails sent", totalSent: totalSentSoFar }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const smtpUser = Deno.env.get("HOSTINGER_TEAM_EMAIL");
     const smtpPass = Deno.env.get("HOSTINGER_TEAM_PASSWORD");
 
     if (!smtpUser || !smtpPass) {
       return new Response(JSON.stringify({ error: "Team SMTP not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: true,
+      host: SMTP_HOST, port: SMTP_PORT, secure: true,
       auth: { user: smtpUser, pass: smtpPass },
     });
 
-    let sent = 0;
-    let failed = 0;
-    const errors: string[] = [];
+    const batch = remaining.slice(0, MAX_PER_BATCH);
+    let batchSent = 0;
 
-    for (const user of users) {
+    for (const user of batch) {
       try {
         await transporter.sendMail({
           from: `${SENDER_NAME} <${smtpUser}>`,
@@ -116,33 +128,54 @@ const handler = async (req: Request): Promise<Response> => {
           subject: SUBJECT,
           html: HTML_CONTENT,
         });
-        sent++;
-        console.log(`Sent ${sent}/${users.length}: ${user.email}`);
-
-        // Small delay to avoid throttling
-        if (sent % 5 === 0) {
-          await new Promise((r) => setTimeout(r, 2000));
-        }
+        sentEmails.push(user.email.toLowerCase());
+        batchSent++;
+        console.log(`Sent ${totalSentSoFar + batchSent}/${allUsers.length}: ${user.email}`);
       } catch (err: any) {
-        failed++;
-        errors.push(`${user.email}: ${err.message}`);
         console.error(`Failed: ${user.email} - ${err.message}`);
+        sentEmails.push(user.email.toLowerCase()); // skip failed ones too
       }
     }
 
     await transporter.close();
 
-    console.log(`Done! Sent: ${sent}, Failed: ${failed}`);
+    const newTotalSent = totalSentSoFar + batchSent;
+    const newRemaining = allUsers.length - sentEmails.length;
+
+    // Self-invoke if more remaining
+    if (newRemaining > 0) {
+      console.log(`Batch done. Sent ${batchSent} this batch. ${newRemaining} remaining. Self-invoking...`);
+      
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+      
+      fetch(`${supabaseUrl}/functions/v1/send-msr-india`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({ sentEmails, totalSent: newTotalSent }),
+      }).catch(err => console.error("Self-invoke error:", err));
+
+      // Small delay to let fetch fire
+      await new Promise(r => setTimeout(r, 1000));
+    }
 
     return new Response(
-      JSON.stringify({ success: true, sent, failed, total: users.length, errors: errors.slice(0, 10) }),
+      JSON.stringify({ 
+        success: true, 
+        batchSent, 
+        totalSent: newTotalSent, 
+        remaining: newRemaining,
+        message: newRemaining > 0 ? "Continuing in background..." : "All done!"
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 };
