@@ -1,0 +1,1 @@
+UPDATE campaigns SET status = 'scheduled', scheduled_at = now(), total_recipients = 2587 WHERE id = 'd2f50a96-cccc-4af6-93a0-1689e15426bb';
