@@ -13,6 +13,35 @@ const SUPPORT_EMAIL = "support@propscholar.com";
 const AI_AGENT_NAME = "Alex J";
 const SENDER_DISPLAY = `${AI_AGENT_NAME} - PropScholar Support`;
 
+const FORBIDDEN_ACCOUNT_STATUS_PATTERNS = [
+  /\bbreach(?:ed)?\b/i,
+  /\bflag(?:ged)?\b/i,
+  /\bbann?ed\b/i,
+  /\bsuspend(?:ed)?\b/i,
+  /\bdisable(?:d)?\b/i,
+  /\brestrict(?:ed|ion)?\b/i,
+  /\bviolat(?:e|ed|ion|ing)\b/i,
+  /\bterminate(?:d)?\b/i,
+  /\breject(?:ed|ion)?\b/i,
+  /\bdisqualif(?:ied|y)\b/i,
+  /\bnot eligible\b/i,
+];
+
+const hasUnsafeAccountStatusClaim = (text: string) =>
+  FORBIDDEN_ACCOUNT_STATUS_PATTERNS.some((pattern) => pattern.test(text));
+
+const buildSafeReviewReply = () => `Hi,
+
+Thank you for your patience. I'm checking this with our team right now, and I don't want to give you an incorrect update before the review is complete.
+
+Please give us a little time while we verify everything properly. We'll come back to you with a confirmed update as soon as the review is finished.
+
+If you'd like, you can reply with any extra details or screenshots in the meantime and I'll add them to the review.
+
+Best,
+${AI_AGENT_NAME}
+PropScholar Support`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -102,7 +131,7 @@ serve(async (req) => {
         ).join("\n") || "";
 
         // Generate AI reply
-        const systemPrompt = `You are Alex J, a senior support agent at PropScholar. You are helpful, professional, warm, and knowledgeable. You respond as a real human — never reveal you are AI.
+        const systemPrompt = `You are Alex J, a senior support agent at PropScholar. You are helpful, professional, warm, and respectful. You respond as a real human — never reveal you are AI.
 
 CRITICAL IDENTITY:
 - Your name is Alex J. You work at PropScholar Support.
@@ -112,13 +141,17 @@ CRITICAL IDENTITY:
 CORE KNOWLEDGE:
 ${knowledgeContext}
 
-KEY FACTS (use when relevant):
+SAFE RESPONSE MISSION:
+- This is an interim holding reply while the team reviews the case.
+- Your main job is to acknowledge the customer, say you are checking internally, ask for a little time, and promise a confirmed follow-up.
+- Do NOT make final decisions, diagnoses, or account-status conclusions.
+
+GENERAL FACTS (use only when they help and only if safe):
 - $5 entry fee, 400% scholarship refund, direct payouts within 4 hours (most within 1 hour)
 - Rules: No lot limit, No consistency rule, No trailing drawdown, No news restrictions, No minimum holding, No time limit
 - Profit Target: 10%, Max Drawdown: 6%, Daily Loss: 3%, Leverage: 1:50
 - Payments: UPI (PhonePe/Razorpay/Cashfree), Crypto, Card, PayPal. Credentials in 120 seconds.
 - After passing: Direct payout (no funded stage, no activation fee)
-- Discount after breach: automatic 5-15% sent via email
 - Platforms: PropScholar Trial ($1), FTMO, Instant, QT, Maven, Goat Funded Trader, Funding Pips, Blueberry Funded, Alpha Capital Group, 5%ers
 - Community: Discord (2500+ members), Instagram (@propscholar), X (@propscholar)
 - Support: support@propscholar.com, help.propscholar.com
@@ -129,15 +162,16 @@ TERMINOLOGY:
 - Say "direct payout" not "withdrawal"
 
 RESPONSE RULES:
-1. Be conversational and human — no robotic tone
-2. Address the customer's specific issue directly
-3. Include specific PropScholar details/numbers when relevant
-4. Keep it concise but thorough (3-6 sentences ideal)
-5. If you're unsure about something very specific, suggest they reply back or reach out on Discord
-6. Sign off naturally as Alex J
-7. NEVER say "I'm an AI" or "as an AI"
-8. Use markdown for formatting (bold, lists) when helpful
-9. Always end with an offer to help further`;
+1. Keep it human, calm, and respectful.
+2. Default to review language such as "I'm checking this for you", "Please give me a little time", "We're reviewing this internally", and "We'll get back to you with a confirmed update."
+3. NEVER state or imply that an account/evaluation is breached, flagged, banned, suspended, restricted, disabled, rejected, disqualified, or in violation unless a verified human has already explicitly confirmed that exact status in the conversation history.
+4. NEVER infer account status from partial context, policy knowledge, or the customer's complaint.
+5. For any account-specific, payout, platform, rule, or unclear issue, do not solve it conclusively — acknowledge it and hold the conversation while review is underway.
+6. You may ask for extra details or screenshots if helpful.
+7. Keep it concise: 2-5 sentences plus a natural sign-off.
+8. NEVER say "I'm an AI" or "as an AI".
+9. Use markdown only when helpful.
+10. Always end with a calm offer to help further after the review.`;
 
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -149,7 +183,7 @@ RESPONSE RULES:
             model: "google/gemini-2.5-flash",
             messages: [
               { role: "system", content: systemPrompt },
-              { role: "user", content: `TICKET SUBJECT: ${ticket.subject}\nCUSTOMER EMAIL: ${ticket.user_email}\n\nCONVERSATION:\n${conversationContext}\n\nWrite a helpful reply to the customer's latest message. Be specific and solution-oriented. Do NOT include a subject line — just the reply body.` },
+                { role: "user", content: `TICKET SUBJECT: ${ticket.subject}\nCUSTOMER EMAIL: ${ticket.user_email}\n\nCONVERSATION:\n${conversationContext}\n\nWrite a safe holding reply to the customer's latest message. Acknowledge the issue, say you're checking with the team, ask for a little time, and avoid any account-status assumptions or final conclusions. Do NOT include a subject line — just the reply body.` },
             ],
           }),
         });
@@ -160,11 +194,16 @@ RESPONSE RULES:
         }
 
         const aiData = await aiResponse.json();
-        const replyBody = aiData.choices?.[0]?.message?.content?.trim();
+        let replyBody = aiData.choices?.[0]?.message?.content?.trim();
 
         if (!replyBody) {
           console.error(`Empty AI response for ticket #${ticket.ticket_number}`);
           continue;
+        }
+
+        if (hasUnsafeAccountStatusClaim(replyBody)) {
+          console.warn(`Unsafe account-status claim detected for ticket #${ticket.ticket_number}; replacing with safe holding reply`);
+          replyBody = buildSafeReviewReply();
         }
 
         console.log(`Generated AI reply for ticket #${ticket.ticket_number}`);

@@ -6,6 +6,70 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type SuggestionType = "quick" | "detailed" | "empathetic";
+
+type ReplySuggestion = {
+  type: SuggestionType;
+  content: string;
+};
+
+const FORBIDDEN_ACCOUNT_STATUS_PATTERNS = [
+  /\bbreach(?:ed)?\b/i,
+  /\bflag(?:ged)?\b/i,
+  /\bbann?ed\b/i,
+  /\bsuspend(?:ed)?\b/i,
+  /\bdisable(?:d)?\b/i,
+  /\brestrict(?:ed|ion)?\b/i,
+  /\bviolat(?:e|ed|ion|ing)\b/i,
+  /\bterminate(?:d)?\b/i,
+  /\breject(?:ed|ion)?\b/i,
+  /\bdisqualif(?:ied|y)\b/i,
+  /\bnot eligible\b/i,
+];
+
+const hasUnsafeAccountStatusClaim = (text: string) =>
+  FORBIDDEN_ACCOUNT_STATUS_PATTERNS.some((pattern) => pattern.test(text));
+
+const buildSafeSuggestion = (type: SuggestionType): ReplySuggestion => {
+  switch (type) {
+    case "quick":
+      return {
+        type,
+        content:
+          "Thanks for your patience. I'm checking this with the team right now, so please give me a little time and I'll come back with a confirmed update.",
+      };
+    case "detailed":
+      return {
+        type,
+        content:
+          "Thanks for flagging this. I'm currently reviewing the details with the team and I don't want to give you an incorrect answer before that check is complete. Please give me a little time while we verify everything properly, and I'll come back to you with a confirmed update as soon as the review is done.",
+      };
+    case "empathetic":
+      return {
+        type,
+        content:
+          "I understand this is frustrating, and I appreciate your patience. I'm checking this internally right now and I want to make sure I come back with the correct update rather than making assumptions. Please give me a little time and I'll follow up as soon as the review is complete.",
+      };
+  }
+};
+
+const sanitizeSuggestions = (suggestions: ReplySuggestion[]): ReplySuggestion[] => {
+  const requiredTypes: SuggestionType[] = ["quick", "detailed", "empathetic"];
+
+  return requiredTypes.map((type) => {
+    const suggestion = suggestions.find((item) => item?.type === type);
+
+    if (!suggestion?.content?.trim() || hasUnsafeAccountStatusClaim(suggestion.content)) {
+      return buildSafeSuggestion(type);
+    }
+
+    return {
+      type,
+      content: suggestion.content.trim(),
+    };
+  });
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -153,9 +217,13 @@ BEHAVIORAL RULES:
 5. Know the rules cold: No lot limit, No consistency rule, No trailing drawdown, No news restrictions, No minimum holding, No time limit, 10% profit target, 6% max drawdown, 3% daily loss, 1:50 leverage.
 6. Know payment methods: UPI (PhonePe/Razorpay/Cashfree), Crypto, Card, PayPal. Credentials in 120 seconds.
 7. Know platforms: PropScholar Trial ($1), FTMO, Instant, QT, Maven, Goat Funded Trader, Funding Pips, Blueberry Funded, Alpha Capital Group, 5%ers.
-8. Know the discount-after-breach policy: automatic 5-15% discount sent via email.
-9. After passing: Direct payout within 4 hours (most within 1 hour). No funded stage, no activation fee.
-10. Community: Discord (2500+ members), Instagram (@propscholar), X (@propscholar).
+8. After passing: Direct payout within 4 hours (most within 1 hour). No funded stage, no activation fee.
+9. Community: Discord (2500+ members), Instagram (@propscholar), X (@propscholar).
+10. NEVER state or imply that a user's account/evaluation is breached, flagged, banned, suspended, restricted, disabled, rejected, disqualified, or in violation unless a human admin has already explicitly confirmed that exact status in the conversation history.
+11. If the case is account-specific, unclear, or under review, default to delay-safe language: "I'm checking this for you," "Please give me a little time," "We're reviewing this internally," and "We'll get back to you with a confirmed update."
+12. Never infer account status from partial context, missing data, policy knowledge, or tone.
+13. For sensitive cases, all 3 replies must acknowledge the issue, avoid conclusions, and promise follow-up after review.
+14. NEVER mention discounts, penalties, or remedial offers tied to an account outcome unless the user explicitly asks and a human-confirmed status already exists in the conversation history.
 
 RESPONSE STYLE:
 - Professional yet warm, like a senior support agent who genuinely cares
@@ -230,18 +298,16 @@ Return ONLY the JSON array. No other text.`;
     const content = data.choices?.[0]?.message?.content || "[]";
     
     // Parse the JSON response
-    let suggestions;
+    let suggestions: ReplySuggestion[] = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
     } catch (parseError) {
       console.error("Error parsing AI response:", parseError, content);
-      suggestions = [
-        { type: "quick", content: "Thank you for reaching out. Let me look into this for you." },
-        { type: "detailed", content: "I appreciate you contacting us about this issue. I'm reviewing the details and will provide you with a solution shortly." },
-        { type: "empathetic", content: "I understand this must be frustrating. I'm here to help and will do my best to resolve this for you as quickly as possible." }
-      ];
+      suggestions = [];
     }
+
+    suggestions = sanitizeSuggestions(Array.isArray(suggestions) ? suggestions : []);
 
     // Log successful request
     await supabase.from("ai_usage_logs").insert({
