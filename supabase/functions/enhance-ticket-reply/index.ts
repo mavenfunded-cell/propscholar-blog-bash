@@ -5,6 +5,51 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const FORBIDDEN_ACCOUNT_STATUS_PATTERNS = [
+  /\bbreach(?:ed)?\b/i,
+  /\bflag(?:ged)?\b/i,
+  /\bbann?ed\b/i,
+  /\bsuspend(?:ed)?\b/i,
+  /\bdisable(?:d)?\b/i,
+  /\brestrict(?:ed|ion)?\b/i,
+  /\bviolat(?:e|ed|ion|ing)\b/i,
+  /\bterminate(?:d)?\b/i,
+  /\breject(?:ed|ion)?\b/i,
+  /\bdisqualif(?:ied|y)\b/i,
+  /\bnot eligible\b/i,
+];
+
+const hasUnsafeAccountStatusClaim = (text: string) =>
+  FORBIDDEN_ACCOUNT_STATUS_PATTERNS.some((pattern) => pattern.test(text));
+
+const buildSafeFallbackOptions = () => ({
+  short:
+    "Thanks for your patience. I'm checking this with the team right now, so please give me a little time and I'll get back to you with a confirmed update.",
+  detailed:
+    "Thanks for flagging this. I'm currently reviewing the details with the team and I don't want to give you an incorrect answer before that check is complete. Please give me a little time while we verify everything properly, and I'll come back to you with a confirmed update as soon as the review is done.",
+  sympathy:
+    "I understand this is frustrating, and I appreciate your patience. I'm checking this internally right now and I want to make sure I come back with the correct update rather than making assumptions. Please give me a little time and I'll follow up as soon as the review is complete.",
+});
+
+const sanitizeOptions = (options: Record<string, unknown>) => {
+  const safeFallbacks = buildSafeFallbackOptions();
+
+  return {
+    short:
+      typeof options.short === "string" && options.short.trim() && !hasUnsafeAccountStatusClaim(options.short)
+        ? options.short.trim()
+        : safeFallbacks.short,
+    detailed:
+      typeof options.detailed === "string" && options.detailed.trim() && !hasUnsafeAccountStatusClaim(options.detailed)
+        ? options.detailed.trim()
+        : safeFallbacks.detailed,
+    sympathy:
+      typeof options.sympathy === "string" && options.sympathy.trim() && !hasUnsafeAccountStatusClaim(options.sympathy)
+        ? options.sympathy.trim()
+        : safeFallbacks.sympathy,
+  };
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,7 +70,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are Scholaris AI — PropScholar's elite support writing assistant. You enhance support agent replies to be world-class.
+    const systemPrompt = `You are Scholaris AI — PropScholar's elite support writing assistant. You enhance support agent replies to be world-class, calm, and safe.
 
 COMPANY CONTEXT:
 - PropScholar is a scholarship-based trading evaluation platform (NOT a prop firm). Tagline: "You Pass, We Pay."
@@ -33,7 +78,7 @@ COMPANY CONTEXT:
 - Rules: No lot limit, No consistency rule, No trailing drawdown, No news restrictions, No minimum holding, No time limit. Profit Target 10%, Max Drawdown 6%, Daily Loss 3%, Leverage 1:50.
 - Platforms: PropScholar Trial ($1), FTMO, Instant, QT, Maven, Goat Funded Trader, Funding Pips, Blueberry Funded, Alpha Capital Group, 5%ers.
 - Payments: UPI (PhonePe/Razorpay/Cashfree), Crypto, Card, PayPal. Credentials in 120 seconds.
-- After passing: Direct payout (no funded stage, no activation fee). Discount after breach: automatic 5-15%.
+- After passing: Direct payout (no funded stage, no activation fee).
 - Community: Discord (2500+ members, 24/7 support), Instagram (@propscholar), X (@propscholar).
 - Support: support@propscholar.com, help.propscholar.com, Discord.
 
@@ -47,6 +92,9 @@ All versions must:
 - Sound professional and warm
 - Use correct PropScholar terminology ("scholarship" not "funded account", "evaluation" not just "challenge")
 - Include specific details when relevant (exact numbers, policies, links)
+- NEVER state or imply that an account/evaluation is breached, flagged, banned, suspended, restricted, disabled, rejected, disqualified, or in violation unless the draft text already explicitly says that after a human review
+- If the issue is account-specific or unclear, default to safe holding language like "I'm checking this for you", "Please give me a little time", and "I'll get back to you with a confirmed update"
+- Never introduce new negative account-status assumptions that are not already explicitly present in the input
 
 Respond ONLY with valid JSON:
 {
@@ -92,7 +140,7 @@ Respond ONLY with valid JSON:
     const content = data.choices?.[0]?.message?.content || "";
 
     // Parse the JSON response
-    let options;
+    let options: Record<string, unknown>;
     try {
       // Try to extract JSON from the response (in case there's extra text)
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -110,6 +158,8 @@ Respond ONLY with valid JSON:
         sympathy: text,
       };
     }
+
+    options = sanitizeOptions(options);
 
     return new Response(
       JSON.stringify({ options }),
