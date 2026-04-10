@@ -21,7 +21,10 @@ interface EmailAttachment {
 }
 
 // Simple IMAP command sender/receiver with timeout
-async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Promise<string> {
+// Max raw email size we'll fully process (1.5MB). Larger emails get header-only treatment.
+const MAX_EMAIL_SIZE = 1.5 * 1024 * 1024;
+
+async function sendCommand(conn: Deno.TlsConn, tag: string, command: string, maxBytes = 0): Promise<string> {
   const encoder = new TextEncoder();
   const fullCommand = `${tag} ${command}\r\n`;
   // Don't log password
@@ -30,15 +33,30 @@ async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Pr
   await conn.write(encoder.encode(fullCommand));
   
   const decoder = new TextDecoder();
-  const buffer = new Uint8Array(65536);
+  const buffer = new Uint8Array(131072); // 128KB read buffer for speed
   let response = "";
   const startTime = Date.now();
   const timeout = 30000; // 30 second timeout
   
   while (true) {
     if (Date.now() - startTime > timeout) {
-      console.error("IMAP timeout. Response so far:", response);
+      console.error("IMAP timeout. Response so far length:", response.length);
       throw new Error(`IMAP command timeout: ${tag}`);
+    }
+
+    // Safety: if the response is already huge, stop accumulating
+    if (maxBytes > 0 && response.length > maxBytes) {
+      console.log(`IMAP response exceeded ${maxBytes} bytes, draining remainder`);
+      // Drain remaining data until tagged response without storing
+      const drainBuf = new Uint8Array(131072);
+      while (true) {
+        if (Date.now() - startTime > timeout) break;
+        const dn = await conn.read(drainBuf);
+        if (dn === null) break;
+        const chunk = decoder.decode(drainBuf.subarray(0, dn));
+        if (chunk.includes(`${tag} OK`) || chunk.includes(`${tag} NO`) || chunk.includes(`${tag} BAD`)) break;
+      }
+      break;
     }
     
     const n = await conn.read(buffer);
