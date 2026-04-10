@@ -21,7 +21,10 @@ interface EmailAttachment {
 }
 
 // Simple IMAP command sender/receiver with timeout
-async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Promise<string> {
+// Max raw email size we'll fully process (1.5MB). Larger emails get header-only treatment.
+const MAX_EMAIL_SIZE = 1.5 * 1024 * 1024;
+
+async function sendCommand(conn: Deno.TlsConn, tag: string, command: string, maxBytes = 0): Promise<string> {
   const encoder = new TextEncoder();
   const fullCommand = `${tag} ${command}\r\n`;
   // Don't log password
@@ -30,15 +33,30 @@ async function sendCommand(conn: Deno.TlsConn, tag: string, command: string): Pr
   await conn.write(encoder.encode(fullCommand));
   
   const decoder = new TextDecoder();
-  const buffer = new Uint8Array(65536);
+  const buffer = new Uint8Array(131072); // 128KB read buffer for speed
   let response = "";
   const startTime = Date.now();
   const timeout = 30000; // 30 second timeout
   
   while (true) {
     if (Date.now() - startTime > timeout) {
-      console.error("IMAP timeout. Response so far:", response);
+      console.error("IMAP timeout. Response so far length:", response.length);
       throw new Error(`IMAP command timeout: ${tag}`);
+    }
+
+    // Safety: if the response is already huge, stop accumulating
+    if (maxBytes > 0 && response.length > maxBytes) {
+      console.log(`IMAP response exceeded ${maxBytes} bytes, draining remainder`);
+      // Drain remaining data until tagged response without storing
+      const drainBuf = new Uint8Array(131072);
+      while (true) {
+        if (Date.now() - startTime > timeout) break;
+        const dn = await conn.read(drainBuf);
+        if (dn === null) break;
+        const chunk = decoder.decode(drainBuf.subarray(0, dn));
+        if (chunk.includes(`${tag} OK`) || chunk.includes(`${tag} NO`) || chunk.includes(`${tag} BAD`)) break;
+      }
+      break;
     }
     
     const n = await conn.read(buffer);
@@ -609,23 +627,49 @@ const handler = async (req: Request): Promise<Response> => {
       
       try {
         console.log(`Processing message ${uid}...`);
-        
-        // Fetch the message
-        const fetchResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822)`);
-        
-        // Extract raw email from response
-        const rawMatch = fetchResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
-        if (!rawMatch) {
-          console.log(`Could not parse message ${uid}, trying alternate parsing`);
-          // Try alternate parsing
-          const altMatch = fetchResp.match(/\* \d+ FETCH[^{]*\{(\d+)\}\r?\n([\s\S]+)/);
-          if (!altMatch) {
-            console.log(`Failed to parse message ${uid}`);
-            continue;
+
+        // First get the email size via RFC822.SIZE to avoid fetching huge emails fully
+        const sizeResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822.SIZE)`);
+        const sizeMatch = sizeResp.match(/RFC822\.SIZE\s+(\d+)/);
+        const emailSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
+        console.log(`Message ${uid} size: ${emailSize} bytes`);
+
+        let rawEmail = "";
+        let oversized = false;
+
+        if (emailSize > MAX_EMAIL_SIZE) {
+          console.log(`Message ${uid} is oversized (${emailSize}). Fetching headers + text only.`);
+          oversized = true;
+          // Fetch only HEADER and first ~50KB of body via partial fetch
+          const headerResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (BODY[HEADER] BODY[TEXT]<0.51200>)`, MAX_EMAIL_SIZE);
+          // Combine header and partial text
+          const headerMatch = headerResp.match(/BODY\[HEADER\]\s*\{(\d+)\}\r?\n([\s\S]*?)(?=\s*BODY\[TEXT\])/);
+          const textMatch = headerResp.match(/BODY\[TEXT\]<0>\s*\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\n\s*\)|\r?\nA\d+)/);
+          const headerPart = headerMatch ? headerMatch[2] : "";
+          const textPart = textMatch ? textMatch[2] : "";
+          rawEmail = headerPart + "\r\n\r\n" + textPart;
+          if (!rawEmail.trim()) {
+            // Fallback: just fetch headers
+            const hdrOnlyResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (BODY[HEADER])`);
+            const hdrMatch = hdrOnlyResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
+            rawEmail = hdrMatch ? hdrMatch[2] : "";
           }
+        } else {
+          // Fetch the full message
+          const fetchResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822)`);
+          
+          // Extract raw email from response
+          const rawMatch = fetchResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
+          if (!rawMatch) {
+            console.log(`Could not parse message ${uid}, trying alternate parsing`);
+            const altMatch = fetchResp.match(/\* \d+ FETCH[^{]*\{(\d+)\}\r?\n([\s\S]+)/);
+            if (!altMatch) {
+              console.log(`Failed to parse message ${uid}`);
+              continue;
+            }
+          }
+          rawEmail = rawMatch ? rawMatch[2] : fetchResp;
         }
-        
-        const rawEmail = rawMatch ? rawMatch[2] : fetchResp;
         const headers = parseEmailHeaders(rawEmail);
         
         const fromHeader = headers["from"] || "";
@@ -669,11 +713,14 @@ const handler = async (req: Request): Promise<Response> => {
         
         const cleanBody = stripQuotedContent(bodyText);
 
-        if (!cleanBody.trim()) {
+        if (!cleanBody.trim() && !oversized) {
           console.log(`Skipping empty email from: ${senderEmail}`);
           await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
           continue;
         }
+
+        // For oversized emails with no parsed body, use a placeholder
+        const finalBody = cleanBody.trim() || (oversized ? `[Email with ${emailSize} bytes of attachments - view in email client]` : "");
 
         // Check for duplicate by message_id (in-memory first, then DB)
         if (messageId) {
@@ -789,24 +836,37 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Upload attachments to storage and get URLs
-        const processedAttachments: { filename: string; contentType: string; size: number; url: string }[] = [];
+        // Skip actual upload for oversized emails to avoid CPU timeout — just record metadata
+        const processedAttachments: { filename: string; contentType: string; size: number; url?: string }[] = [];
         
         if (rawAttachments.length > 0) {
-          console.log(`Processing ${rawAttachments.length} attachment(s)...`);
+          console.log(`Processing ${rawAttachments.length} attachment(s)... oversized=${oversized}`);
           
-          for (const att of rawAttachments) {
-            const url = await uploadAttachment(supabase, ticketId!, att);
-            if (url) {
+          if (oversized) {
+            // For oversized emails, just record attachment metadata without uploading
+            for (const att of rawAttachments) {
               processedAttachments.push({
                 filename: att.filename,
                 contentType: att.contentType,
                 size: att.size,
-                url: url
               });
             }
+            console.log(`Recorded ${processedAttachments.length} attachment metadata (skipped upload due to size)`);
+          } else {
+            // Normal size — upload attachments
+            for (const att of rawAttachments) {
+              const url = await uploadAttachment(supabase, ticketId!, att);
+              if (url) {
+                processedAttachments.push({
+                  filename: att.filename,
+                  contentType: att.contentType,
+                  size: att.size,
+                  url: url
+                });
+              }
+            }
+            console.log(`Uploaded ${processedAttachments.length} attachment(s)`);
           }
-          
-          console.log(`Uploaded ${processedAttachments.length} attachment(s)`);
         }
 
         // Insert message with attachments
@@ -815,8 +875,8 @@ const handler = async (req: Request): Promise<Response> => {
           sender_email: senderEmail,
           sender_name: senderName,
           sender_type: "user",
-          body: cleanBody,
-          body_html: html,
+          body: finalBody,
+          body_html: oversized ? null : html,
           message_id: messageId,
           in_reply_to: inReplyTo,
           attachments: processedAttachments,
