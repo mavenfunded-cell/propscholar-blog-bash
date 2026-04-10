@@ -627,23 +627,49 @@ const handler = async (req: Request): Promise<Response> => {
       
       try {
         console.log(`Processing message ${uid}...`);
-        
-        // Fetch the message
-        const fetchResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822)`);
-        
-        // Extract raw email from response
-        const rawMatch = fetchResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
-        if (!rawMatch) {
-          console.log(`Could not parse message ${uid}, trying alternate parsing`);
-          // Try alternate parsing
-          const altMatch = fetchResp.match(/\* \d+ FETCH[^{]*\{(\d+)\}\r?\n([\s\S]+)/);
-          if (!altMatch) {
-            console.log(`Failed to parse message ${uid}`);
-            continue;
+
+        // First get the email size via RFC822.SIZE to avoid fetching huge emails fully
+        const sizeResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822.SIZE)`);
+        const sizeMatch = sizeResp.match(/RFC822\.SIZE\s+(\d+)/);
+        const emailSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
+        console.log(`Message ${uid} size: ${emailSize} bytes`);
+
+        let rawEmail = "";
+        let oversized = false;
+
+        if (emailSize > MAX_EMAIL_SIZE) {
+          console.log(`Message ${uid} is oversized (${emailSize}). Fetching headers + text only.`);
+          oversized = true;
+          // Fetch only HEADER and first ~50KB of body via partial fetch
+          const headerResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (BODY[HEADER] BODY[TEXT]<0.51200>)`, MAX_EMAIL_SIZE);
+          // Combine header and partial text
+          const headerMatch = headerResp.match(/BODY\[HEADER\]\s*\{(\d+)\}\r?\n([\s\S]*?)(?=\s*BODY\[TEXT\])/);
+          const textMatch = headerResp.match(/BODY\[TEXT\]<0>\s*\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\n\s*\)|\r?\nA\d+)/);
+          const headerPart = headerMatch ? headerMatch[2] : "";
+          const textPart = textMatch ? textMatch[2] : "";
+          rawEmail = headerPart + "\r\n\r\n" + textPart;
+          if (!rawEmail.trim()) {
+            // Fallback: just fetch headers
+            const hdrOnlyResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (BODY[HEADER])`);
+            const hdrMatch = hdrOnlyResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
+            rawEmail = hdrMatch ? hdrMatch[2] : "";
           }
+        } else {
+          // Fetch the full message
+          const fetchResp = await sendCommand(conn, `A${tagNum++}`, `FETCH ${uid} (RFC822)`);
+          
+          // Extract raw email from response
+          const rawMatch = fetchResp.match(/\{(\d+)\}\r?\n([\s\S]*?)(?=\r?\nA\d+ OK|\r?\n\))/);
+          if (!rawMatch) {
+            console.log(`Could not parse message ${uid}, trying alternate parsing`);
+            const altMatch = fetchResp.match(/\* \d+ FETCH[^{]*\{(\d+)\}\r?\n([\s\S]+)/);
+            if (!altMatch) {
+              console.log(`Failed to parse message ${uid}`);
+              continue;
+            }
+          }
+          rawEmail = rawMatch ? rawMatch[2] : fetchResp;
         }
-        
-        const rawEmail = rawMatch ? rawMatch[2] : fetchResp;
         const headers = parseEmailHeaders(rawEmail);
         
         const fromHeader = headers["from"] || "";
