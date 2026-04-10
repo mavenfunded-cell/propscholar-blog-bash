@@ -833,24 +833,37 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Upload attachments to storage and get URLs
-        const processedAttachments: { filename: string; contentType: string; size: number; url: string }[] = [];
+        // Skip actual upload for oversized emails to avoid CPU timeout — just record metadata
+        const processedAttachments: { filename: string; contentType: string; size: number; url?: string }[] = [];
         
         if (rawAttachments.length > 0) {
-          console.log(`Processing ${rawAttachments.length} attachment(s)...`);
+          console.log(`Processing ${rawAttachments.length} attachment(s)... oversized=${oversized}`);
           
-          for (const att of rawAttachments) {
-            const url = await uploadAttachment(supabase, ticketId!, att);
-            if (url) {
+          if (oversized) {
+            // For oversized emails, just record attachment metadata without uploading
+            for (const att of rawAttachments) {
               processedAttachments.push({
                 filename: att.filename,
                 contentType: att.contentType,
                 size: att.size,
-                url: url
               });
             }
+            console.log(`Recorded ${processedAttachments.length} attachment metadata (skipped upload due to size)`);
+          } else {
+            // Normal size — upload attachments
+            for (const att of rawAttachments) {
+              const url = await uploadAttachment(supabase, ticketId!, att);
+              if (url) {
+                processedAttachments.push({
+                  filename: att.filename,
+                  contentType: att.contentType,
+                  size: att.size,
+                  url: url
+                });
+              }
+            }
+            console.log(`Uploaded ${processedAttachments.length} attachment(s)`);
           }
-          
-          console.log(`Uploaded ${processedAttachments.length} attachment(s)`);
         }
 
         // Insert message with attachments
