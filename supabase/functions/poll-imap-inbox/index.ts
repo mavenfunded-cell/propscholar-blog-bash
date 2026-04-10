@@ -713,11 +713,14 @@ const handler = async (req: Request): Promise<Response> => {
         
         const cleanBody = stripQuotedContent(bodyText);
 
-        if (!cleanBody.trim()) {
+        if (!cleanBody.trim() && !oversized) {
           console.log(`Skipping empty email from: ${senderEmail}`);
           await sendCommand(conn, `A${tagNum++}`, `STORE ${uid} +FLAGS (\\Seen)`);
           continue;
         }
+
+        // For oversized emails with no parsed body, use a placeholder
+        const finalBody = cleanBody.trim() || (oversized ? `[Email with ${emailSize} bytes of attachments - view in email client]` : "");
 
         // Check for duplicate by message_id (in-memory first, then DB)
         if (messageId) {
