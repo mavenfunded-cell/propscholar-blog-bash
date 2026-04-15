@@ -280,74 +280,17 @@ const handler = async (req: Request): Promise<Response> => {
       // Convert markdown to HTML for email body
       const formattedBody = markdownToHtml(body);
 
-      // Clean email template with attachments support
-      const logoUrl = "https://res.cloudinary.com/dzozyqlqr/image/upload/v1763325013/d0d1d9_dthfiq.jpg";
-      const emailHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<!--[if mso]>
-<noscript>
-<xml>
-<o:OfficeDocumentSettings>
-<o:PixelsPerInch>96</o:PixelsPerInch>
-</o:OfficeDocumentSettings>
-</xml>
-</noscript>
-<![endif]-->
-</head>
-<body style="margin:0;padding:0;background-color:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#020617;">
-<tr>
-<td style="padding:40px 20px;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" align="center" style="max-width:600px;margin:0 auto;">
-<tr>
-<td style="text-align:center;padding-bottom:24px;">
-<img src="${logoUrl}" alt="PropScholar" width="100" height="100" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:12px;">
-</td>
-</tr>
-<tr>
-<td>
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#0f172a;border-radius:16px;border:1px solid rgba(59,130,246,0.3);">
-<tr>
-<td style="height:3px;background:linear-gradient(90deg,#1e40af,#3b82f6,#1e40af);border-radius:16px 16px 0 0;"></td>
-</tr>
-<tr>
-<td style="padding:28px 32px 20px 32px;">
-<span style="display:inline-block;background-color:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:16px;padding:6px 14px;font-size:11px;color:#60a5fa;font-weight:600;letter-spacing:0.5px;">TICKET #${ticket.ticket_number}</span>
-<h1 style="margin:16px 0 0 0;font-size:22px;font-weight:600;color:#ffffff;">Support Response</h1>
-</td>
-</tr>
-<tr>
-<td style="padding:0 32px 20px 32px;">
-<div style="background-color:rgba(15,23,42,0.6);border-radius:12px;border:1px solid rgba(59,130,246,0.1);padding:20px;">
-<div style="margin:0;color:#e2e8f0;font-size:15px;line-height:1.7;">${formattedBody}</div>
-</div>
-</td>
-</tr>
-${attachmentsHtml}
-<tr>
-<td style="padding:0 32px 24px 32px;text-align:center;">
-<p style="margin:0 0 16px 0;color:#94a3b8;font-size:13px;">Reply to this email to continue the conversation</p>
-<a href="https://www.propscholar.com" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:10px;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Visit PropScholar</a>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td style="padding:24px 20px;text-align:center;">
-<p style="margin:0;color:#475569;font-size:11px;">&copy; ${new Date().getFullYear()} PropScholar. All rights reserved.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</body>
-</html>`;
+      // Simple plain email template
+      const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:20px;font-family:Arial,sans-serif;">
+<p><strong>Ticket #${ticket.ticket_number} — Support Response</strong></p>
+<hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">
+<div style="font-size:15px;line-height:1.7;">${formattedBody}</div>
+${attachments && attachments.length > 0 ? `<hr style="border:none;border-top:1px solid #ddd;margin:16px 0;"><p style="font-size:13px;color:#666;"><strong>Attachments:</strong></p>${attachments.filter(a => isSafeUrl(a.url)).map(a => `<p style="font-size:13px;"><a href="${escapeHtml(a.url)}">${escapeHtml(a.name)}</a></p>`).join('')}` : ''}
+<hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">
+<p style="font-size:13px;color:#666;">Reply to this email to continue the conversation.</p>
+<p style="font-size:13px;">Best regards,<br>${displaySenderName}</p>
+<p style="font-size:11px;color:#999;">&copy; ${new Date().getFullYear()} PropScholar. All rights reserved.</p>
+</body></html>`;
 
       console.log(`Sending email to ${ticket.user_email} via Hostinger SMTP`);
 
