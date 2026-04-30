@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Only this email can login as admin
-const ADMIN_EMAIL = "notehanmalik@gmail.com";
+// Only these emails can login as admin
+const ADMIN_EMAILS = ["notehanmalik@gmail.com", "notchiragc@gmail.com"];
 
 // Session validity in days
 const SESSION_VALIDITY_DAYS = 7;
@@ -33,8 +33,8 @@ const handler = async (req: Request): Promise<Response> => {
     
     const normalizedEmail = email.trim().toLowerCase();
     
-    // Check if this is the allowed admin email
-    if (normalizedEmail !== ADMIN_EMAIL.toLowerCase()) {
+    // Check if this is an allowed admin email
+    if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes(normalizedEmail)) {
       return new Response(
         JSON.stringify({ error: "Unauthorized email address" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }

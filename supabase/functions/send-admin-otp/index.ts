@@ -13,8 +13,8 @@ const SMTP_PORT = 465;
 const SUPPORT_EMAIL = "support@propscholar.com";
 const FROM_NAME = "PropScholar Admin";
 
-// Only this email can receive admin OTP
-const ADMIN_EMAIL = "notehanmalik@gmail.com";
+// Only these emails can receive admin OTP
+const ADMIN_EMAILS = ["notehanmalik@gmail.com", "notchiragc@gmail.com"];
 
 interface OTPRequest {
   email: string;
@@ -44,8 +44,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Normalize email
     const normalizedEmail = email.trim().toLowerCase();
     
-    // Check if this is the allowed admin email
-    if (normalizedEmail !== ADMIN_EMAIL.toLowerCase()) {
+    // Check if this is an allowed admin email
+    if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes(normalizedEmail)) {
       console.log(`Unauthorized login attempt from: ${normalizedEmail}`);
       return new Response(
         JSON.stringify({ error: "Unauthorized email address" }),
