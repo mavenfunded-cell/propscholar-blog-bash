@@ -1,0 +1,1 @@
+UPDATE public.support_tickets SET status='closed', closed_at=NOW(), updated_at=NOW() WHERE status != 'closed' AND ticket_number NOT IN (451, 450);
