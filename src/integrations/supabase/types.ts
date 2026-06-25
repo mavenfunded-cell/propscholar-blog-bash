@@ -2010,9 +2010,11 @@ export type Database = {
       }
       support_tickets: {
         Row: {
+          auto_closed: boolean
           chat_history: Json | null
           closed_at: string | null
           created_at: string
+          followup_sent_at: string | null
           id: string
           last_reply_at: string | null
           last_reply_by: string | null
@@ -2029,9 +2031,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          auto_closed?: boolean
           chat_history?: Json | null
           closed_at?: string | null
           created_at?: string
+          followup_sent_at?: string | null
           id?: string
           last_reply_at?: string | null
           last_reply_by?: string | null
@@ -2048,9 +2052,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          auto_closed?: boolean
           chat_history?: Json | null
           closed_at?: string | null
           created_at?: string
+          followup_sent_at?: string | null
           id?: string
           last_reply_at?: string | null
           last_reply_by?: string | null
