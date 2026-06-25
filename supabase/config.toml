@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.send-msr-india]
 verify_jwt = false
+
+[functions.ticket-followup-close]
+verify_jwt = false
